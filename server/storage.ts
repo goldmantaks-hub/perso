@@ -19,6 +19,8 @@ import {
   type InsertConversationParticipant,
   type Message,
   type InsertMessage,
+  type PersonaMemory,
+  type InsertPersonaMemory,
   users,
   personas,
   posts,
@@ -29,6 +31,7 @@ import {
   conversationParticipants,
   messages,
   postConversations,
+  personaMemories,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -41,6 +44,11 @@ export interface IStorage {
   createPersona(persona: InsertPersona): Promise<Persona>;
   getPersonaByUserId(userId: string): Promise<Persona | undefined>;
   getPersona(id: string): Promise<Persona | undefined>;
+  updatePersonaStats(personaId: string, stats: Partial<{ empathy: number; humor: number; sociability: number; creativity: number; knowledge: number; currentMood: any }>): Promise<void>;
+  
+  // PersonaMemory methods
+  getMemoriesByPersona(personaId: string, limit?: number): Promise<PersonaMemory[]>;
+  createMemory(memory: InsertPersonaMemory): Promise<PersonaMemory>;
   
   // Post methods
   getPosts(): Promise<Post[]>;
@@ -102,6 +110,26 @@ export class DbStorage implements IStorage {
   async getPersona(id: string): Promise<Persona | undefined> {
     const [persona] = await db.select().from(personas).where(eq(personas.id, id));
     return persona;
+  }
+
+  async updatePersonaStats(personaId: string, stats: Partial<{ empathy: number; humor: number; sociability: number; creativity: number; knowledge: number; currentMood: any }>): Promise<void> {
+    await db.update(personas)
+      .set(stats)
+      .where(eq(personas.id, personaId));
+  }
+
+  // PersonaMemory methods
+  async getMemoriesByPersona(personaId: string, limit: number = 10): Promise<PersonaMemory[]> {
+    return await db.select()
+      .from(personaMemories)
+      .where(eq(personaMemories.personaId, personaId))
+      .orderBy(desc(personaMemories.createdAt))
+      .limit(limit);
+  }
+
+  async createMemory(insertMemory: InsertPersonaMemory): Promise<PersonaMemory> {
+    const [memory] = await db.insert(personaMemories).values(insertMemory).returning();
+    return memory;
   }
 
   // Post methods
