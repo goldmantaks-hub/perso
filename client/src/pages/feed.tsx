@@ -1,4 +1,4 @@
-import { Settings } from "lucide-react";
+import { Settings, Plus } from "lucide-react";
 import { Link } from "wouter";
 import BottomNav from "@/components/bottom-nav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -113,12 +113,12 @@ export default function FeedPage() {
       </section>
 
       {/* 스토리 섹션 */}
-      <section className="py-3">
+      <section className="py-6">
         <div className="flex overflow-x-auto px-4 gap-5 scrollbar-hide">
           {stories.map((story) => (
             <div key={story.username} className="flex flex-col items-center gap-2 flex-shrink-0 w-20">
               <div className="relative">
-                <Avatar className="w-16 h-16 ring-2 ring-primary ring-offset-2 ring-offset-background">
+                <Avatar className="w-16 h-16">
                   <AvatarImage src={story.avatar} />
                   <AvatarFallback>{story.username[0]}</AvatarFallback>
                 </Avatar>
@@ -127,7 +127,7 @@ export default function FeedPage() {
                     className="absolute bottom-0 right-0 w-6 h-6 bg-primary rounded-full flex items-center justify-center text-primary-foreground border-2 border-background"
                     data-testid="button-add-story"
                   >
-                    <Sparkles className="w-3 h-3" />
+                    <Plus className="w-3 h-3" />
                   </button>
                 )}
               </div>
