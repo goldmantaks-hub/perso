@@ -10,6 +10,7 @@ import FeedPage from "@/pages/feed";
 import ProfilePage from "@/pages/profile";
 import SearchPage from "@/pages/search";
 import ActivityPage from "@/pages/activity";
+import PersoPage from "@/pages/perso";
 
 function Router() {
   return (
@@ -21,6 +22,7 @@ function Router() {
       <Route path="/search" component={SearchPage} />
       <Route path="/activity" component={ActivityPage} />
       <Route path="/profile" component={ProfilePage} />
+      <Route path="/perso/:postId" component={PersoPage} />
       <Route component={NotFound} />
     </Switch>
   );
