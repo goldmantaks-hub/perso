@@ -34,6 +34,26 @@ export default function FeedPage() {
       username: "junho_choi",
       avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=junho",
       hasNew: false
+    },
+    {
+      username: "hyejin_kang",
+      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=hyejin",
+      hasNew: false
+    },
+    {
+      username: "dongwoo_shin",
+      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=dongwoo",
+      hasNew: false
+    },
+    {
+      username: "yuna_jung",
+      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=yuna",
+      hasNew: false
+    },
+    {
+      username: "taehoon_kim",
+      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=taehoon",
+      hasNew: false
     }
   ];
 
