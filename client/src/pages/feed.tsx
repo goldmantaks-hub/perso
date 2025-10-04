@@ -102,12 +102,12 @@ export default function FeedPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* 상단 헤더 */}
-      <header className="sticky top-0 z-10 flex items-center justify-between p-4 bg-background/80 backdrop-blur-sm">
+      <header className="sticky top-0 z-10 flex items-center justify-between px-4 h-16 bg-background/80 backdrop-blur-sm">
         <div className="w-8"></div>
         <img 
           src={logoImage} 
           alt="PERSO" 
-          className="h-24 dark:invert-0 invert" 
+          className="h-36 dark:invert-0 invert" 
           data-testid="img-logo" 
         />
         <button className="text-foreground" data-testid="button-settings">
