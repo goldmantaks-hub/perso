@@ -17,6 +17,12 @@ export const personas = pgTable("personas", {
   name: text("name").notNull(),
   image: text("image").notNull(),
   description: text("description"),
+  empathy: integer("empathy").notNull().default(5),
+  humor: integer("humor").notNull().default(5),
+  sociability: integer("sociability").notNull().default(5),
+  creativity: integer("creativity").notNull().default(5),
+  knowledge: integer("knowledge").notNull().default(5),
+  currentMood: jsonb("current_mood"),
 });
 
 export const posts = pgTable("posts", {
@@ -97,6 +103,15 @@ export const postConversations = pgTable("post_conversations", {
   conversationId: varchar("conversation_id").notNull().references(() => conversations.id, { onDelete: 'cascade' }),
 });
 
+export const personaMemories = pgTable("persona_memories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  personaId: varchar("persona_id").notNull().references(() => personas.id, { onDelete: 'cascade' }),
+  content: text("content").notNull(),
+  summary: text("summary"),
+  context: text("context"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -146,6 +161,11 @@ export const insertPostConversationSchema = createInsertSchema(postConversations
   id: true,
 });
 
+export const insertPersonaMemorySchema = createInsertSchema(personaMemories).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -176,3 +196,6 @@ export type Message = typeof messages.$inferSelect;
 
 export type InsertPostConversation = z.infer<typeof insertPostConversationSchema>;
 export type PostConversation = typeof postConversations.$inferSelect;
+
+export type InsertPersonaMemory = z.infer<typeof insertPersonaMemorySchema>;
+export type PersonaMemory = typeof personaMemories.$inferSelect;

@@ -1,0 +1,110 @@
+PERSO 앱의 "페르소나 대화 시스템"을 구현한다.
+페르소나는 기본적으로 ChatGPT처럼 다양한 대화가 가능해야 한다.
+추가적으로, 페르소나의 스탯(공감, 유머, 사교성, 창의성, 지식)과 성장, 기억이 반영되어 
+대화 톤, 말투, 습관, 이모지가 달라지도록 한다.
+
+환경:
+- Next.js + TypeScript + Tailwind
+- Prisma + SQLite (개발용 DB)
+- OpenAI API
+
+구현 범위:
+
+1) DB (Prisma)
+- User, Persona, Post, PersonaMemory 모델 정의
+  model User {
+    id        String   @id @default(cuid())
+    username  String   @unique
+    persona   Persona?
+    posts     Post[]
+  }
+
+  model Persona {
+    id          String   @id @default(cuid())
+    name        String
+    userId      String   @unique
+    user        User     @relation(fields: [userId], references: [id])
+    empathy     Int      @default(5)
+    humor       Int      @default(5)
+    sociability Int      @default(5)
+    creativity  Int      @default(5)
+    knowledge   Int      @default(5)
+    memories    PersonaMemory[]
+  }
+
+  model Post {
+    id        String   @id @default(cuid())
+    userId    String
+    content   String
+    createdAt DateTime @default(now())
+    sentiment Json?
+  }
+
+  model PersonaMemory {
+    id        String   @id @default(cuid())
+    personaId String
+    content   String
+    createdAt DateTime @default(now())
+  }
+
+2) utils/personaPrompt.ts
+- buildPersonaPrompt(stats, memories, message)
+- 규칙:
+  * Empathy 높음 → 따뜻한 어투 + 이모지
+  * Humor 높음 → 농담/드립 섞기
+  * Sociability 높음 → 반드시 질문 포함
+  * Creativity 높음 → 비유/시적 표현
+  * Knowledge 높음 → 배경지식 포함
+- memories는 최근 대화 요약 3개까지만 프롬프트에 삽입
+- 최종 systemPrompt + userPrompt 리턴
+
+3) utils/personaGrowth.ts
+- computePersonaDeltas({ sentiment, tones, imageScores })
+- updatePersonaStats(personaId, deltas) → DB 업데이트
+- 게시물 업로드 시 자동 반영
+
+4) API
+- app/api/chat/route.ts
+  * POST { userId, message }
+  * DB에서 personaStats + recent memories 불러오기
+  * buildPersonaPrompt 호출 → OpenAI API 호출
+  * 응답 저장 (PersonaMemory에 요약 저장)
+  * JSON 반환
+
+- app/api/posts/analyze/route.ts
+  * POST { userId, content }
+  * /ai/analyze(mock) 호출: sentiment, tones, image_scores
+  * computePersonaDeltas 실행
+  * DB 업데이트
+  * 결과 { sentiment, deltas } 반환
+
+5) 프론트엔드
+- PersonaChat.tsx
+  * textarea 입력 + Send 버튼
+  * persona 응답 표시
+  * 실제로는 ChatGPT처럼 모든 질문에 응답, 하지만 말투/톤은 personaStats에 따라 다름
+
+- PostCard.tsx
+  * 게시물 표시
+  * 감성 분석 결과 표시 (progress bar + 😊 이모지)
+  * 스탯 반영 토스트 표시 (2초 후 사라짐)
+
+6) 기본 동작
+- 유저가 메시지를 입력하면:
+  1) 페르소나 스탯 + 최근 기억을 systemPrompt에 반영
+  2) ChatGPT처럼 자유롭게 대화 생성
+  3) 응답이 persona의 개성과 톤을 반영
+- 유저가 게시물을 올리면:
+  1) 감성 분석 실행
+  2) 스탯 자동 업데이트
+  3) UI에 토스트로 “Empathy +1 …” 표시
+
+7) 안티-게이밍
+- 같은 사용자가 2분 내 연속 게시물 → 최신 1건만 반영
+- 텍스트 유사도 ≥0.9 → 무효 처리
+
+완료 조건:
+- 페르소나는 ChatGPT처럼 어떤 질문에도 대답 가능하다.
+- 대화 스타일은 persona의 스탯에 따라 체감되게 달라진다.
+- 게시물 감성분석을 통해 스탯이 자동 성장하고, 대화 톤이 점점 변한다.
+- 대화 요약이 memory에 저장되어, 이후 대화에 맥락이 반영된다.
