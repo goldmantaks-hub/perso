@@ -116,11 +116,28 @@ function PostCard({ post }: { post: any }) {
     <div key={post.id} data-testid={`post-${post.id}`}>
       {/* 포스트 헤더 */}
       <div className="flex justify-between items-center mb-4 pt-4">
-        <div className="flex items-center gap-2">
-          <Avatar className="w-10 h-10">
+        <div className="flex items-center gap-3">
+          {/* 유저 프로필 이미지 */}
+          <Avatar className="w-10 h-10" data-testid={`avatar-user-${post.id}`}>
             <AvatarImage src={post.author.profileImage} />
             <AvatarFallback>{post.author.name[0]}</AvatarFallback>
           </Avatar>
+          
+          {/* 페르소나 프로필 이미지 (있을 경우) */}
+          {post.persona && (
+            <Link href={`/chat/${post.persona.id}`}>
+              <div className="relative" data-testid={`avatar-persona-${post.id}`}>
+                <Avatar className="w-8 h-8 border-2 border-primary/20">
+                  <AvatarImage src={post.persona.image} />
+                  <AvatarFallback>AI</AvatarFallback>
+                </Avatar>
+                <div className="absolute -bottom-0.5 -right-0.5 bg-primary rounded-full p-0.5">
+                  <Sparkles className="w-2.5 h-2.5 text-primary-foreground" />
+                </div>
+              </div>
+            </Link>
+          )}
+          
           <div className="flex items-baseline gap-2">
             <h2 className="text-lg font-bold" data-testid="text-author-name">
               @{post.author.username.split('_')[0]}

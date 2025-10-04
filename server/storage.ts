@@ -286,6 +286,69 @@ export class DbStorage implements IStorage {
       .where(eq(conversationParticipants.conversationId, conversationId))
       .orderBy(conversationParticipants.joinedAt);
   }
+
+  async findConversationBetweenPersonas(persona1Id: string, persona2Id: string): Promise<Conversation | undefined> {
+    // 두 페르소나 간 기존 대화방 찾기
+    const allConversations = await db
+      .select()
+      .from(conversations)
+      .where(eq(conversations.scopeType, 'persona-dm'));
+    
+    for (const conv of allConversations) {
+      const participants = await this.getParticipantsByConversation(conv.id);
+      const personaIds = participants
+        .filter(p => p.participantType === 'persona')
+        .map(p => p.participantId);
+      
+      if (
+        personaIds.length === 2 &&
+        personaIds.includes(persona1Id) &&
+        personaIds.includes(persona2Id)
+      ) {
+        return conv;
+      }
+    }
+    
+    return undefined;
+  }
+
+  async getOrCreatePersonaConversation(
+    userPersonaId: string,
+    targetPersonaId: string
+  ): Promise<Conversation> {
+    // 기존 대화방 찾기
+    const existing = await this.findConversationBetweenPersonas(userPersonaId, targetPersonaId);
+    if (existing) return existing;
+    
+    // 새 대화방 생성
+    const [conversation] = await db
+      .insert(conversations)
+      .values({
+        scopeType: 'persona-dm',
+        scopeId: null,
+        title: null,
+        createdByType: 'persona',
+        createdById: userPersonaId,
+      })
+      .returning();
+    
+    // 두 페르소나를 participant로 추가
+    await this.addParticipant({
+      conversationId: conversation.id,
+      participantType: 'persona',
+      participantId: userPersonaId,
+      role: 'member',
+    });
+    
+    await this.addParticipant({
+      conversationId: conversation.id,
+      participantType: 'persona',
+      participantId: targetPersonaId,
+      role: 'member',
+    });
+    
+    return conversation;
+  }
 }
 
 export const storage = new DbStorage();
