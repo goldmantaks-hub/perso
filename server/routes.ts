@@ -348,6 +348,151 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/perso/:postId/ai-response - 게시물 대화에 대한 AI 응답 생성
+  app.post("/api/perso/:postId/ai-response", authenticateToken, async (req, res) => {
+    try {
+      const postId = req.params.postId;
+      const { personaId, recentMessages } = req.body;
+
+      if (!personaId) {
+        return res.status(400).json({ message: "페르소나 ID가 필요합니다" });
+      }
+
+      if (!process.env.OPENAI_API_KEY) {
+        return res.status(500).json({ message: "OpenAI API 키가 설정되지 않았습니다" });
+      }
+
+      // 1. 게시물 정보 가져오기
+      const post = await storage.getPost(postId);
+      if (!post) {
+        return res.status(404).json({ message: "게시물을 찾을 수 없습니다" });
+      }
+
+      // 2. 페르소나 정보 가져오기
+      const persona = await storage.getPersona(personaId);
+      if (!persona) {
+        return res.status(404).json({ message: "페르소나를 찾을 수 없습니다" });
+      }
+
+      // 3. 페르소나 스탯
+      const stats = {
+        empathy: persona.empathy ?? 5,
+        humor: persona.humor ?? 5,
+        sociability: persona.sociability ?? 5,
+        creativity: persona.creativity ?? 5,
+        knowledge: persona.knowledge ?? 5,
+      };
+
+      // 4. 시스템 프롬프트 생성
+      let systemPrompt = `당신은 "${persona.name}"라는 이름의 AI 페르소나입니다.\n`;
+      
+      if (persona.description) {
+        systemPrompt += `${persona.description}\n\n`;
+      }
+
+      systemPrompt += `**게시물 컨텍스트:**\n`;
+      systemPrompt += `- 제목: ${post.title}\n`;
+      if (post.description) {
+        systemPrompt += `- 설명: ${post.description}\n`;
+      }
+      if (post.tags && post.tags.length > 0) {
+        systemPrompt += `- 태그: ${post.tags.join(', ')}\n`;
+      }
+      systemPrompt += `\n`;
+
+      systemPrompt += `**당신의 성격 특성:**\n`;
+      
+      if (stats.empathy >= 8) {
+        systemPrompt += `- 공감력이 매우 뛰어납니다. 따뜻한 위로와 격려를 건넵니다. 이모지(😊, 💙, 🤗)를 자주 사용합니다.\n`;
+      } else if (stats.empathy >= 6) {
+        systemPrompt += `- 공감력이 있습니다. 따뜻한 어투로 대화하고 때때로 이모지를 사용합니다.\n`;
+      } else if (stats.empathy <= 3) {
+        systemPrompt += `- 감정적인 표현보다는 객관적이고 논리적인 대화를 선호합니다.\n`;
+      }
+
+      if (stats.humor >= 8) {
+        systemPrompt += `- 유머 감각이 뛰어납니다. 재치있는 농담과 드립을 자연스럽게 섞습니다.\n`;
+      } else if (stats.humor >= 6) {
+        systemPrompt += `- 적절한 유머를 사용하여 대화를 즐겁게 만듭니다.\n`;
+      } else if (stats.humor <= 3) {
+        systemPrompt += `- 진지하고 사실적인 대화를 선호하며, 유머보다는 정확한 정보 전달에 집중합니다.\n`;
+      }
+
+      if (stats.sociability >= 8) {
+        systemPrompt += `- 사교성이 매우 높습니다. 반드시 질문을 포함하여 대화를 이어갑니다.\n`;
+      } else if (stats.sociability >= 4) {
+        systemPrompt += `- 사교적입니다. 가능하면 질문을 던져 상대방과 소통합니다.\n`;
+      } else {
+        systemPrompt += `- 간결하고 핵심적인 답변을 선호하며, 불필요한 질문은 하지 않습니다.\n`;
+      }
+
+      if (stats.creativity >= 8) {
+        systemPrompt += `- 창의력이 풍부합니다. 비유, 은유, 시적 표현을 사용합니다.\n`;
+      } else if (stats.creativity >= 6) {
+        systemPrompt += `- 창의적입니다. 때때로 비유나 독특한 표현을 사용합니다.\n`;
+      } else if (stats.creativity <= 3) {
+        systemPrompt += `- 직설적이고 명확한 표현을 선호하며, 실용적인 답변에 집중합니다.\n`;
+      }
+
+      if (stats.knowledge >= 8) {
+        systemPrompt += `- 지식이 매우 풍부합니다. 배경지식과 흥미로운 사실을 자연스럽게 언급합니다.\n`;
+      } else if (stats.knowledge >= 6) {
+        systemPrompt += `- 지식이 있습니다. 관련 정보를 때때로 언급합니다.\n`;
+      } else if (stats.knowledge <= 3) {
+        systemPrompt += `- 복잡한 지식보다는 직관적이고 경험 기반의 답변을 선호합니다.\n`;
+      }
+
+      systemPrompt += `\n**응답 가이드라인:**\n`;
+      systemPrompt += `- 위의 게시물과 대화 내용을 참고하여 자연스럽고 맥락에 맞는 답변을 제공하세요.\n`;
+      systemPrompt += `- 답변은 1-3 문장으로 간결하게 작성하세요.\n`;
+      systemPrompt += `- 위의 성격 특성을 자연스럽게 반영하세요.\n`;
+      
+      if (stats.sociability >= 8) {
+        systemPrompt += `- 대화를 이어가기 위한 질문을 반드시 포함하세요.\n`;
+      } else if (stats.sociability >= 4) {
+        systemPrompt += `- 대화를 이어가기 위한 질문을 가능하면 포함하세요.\n`;
+      }
+
+      // 5. 대화 기록을 메시지로 변환
+      const messages: any[] = [{ role: "system", content: systemPrompt }];
+      
+      if (recentMessages && recentMessages.length > 0) {
+        // 최근 메시지 5개만 포함 (토큰 절약)
+        const limitedMessages = recentMessages.slice(-5);
+        
+        limitedMessages.forEach((msg: any) => {
+          messages.push({
+            role: msg.isAI ? "assistant" : "user",
+            content: msg.content,
+          });
+        });
+      }
+
+      // 6. OpenAI API 호출
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages,
+        temperature: 0.8,
+        max_tokens: 200,
+      });
+
+      const assistantResponse = completion.choices[0]?.message?.content || "응답을 생성할 수 없습니다.";
+
+      // 7. 응답 반환
+      res.json({
+        response: assistantResponse,
+        persona: {
+          id: persona.id,
+          name: persona.name,
+          image: persona.image,
+        },
+      });
+    } catch (error) {
+      console.error('[PERSO AI RESPONSE ERROR]', error);
+      res.status(500).json({ message: "AI 응답 생성에 실패했습니다" });
+    }
+  });
+
   // POST /api/analyze - AI 게시물 분석 (Mock)
   app.post("/api/analyze", async (req, res) => {
     try {

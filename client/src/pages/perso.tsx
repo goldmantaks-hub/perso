@@ -8,10 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function PersoPage() {
   const [, params] = useRoute("/perso/:postId");
   const postId = params?.postId;
+  const { toast } = useToast();
 
   const [message, setMessage] = useState("");
 
@@ -22,6 +24,13 @@ export default function PersoPage() {
     enabled: !!postId,
   });
 
+  // 사용자 페르소나 가져오기 (AI 응답에 사용)
+  const { data: userPersona, isLoading: personaLoading, error: personaError } = useQuery<any>({
+    queryKey: ['/api/user/persona'],
+    enabled: !!postId, // postId가 있을 때만 로드
+    retry: false,
+  });
+
   const messages = data?.messages || [];
   const post = data?.post;
 
@@ -30,61 +39,78 @@ export default function PersoPage() {
     mutationFn: async (content: string) => {
       return await apiRequest("POST", `/api/perso/${postId}/messages`, { content, isAI: false });
     },
-    onSuccess: async () => {
-      // AI 메시지에서 페르소나 ID 찾기 (invalidation 전에)
-      const aiMessage = messages.find((m: any) => m.isAI && m.personaId);
-      const personaId = aiMessage?.personaId;
+    onSuccess: async (_, sentMessageContent) => {
+      // 페르소나 데이터 확보 (로딩 중이면 완료 대기)
+      let personaData: any;
+      try {
+        personaData = await queryClient.ensureQueryData({
+          queryKey: ['/api/user/persona'],
+        });
+      } catch (error: any) {
+        toast({
+          title: "로그인이 필요합니다",
+          description: "AI와 대화하려면 로그인해주세요.",
+          variant: "destructive",
+        });
+        return;
+      }
       
-      // 게시물 정보도 invalidation 전에 캡처
-      const currentPost = post;
+      const personaId = personaData?.id;
       
-      // 먼저 메시지 목록을 업데이트
-      await queryClient.invalidateQueries({ queryKey: ["/api/perso", postId, "messages"] });
+      if (!personaId) {
+        toast({
+          title: "페르소나를 찾을 수 없습니다",
+          description: "AI 응답을 생성할 수 없습니다.",
+          variant: "destructive",
+        });
+        return;
+      }
       
-      // AI 자동 응답 시뮬레이션 (1초 후)
-      if (personaId && currentPost) {
-        setTimeout(async () => {
-          // 게시물 태그 기반 AI 응답 생성
-          const tagResponses: Record<string, string[]> = {
-            "일상": ["일상의 소중함을 느끼셨네요 ✨", "평범한 순간도 특별하죠!"],
-            "힐링": ["힐링이 필요한 시간이었나봐요 🌿", "휴식도 중요하죠!"],
-            "카페": ["좋은 카페 추천 부탁드려요 ☕", "카페 분위기 정말 좋아보여요!"],
-            "여행": ["여행지가 정말 멋지네요! 🌍", "나도 거기 가보고 싶다!"],
-            "풍경": ["경치가 정말 아름답네요!", "사진 잘 찍으셨어요 📸"],
-            "자연": ["자연과 함께하는 시간이 좋죠 🌿", "힐링되는 풍경이에요!"],
-            "야경": ["야경이 정말 멋지네요! ✨", "밤 풍경 사진 잘 찍으셨어요!"],
-            "음식": ["맛있어 보여요! 🍴", "레시피 공유해주세요!"],
-            "커피": ["커피 향이 여기까지 느껴지는 것 같아요 ☕", "커피 한잔의 여유가 좋죠!"],
-            "취미": ["멋진 취미네요! 👍", "꾸준히 하시는 게 대단해요!"],
-            "베이킹": ["베이킹 솜씨가 대단하시네요! 🥐", "나도 배우고 싶어요!"],
-            "디저트": ["디저트가 정말 맛있어 보여요! 🍰", "비주얼이 완벽해요!"],
-            "요리": ["요리 실력이 대단하시네요! 👨‍🍳", "레시피 알려주세요!"],
-            "운동": ["멋진 운동 루틴이네요! 💪", "건강관리 대단해요!"],
-            "건강": ["건강 관리 잘하시는군요! 💪", "몸도 마음도 건강해지겠어요!"],
-            "피트니스": ["운동 열심히 하시네요! 🏋️", "멋진 체력이에요!"],
-            "맛집": ["맛집 추천 감사합니다! 🍽️", "나도 가보고 싶어요!"],
-          };
+      // AI 자동 응답 생성 (OpenAI 기반, 1초 후)
+      setTimeout(async () => {
+        try {
+          // 최신 메시지 목록을 확실하게 가져오기 (refetch 후 데이터 반환)
+          await queryClient.refetchQueries({ queryKey: ["/api/perso", postId, "messages"] });
+          const updatedData = await queryClient.ensureQueryData({
+            queryKey: ["/api/perso", postId, "messages"],
+          }) as any;
           
-          let response = "공감돼요! 멋진 경험이네요 ✨";
+          const allMessages = updatedData?.messages || [];
           
-          if (currentPost.tags && currentPost.tags.length > 0) {
-            // 모든 태그를 순회하며 매칭되는 응답 찾기
-            for (const tag of currentPost.tags) {
-              if (tagResponses[tag]) {
-                response = tagResponses[tag][Math.floor(Math.random() * tagResponses[tag].length)];
-                break;
-              }
-            }
-          }
+          // 최근 5개 메시지 (방금 보낸 메시지 포함 보장)
+          const recentMessages = allMessages.slice(-5);
           
+          // OpenAI를 사용한 AI 응답 생성 (apiRequest는 이미 에러 체크함)
+          const response = await apiRequest("POST", `/api/perso/${postId}/ai-response`, {
+            personaId,
+            recentMessages,
+          });
+          const aiResponse = await response.json();
+          
+          // AI 응답을 메시지로 저장
           await apiRequest("POST", `/api/perso/${postId}/messages`, { 
-            content: response,
+            content: aiResponse.response,
             isAI: true,
             personaId,
           });
+          
           queryClient.invalidateQueries({ queryKey: ["/api/perso", postId, "messages"] });
-        }, 1000);
-      }
+        } catch (error: any) {
+          console.error('AI 응답 생성 실패:', error);
+          
+          // OpenAI 키 미설정 등의 특정 에러 메시지 처리
+          let errorMessage = "다시 시도해주세요.";
+          if (error.message?.includes("OpenAI")) {
+            errorMessage = "AI 서비스를 사용할 수 없습니다. 관리자에게 문의하세요.";
+          }
+          
+          toast({
+            title: "AI 응답 생성 실패",
+            description: errorMessage,
+            variant: "destructive",
+          });
+        }
+      }, 1000);
     },
   });
 
