@@ -46,7 +46,7 @@ export default function ChatPage() {
     mutationFn: async (message: string) => {
       if (!persona?.id) throw new Error('페르소나가 없습니다');
       
-      const res = await apiRequest("POST", `/personas/${persona.id}/chat`, {
+      const res = await apiRequest("POST", `/api/personas/${persona.id}/chat`, {
         message,
       });
       return await res.json() as ChatResponse;
