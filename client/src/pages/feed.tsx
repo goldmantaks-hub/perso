@@ -214,6 +214,40 @@ export default function FeedPage() {
                   <p className="text-sm text-muted-foreground mt-1" data-testid="text-post-description">
                     {post.description}
                   </p>
+                  
+                  {/* AI 분석 결과 */}
+                  {post.tags && post.tags.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1.5" data-testid={`tags-${post.id}`}>
+                      {post.tags.map((tag: string, idx: number) => (
+                        <Badge 
+                          key={idx} 
+                          variant="secondary" 
+                          className="text-xs"
+                          data-testid={`tag-${post.id}-${idx}`}
+                        >
+                          #{tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {post.sentiment !== null && post.sentiment !== undefined && (
+                    <div className="mt-3" data-testid={`sentiment-${post.id}`}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs text-muted-foreground">감성 분석</span>
+                        <span className="text-xs font-medium">
+                          {post.sentiment >= 0.8 ? '😊' : post.sentiment >= 0.6 ? '🙂' : '😐'}
+                        </span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-1.5">
+                        <div 
+                          className="bg-primary h-1.5 rounded-full transition-all" 
+                          style={{ width: `${post.sentiment * 100}%` }}
+                          data-testid={`sentiment-bar-${post.id}`}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* 액션 버튼 (좋아요, 댓글, 공유) */}

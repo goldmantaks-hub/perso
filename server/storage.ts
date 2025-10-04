@@ -36,6 +36,7 @@ export interface IStorage {
   getPosts(): Promise<Post[]>;
   getPost(id: string): Promise<Post | undefined>;
   createPost(post: InsertPost): Promise<Post>;
+  updatePostAnalysis(postId: string, analysis: { tags: string[], sentiment: number, personaEffect: any }): Promise<void>;
   
   // Like methods
   createLike(like: InsertLike): Promise<Like>;
@@ -98,6 +99,16 @@ export class DbStorage implements IStorage {
   async createPost(insertPost: InsertPost): Promise<Post> {
     const [post] = await db.insert(posts).values(insertPost).returning();
     return post;
+  }
+
+  async updatePostAnalysis(postId: string, analysis: { tags: string[], sentiment: number, personaEffect: any }): Promise<void> {
+    await db.update(posts)
+      .set({
+        tags: analysis.tags,
+        sentiment: analysis.sentiment,
+        personaEffect: analysis.personaEffect,
+      })
+      .where(eq(posts.id, postId));
   }
 
   // Like methods

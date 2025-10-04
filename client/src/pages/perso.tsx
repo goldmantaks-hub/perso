@@ -15,12 +15,15 @@ export default function PersoPage() {
 
   const [message, setMessage] = useState("");
 
-  // 메시지 가져오기
-  const { data: messages = [], isLoading } = useQuery<any[]>({
+  // 메시지 및 게시물 정보 가져오기
+  const { data, isLoading } = useQuery<any>({
     queryKey: ["/api/perso", postId, "messages"],
     queryFn: () => fetch(`/api/perso/${postId}/messages`).then(res => res.json()),
     enabled: !!postId,
   });
+
+  const messages = data?.messages || [];
+  const post = data?.post;
 
   // 메시지 전송
   const sendMessageMutation = useMutation({
@@ -32,23 +35,50 @@ export default function PersoPage() {
       const aiMessage = messages.find((m: any) => m.isAI && m.personaId);
       const personaId = aiMessage?.personaId;
       
+      // 게시물 정보도 invalidation 전에 캡처
+      const currentPost = post;
+      
       // 먼저 메시지 목록을 업데이트
       await queryClient.invalidateQueries({ queryKey: ["/api/perso", postId, "messages"] });
       
       // AI 자동 응답 시뮬레이션 (1초 후)
-      if (personaId) {
+      if (personaId && currentPost) {
         setTimeout(async () => {
-          const aiResponses = [
-            "좋은 얘기네요! 저도 공감돼요 ✨",
-            "정말 멋진 경험이네요!",
-            "나도 비슷한 느낌 받았어요 😊",
-            "와, 대단해요!",
-          ];
+          // 게시물 태그 기반 AI 응답 생성
+          const tagResponses: Record<string, string[]> = {
+            "일상": ["일상의 소중함을 느끼셨네요 ✨", "평범한 순간도 특별하죠!"],
+            "힐링": ["힐링이 필요한 시간이었나봐요 🌿", "휴식도 중요하죠!"],
+            "카페": ["좋은 카페 추천 부탁드려요 ☕", "카페 분위기 정말 좋아보여요!"],
+            "여행": ["여행지가 정말 멋지네요! 🌍", "나도 거기 가보고 싶다!"],
+            "풍경": ["경치가 정말 아름답네요!", "사진 잘 찍으셨어요 📸"],
+            "자연": ["자연과 함께하는 시간이 좋죠 🌿", "힐링되는 풍경이에요!"],
+            "야경": ["야경이 정말 멋지네요! ✨", "밤 풍경 사진 잘 찍으셨어요!"],
+            "음식": ["맛있어 보여요! 🍴", "레시피 공유해주세요!"],
+            "커피": ["커피 향이 여기까지 느껴지는 것 같아요 ☕", "커피 한잔의 여유가 좋죠!"],
+            "취미": ["멋진 취미네요! 👍", "꾸준히 하시는 게 대단해요!"],
+            "베이킹": ["베이킹 솜씨가 대단하시네요! 🥐", "나도 배우고 싶어요!"],
+            "디저트": ["디저트가 정말 맛있어 보여요! 🍰", "비주얼이 완벽해요!"],
+            "요리": ["요리 실력이 대단하시네요! 👨‍🍳", "레시피 알려주세요!"],
+            "운동": ["멋진 운동 루틴이네요! 💪", "건강관리 대단해요!"],
+            "건강": ["건강 관리 잘하시는군요! 💪", "몸도 마음도 건강해지겠어요!"],
+            "피트니스": ["운동 열심히 하시네요! 🏋️", "멋진 체력이에요!"],
+            "맛집": ["맛집 추천 감사합니다! 🍽️", "나도 가보고 싶어요!"],
+          };
           
-          const randomResponse = aiResponses[Math.floor(Math.random() * aiResponses.length)];
+          let response = "공감돼요! 멋진 경험이네요 ✨";
+          
+          if (currentPost.tags && currentPost.tags.length > 0) {
+            // 모든 태그를 순회하며 매칭되는 응답 찾기
+            for (const tag of currentPost.tags) {
+              if (tagResponses[tag]) {
+                response = tagResponses[tag][Math.floor(Math.random() * tagResponses[tag].length)];
+                break;
+              }
+            }
+          }
           
           await apiRequest("POST", `/api/perso/${postId}/messages`, { 
-            content: randomResponse,
+            content: response,
             isAI: true,
             personaId,
           });
@@ -76,8 +106,8 @@ export default function PersoPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* 헤더 */}
-      <header className="sticky top-0 z-10 bg-background border-b border-border p-4">
-        <div className="flex items-center gap-3">
+      <header className="sticky top-0 z-10 bg-background border-b border-border">
+        <div className="flex items-center gap-3 p-4">
           <Link href="/feed">
             <button className="text-foreground" data-testid="button-back">
               <ArrowLeft className="w-6 h-6" />
@@ -86,11 +116,30 @@ export default function PersoPage() {
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary" />
-              <h1 className="text-lg font-bold">페르소 #{postId?.slice(0, 8)}</h1>
+              <h1 className="text-lg font-bold">페르소</h1>
             </div>
             <p className="text-xs text-muted-foreground">AI들이 대화 중 · 참여자 {messages.length}명</p>
           </div>
         </div>
+        
+        {/* 게시물 정보 */}
+        {post && (
+          <div className="px-4 pb-4" data-testid="post-info">
+            <div className="bg-muted rounded-lg p-3">
+              <p className="text-sm font-medium mb-1">{post.title}</p>
+              <p className="text-xs text-muted-foreground mb-2">{post.description}</p>
+              {post.tags && post.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {post.tags.map((tag: string, idx: number) => (
+                    <Badge key={idx} variant="outline" className="text-[10px] h-5">
+                      #{tag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </header>
 
       {/* 채팅 영역 */}

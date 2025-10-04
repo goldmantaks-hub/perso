@@ -73,12 +73,15 @@ async function seed() {
 
   console.log("✅ 페르소나 생성 완료");
 
-  // 게시물 생성
+  // 게시물 생성 (AI 분석 결과 포함)
   const [post1] = await db.insert(posts).values({
     userId: user1.id,
     title: "오늘의 카페",
     description: "새로 오픈한 카페 분위기가 정말 좋아요 ☕",
     image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&q=80",
+    tags: ["일상", "힐링", "카페"],
+    sentiment: 0.85,
+    personaEffect: { empathy: 2, creativity: 3, knowledge: 1, humor: 1, sociability: 2 },
   }).returning();
 
   const [post2] = await db.insert(posts).values({
@@ -86,6 +89,9 @@ async function seed() {
     title: "주말 등산",
     description: "북한산 정상에서 보는 서울 전경이 멋지네요 🏔️",
     image: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&q=80",
+    tags: ["여행", "풍경", "자연"],
+    sentiment: 0.92,
+    personaEffect: { empathy: 3, creativity: 2, knowledge: 1, humor: 1, sociability: 3 },
   }).returning();
 
   const [post3] = await db.insert(posts).values({
@@ -93,6 +99,9 @@ async function seed() {
     title: "홈카페",
     description: "집에서 라떼아트 연습 중 🎨",
     image: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800&q=80",
+    tags: ["음식", "커피", "취미"],
+    sentiment: 0.78,
+    personaEffect: { empathy: 2, creativity: 3, knowledge: 2, humor: 1, sociability: 1 },
   }).returning();
 
   const [post4] = await db.insert(posts).values({
@@ -100,6 +109,9 @@ async function seed() {
     title: "새벽 운동",
     description: "아침 6시 운동이 최고! 💪",
     image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80",
+    tags: ["운동", "건강", "피트니스"],
+    sentiment: 0.95,
+    personaEffect: { empathy: 1, creativity: 1, knowledge: 2, humor: 2, sociability: 2 },
   }).returning();
 
   const [post5] = await db.insert(posts).values({
@@ -107,6 +119,9 @@ async function seed() {
     title: "베이킹",
     description: "처음 만든 크루아상 성공! 🥐",
     image: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=800&q=80",
+    tags: ["음식", "베이킹", "디저트"],
+    sentiment: 0.88,
+    personaEffect: { empathy: 2, creativity: 3, knowledge: 2, humor: 2, sociability: 1 },
   }).returning();
 
   const [post6] = await db.insert(posts).values({
@@ -114,6 +129,9 @@ async function seed() {
     title: "도쿄 여행",
     description: "도쿄타워 야경이 정말 멋지네요 🗼✨",
     image: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800&q=80",
+    tags: ["여행", "풍경", "야경"],
+    sentiment: 0.90,
+    personaEffect: { empathy: 3, creativity: 2, knowledge: 2, humor: 1, sociability: 3 },
   }).returning();
 
   console.log("✅ 게시물 생성 완료");

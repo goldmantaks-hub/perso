@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, jsonb, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -25,6 +25,9 @@ export const posts = pgTable("posts", {
   title: text("title").notNull(),
   description: text("description"),
   image: text("image").notNull(),
+  tags: text("tags").array(),
+  sentiment: real("sentiment"),
+  personaEffect: jsonb("persona_effect"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
