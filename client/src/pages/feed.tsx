@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles } from "lucide-react";
+import logoImage from "@assets/logo.svg";
 
 export default function FeedPage() {
   const currentUser = {
@@ -103,9 +104,7 @@ export default function FeedPage() {
       {/* 상단 헤더 */}
       <header className="sticky top-0 z-10 flex items-center justify-between p-4 bg-background/80 backdrop-blur-sm">
         <div className="w-8"></div>
-        <h1 className="text-lg font-bold tracking-[0.3em]" data-testid="text-logo">
-          PERSO
-        </h1>
+        <img src={logoImage} alt="PERSO" className="h-8" data-testid="img-logo" />
         <button className="text-foreground" data-testid="button-settings">
           <Settings className="w-6 h-6" />
         </button>
