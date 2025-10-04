@@ -56,6 +56,47 @@ export const persoMessages = pgTable("perso_messages", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const conversations = pgTable("conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  scopeType: varchar("scope_type", { length: 20 }).notNull(),
+  scopeId: varchar("scope_id"),
+  title: text("title"),
+  createdByType: varchar("created_by_type", { length: 20 }).notNull(),
+  createdById: varchar("created_by_id").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const conversationParticipants = pgTable("conversation_participants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  conversationId: varchar("conversation_id").notNull().references(() => conversations.id, { onDelete: 'cascade' }),
+  participantType: varchar("participant_type", { length: 20 }).notNull(),
+  participantId: varchar("participant_id").notNull(),
+  role: varchar("role", { length: 20 }).notNull().default('member'),
+  joinedAt: timestamp("joined_at").notNull().defaultNow(),
+  lastReadMessageId: varchar("last_read_message_id"),
+});
+
+export const messages = pgTable("messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  conversationId: varchar("conversation_id").notNull().references(() => conversations.id, { onDelete: 'cascade' }),
+  senderType: varchar("sender_type", { length: 20 }).notNull(),
+  senderId: varchar("sender_id").notNull(),
+  content: text("content").notNull(),
+  messageType: varchar("message_type", { length: 20 }).notNull().default('text'),
+  replyToId: varchar("reply_to_id"),
+  meta: jsonb("meta"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  editedAt: timestamp("edited_at"),
+  deletedAt: timestamp("deleted_at"),
+});
+
+export const postConversations = pgTable("post_conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  postId: varchar("post_id").notNull().references(() => posts.id, { onDelete: 'cascade' }),
+  conversationId: varchar("conversation_id").notNull().references(() => conversations.id, { onDelete: 'cascade' }),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -85,6 +126,26 @@ export const insertPersoMessageSchema = createInsertSchema(persoMessages).omit({
   createdAt: true,
 });
 
+export const insertConversationSchema = createInsertSchema(conversations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertConversationParticipantSchema = createInsertSchema(conversationParticipants).omit({
+  id: true,
+  joinedAt: true,
+});
+
+export const insertMessageSchema = createInsertSchema(messages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPostConversationSchema = createInsertSchema(postConversations).omit({
+  id: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -103,3 +164,15 @@ export type Comment = typeof comments.$inferSelect;
 
 export type InsertPersoMessage = z.infer<typeof insertPersoMessageSchema>;
 export type PersoMessage = typeof persoMessages.$inferSelect;
+
+export type InsertConversation = z.infer<typeof insertConversationSchema>;
+export type Conversation = typeof conversations.$inferSelect;
+
+export type InsertConversationParticipant = z.infer<typeof insertConversationParticipantSchema>;
+export type ConversationParticipant = typeof conversationParticipants.$inferSelect;
+
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type Message = typeof messages.$inferSelect;
+
+export type InsertPostConversation = z.infer<typeof insertPostConversationSchema>;
+export type PostConversation = typeof postConversations.$inferSelect;
