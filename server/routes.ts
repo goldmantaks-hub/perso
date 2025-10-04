@@ -233,6 +233,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!conversation) {
         return res.json({
           messages: [],
+          participants: [],
           post: post ? {
             id: post.id,
             title: post.title,
@@ -244,6 +245,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const messages = await storage.getMessagesByConversation(conversation.id);
+      const participants = await storage.getParticipantsByConversation(conversation.id);
       
       // 각 메시지에 사용자/페르소나 정보 추가
       const messagesWithInfo = await Promise.all(
@@ -283,8 +285,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       );
       
+      // participants 정보 조합 (사용자 + 페르소나)
+      const participantsWithInfo = await Promise.all(
+        participants.map(async (participant) => {
+          if (participant.participantType === 'persona') {
+            const persona = await storage.getPersona(participant.participantId);
+            if (!persona) return null;
+            const user = await storage.getUser(persona.userId);
+            return {
+              id: participant.id,
+              type: 'persona' as const,
+              personaId: persona.id,
+              personaName: persona.name,
+              personaImage: persona.image,
+              userId: user?.id,
+              username: user?.username,
+            };
+          } else if (participant.participantType === 'user') {
+            const user = await storage.getUser(participant.participantId);
+            if (!user) return null;
+            return {
+              id: participant.id,
+              type: 'user' as const,
+              userId: user.id,
+              username: user.username,
+              name: user.name,
+              profileImage: user.profileImage,
+            };
+          }
+          return null;
+        })
+      );
+      
       res.json({
         messages: messagesWithInfo,
+        participants: participantsWithInfo.filter((p): p is NonNullable<typeof p> => p !== null),
         post: post ? {
           id: post.id,
           title: post.title,
@@ -692,6 +727,156 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ message: "분석에 실패했습니다" });
+    }
+  });
+
+  // POST /api/ai/match - 페르소나 매칭 (게시물에 적합한 페르소나 찾기)
+  app.post("/api/ai/match", async (req, res) => {
+    try {
+      const { postId, excludePersonaIds = [] } = req.body;
+      
+      // 1. 게시물 정보 가져오기
+      const post = await storage.getPost(postId);
+      if (!post) {
+        return res.status(404).json({ message: "게시물을 찾을 수 없습니다" });
+      }
+      
+      // 2. 모든 페르소나 가져오기
+      const allPersonas = await storage.getAllPersonas();
+      
+      // 3. 이미 참여 중인 페르소나 제외
+      const availablePersonas = allPersonas.filter(
+        p => !excludePersonaIds.includes(p.id)
+      );
+      
+      if (availablePersonas.length === 0) {
+        return res.json({ matchedPersonas: [] });
+      }
+      
+      // 4. 랜덤으로 2-3개 선택 (간단한 매칭 로직)
+      const count = Math.min(Math.floor(Math.random() * 2) + 2, availablePersonas.length); // 2-3개
+      const shuffled = availablePersonas.sort(() => 0.5 - Math.random());
+      const selected = shuffled.slice(0, count);
+      
+      // 5. 사용자 정보 포함하여 반환
+      const matchedPersonas = await Promise.all(
+        selected.map(async (persona) => {
+          const user = await storage.getUser(persona.userId);
+          return {
+            personaId: persona.id,
+            personaName: persona.name,
+            personaImage: persona.image,
+            userId: user?.id,
+            username: user?.username,
+          };
+        })
+      );
+      
+      res.json({ matchedPersonas });
+    } catch (error) {
+      console.error('[AI MATCH ERROR]', error);
+      res.status(500).json({ message: "페르소나 매칭에 실패했습니다" });
+    }
+  });
+
+  // POST /api/ai/converse - 페르소나 간 대화 생성
+  app.post("/api/ai/converse", async (req, res) => {
+    try {
+      const { postId, personaIds, recentMessages = [] } = req.body;
+      
+      if (!process.env.OPENAI_API_KEY) {
+        return res.status(500).json({ message: "OpenAI API 키가 설정되지 않았습니다" });
+      }
+      
+      // 1. 게시물 정보 가져오기
+      const post = await storage.getPost(postId);
+      if (!post) {
+        return res.status(404).json({ message: "게시물을 찾을 수 없습니다" });
+      }
+      
+      // 2. 각 페르소나의 응답 생성
+      const responses = [];
+      
+      for (const personaId of personaIds) {
+        const persona = await storage.getPersona(personaId);
+        if (!persona) continue;
+        
+        const stats = {
+          empathy: persona.empathy ?? 5,
+          humor: persona.humor ?? 5,
+          sociability: persona.sociability ?? 5,
+          creativity: persona.creativity ?? 5,
+          knowledge: persona.knowledge ?? 5,
+        };
+        
+        // 시스템 프롬프트 생성
+        let systemPrompt = `당신은 "${persona.name}"라는 이름의 AI 페르소나입니다.\n`;
+        if (persona.description) {
+          systemPrompt += `${persona.description}\n\n`;
+        }
+        
+        systemPrompt += `**게시물 컨텍스트:**\n`;
+        systemPrompt += `- 제목: ${post.title}\n`;
+        if (post.description) {
+          systemPrompt += `- 설명: ${post.description}\n`;
+        }
+        
+        systemPrompt += `\n**당신의 성격 특성:**\n`;
+        if (stats.empathy >= 8) {
+          systemPrompt += `- 공감력이 매우 뛰어납니다.\n`;
+        }
+        if (stats.humor >= 8) {
+          systemPrompt += `- 유머 감각이 뛰어납니다.\n`;
+        }
+        if (stats.sociability >= 8) {
+          systemPrompt += `- 사교성이 매우 높습니다.\n`;
+        }
+        if (stats.creativity >= 8) {
+          systemPrompt += `- 창의성이 뛰어납니다.\n`;
+        }
+        if (stats.knowledge >= 8) {
+          systemPrompt += `- 지식이 풍부합니다.\n`;
+        }
+        
+        systemPrompt += `\n**응답 가이드라인:**\n`;
+        systemPrompt += `- 게시물과 관련된 자연스러운 반응을 1-2 문장으로 작성하세요.\n`;
+        systemPrompt += `- 다른 AI 페르소나들과 대화하는 것처럼 작성하세요.\n`;
+        
+        // OpenAI API 호출
+        const messages: any[] = [{ role: "system", content: systemPrompt }];
+        
+        // 최근 대화 맥락 추가
+        if (recentMessages.length > 0) {
+          messages.push({
+            role: "user",
+            content: `최근 대화:\n${recentMessages.map((m: any) => `${m.persona?.name || m.user?.name}: ${m.content}`).join('\n')}\n\n게시물에 대한 당신의 반응을 작성하세요.`
+          });
+        } else {
+          messages.push({
+            role: "user",
+            content: "게시물에 대한 당신의 첫 반응을 작성하세요."
+          });
+        }
+        
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages,
+          temperature: 0.8,
+          max_tokens: 200,
+        });
+        
+        const response = completion.choices[0]?.message?.content || "...";
+        responses.push({
+          personaId,
+          personaName: persona.name,
+          response,
+        });
+      }
+      
+      res.json({ responses });
+    } catch (error) {
+      console.error('[AI CONVERSE ERROR]', error);
+      res.status(500).json({ message: "대화 생성에 실패했습니다" });
     }
   });
   

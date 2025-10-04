@@ -44,6 +44,7 @@ export interface IStorage {
   createPersona(persona: InsertPersona): Promise<Persona>;
   getPersonaByUserId(userId: string): Promise<Persona | undefined>;
   getPersona(id: string): Promise<Persona | undefined>;
+  getAllPersonas(): Promise<Persona[]>;
   updatePersonaStats(personaId: string, stats: Partial<{ empathy: number; humor: number; sociability: number; creativity: number; knowledge: number; currentMood: any }>): Promise<void>;
   
   // PersonaMemory methods
@@ -73,6 +74,7 @@ export interface IStorage {
   // Conversation methods (new)
   getConversationByPost(postId: string): Promise<Conversation | undefined>;
   getMessagesByConversation(conversationId: string): Promise<Message[]>;
+  getParticipantsByConversation(conversationId: string): Promise<ConversationParticipant[]>;
   createConversation(conversation: InsertConversation): Promise<Conversation>;
   createConversationForPost(postId: string, createdByType: 'user' | 'persona', createdById: string): Promise<Conversation>;
   addParticipant(participant: InsertConversationParticipant): Promise<ConversationParticipant>;
@@ -110,6 +112,10 @@ export class DbStorage implements IStorage {
   async getPersona(id: string): Promise<Persona | undefined> {
     const [persona] = await db.select().from(personas).where(eq(personas.id, id));
     return persona;
+  }
+
+  async getAllPersonas(): Promise<Persona[]> {
+    return await db.select().from(personas);
   }
 
   async updatePersonaStats(personaId: string, stats: Partial<{ empathy: number; humor: number; sociability: number; creativity: number; knowledge: number; currentMood: any }>): Promise<void> {
@@ -271,6 +277,14 @@ export class DbStorage implements IStorage {
       .values(insertMessage)
       .returning();
     return message;
+  }
+
+  async getParticipantsByConversation(conversationId: string): Promise<ConversationParticipant[]> {
+    return await db
+      .select()
+      .from(conversationParticipants)
+      .where(eq(conversationParticipants.conversationId, conversationId))
+      .orderBy(conversationParticipants.joinedAt);
   }
 }
 

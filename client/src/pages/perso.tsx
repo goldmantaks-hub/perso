@@ -32,6 +32,7 @@ export default function PersoPage() {
   });
 
   const messages = data?.messages || [];
+  const participants = data?.participants || [];
   const post = data?.post;
 
   // 메시지 전송
@@ -144,9 +145,39 @@ export default function PersoPage() {
               <Sparkles className="w-5 h-5 text-primary" />
               <h1 className="text-lg font-bold">페르소</h1>
             </div>
-            <p className="text-xs text-muted-foreground">AI들이 대화 중 · 참여자 {messages.length}명</p>
+            <p className="text-xs text-muted-foreground">AI들이 대화 중 · 참여자 {participants.length}명</p>
           </div>
         </div>
+        
+        {/* 참여 페르소나 리스트 */}
+        {participants.length > 0 && (
+          <div className="px-4 pb-3">
+            <div className="flex items-center gap-2 overflow-x-auto pb-2">
+              <span className="text-xs text-muted-foreground shrink-0">참여 중:</span>
+              {participants.filter((p: any) => p).map((p: any) => (
+                <div key={p.id} className="flex items-center gap-1.5 bg-muted rounded-full pl-1 pr-2 py-0.5 shrink-0" data-testid={`participant-${p.id}`}>
+                  {p.type === 'persona' ? (
+                    <>
+                      <Avatar className="w-5 h-5">
+                        <AvatarImage src={p.personaImage} />
+                        <AvatarFallback>AI</AvatarFallback>
+                      </Avatar>
+                      <span className="text-xs">{p.personaName}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Avatar className="w-5 h-5">
+                        <AvatarImage src={p.profileImage} />
+                        <AvatarFallback>{p.name?.[0]}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-xs">{p.name}</span>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         
         {/* 게시물 정보 */}
         {post && (
@@ -181,9 +212,22 @@ export default function PersoPage() {
                   <AvatarImage src={msg.persona?.image} />
                   <AvatarFallback>AI</AvatarFallback>
                 </Avatar>
-                <Badge variant="secondary" className="text-[10px] px-1 h-4">
-                  AI
-                </Badge>
+                {(() => {
+                  const participant = participants.find((p: any) => p && p.type === 'persona' && p.personaId === msg.personaId);
+                  if (!participant) {
+                    return (
+                      <Badge variant="secondary" className="text-[10px] px-1 h-4">
+                        AI
+                      </Badge>
+                    );
+                  }
+                  const username = participant.username?.split('_')?.[0] ?? '알 수 없음';
+                  return (
+                    <Badge variant="secondary" className="text-[10px] px-1 h-4">
+                      @{username}의 AI
+                    </Badge>
+                  );
+                })()}
               </div>
             )}
             <div className={`flex flex-col gap-1 max-w-[70%] ${!msg.isAI ? 'items-end' : 'items-start'}`}>
