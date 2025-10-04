@@ -229,25 +229,32 @@ function simpleHash(str: string): string {
  */
 export function validatePost(params: {
   userId: string;
+  postId: string;
   content: string;
   timestamp?: number;
 }): { valid: boolean; reason?: string } {
   const now = params.timestamp || Date.now();
   const contentHash = simpleHash(params.content);
   
-  // 2분 이내 동일 유저의 게시물 찾기
+  // 이미 분석된 게시물인지 확인
+  const alreadyAnalyzed = recentPosts.find(p => 
+    p.userId === params.userId && 
+    p.contentHash === contentHash
+  );
+  
+  if (alreadyAnalyzed) {
+    return { valid: false, reason: '이미 분석된 게시물' };
+  }
+  
+  // 2분 이내 동일 유저의 게시물 개수 확인
   const recentUserPosts = recentPosts.filter(p => 
     p.userId === params.userId && 
     (now - p.timestamp) < 2 * 60 * 1000
   );
   
-  // 같은 유저가 2분 내 여러 게시물 작성
-  if (recentUserPosts.length > 0) {
-    // 가장 최근 게시물만 유효
-    const latest = recentUserPosts[recentUserPosts.length - 1];
-    if (latest.timestamp > now - 2 * 60 * 1000) {
-      return { valid: false, reason: '2분 내 중복 게시물' };
-    }
+  // 같은 유저가 2분 내 2개 이상 게시물 작성 시 제한
+  if (recentUserPosts.length >= 2) {
+    return { valid: false, reason: '2분 내 과도한 게시물' };
   }
   
   // 텍스트 유사도 체크 (완전 동일한 내용)
