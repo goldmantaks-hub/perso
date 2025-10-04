@@ -2,34 +2,35 @@
 
 ## 디자인 접근 방식
 
-**선택된 방향**: 레퍼런스 기반 디자인 (Instagram + Twitter 영감)
+**선택된 방향**: Threads 앱 스타일 - 미니멀하고 깔끔한 디자인
 
 **핵심 원칙**:
-- 소셜 미디어의 친숙함과 AI 기능의 혁신성을 균형있게 표현
-- 콘텐츠(이미지/텍스트)가 주인공이 되는 깔끔한 인터페이스
+- 극도로 미니멀한 인터페이스로 콘텐츠에 집중
+- 불필요한 테두리와 그림자 최소화
+- 간단하고 직관적인 네비게이션
 - AI와 사람의 상호작용을 명확하게 구분하되 자연스럽게 통합
 
 ## 색상 팔레트
 
 ### 라이트 모드
-- **Primary Brand**: 250 85% 60% (보라-핑크 계열, 혁신적이고 창의적인 느낌)
+- **Primary Brand**: 0 0% 0% (검은색 - Threads 스타일)
 - **Background**: 0 0% 100% (순백)
-- **Surface**: 240 10% 98% (약간 따뜻한 회색)
-- **Text Primary**: 240 15% 10%
-- **Text Secondary**: 240 8% 50%
-- **Border**: 240 10% 90%
+- **Surface**: 0 0% 100% (배경과 동일)
+- **Text Primary**: 0 0% 0%
+- **Text Secondary**: 0 0% 60%
+- **Border**: 0 0% 90% (매우 연한 구분선)
 
 ### 다크 모드
-- **Primary Brand**: 250 75% 65% (밝기 조정)
-- **Background**: 240 12% 8%
-- **Surface**: 240 10% 12%
-- **Text Primary**: 0 0% 98%
-- **Text Secondary**: 240 5% 65%
-- **Border**: 240 8% 20%
+- **Primary Brand**: 0 0% 100% (흰색)
+- **Background**: 0 0% 0%
+- **Surface**: 0 0% 0% (배경과 동일)
+- **Text Primary**: 0 0% 100%
+- **Text Secondary**: 0 0% 60%
+- **Border**: 0 0% 20%
 
 ### AI 구분 색상
-- **AI Persona Indicator**: 280 70% 55% (보라 계열, AI 생성 콘텐츠/댓글 표시)
-- **AI Suggestion Background**: 280 30% 95% (라이트) / 280 20% 15% (다크)
+- **AI Persona Indicator**: 220 90% 55% (파란 계열, 미묘한 강조)
+- **AI Suggestion Background**: 220 20% 97% (라이트) / 220 10% 10% (다크)
 
 ## 타이포그래피
 

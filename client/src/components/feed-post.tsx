@@ -51,7 +51,7 @@ export default function FeedPost({
   };
 
   return (
-    <div className="bg-card border border-card-border rounded-2xl overflow-hidden hover-elevate" data-testid={`post-card`}>
+    <div className="border-b border-border pb-4" data-testid={`post-card`}>
       <div className="p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -61,9 +61,9 @@ export default function FeedPost({
             </Avatar>
             <div>
               <div className="flex items-center gap-2">
-                <p className="font-semibold text-card-foreground" data-testid="text-author-name">{author.name}</p>
+                <p className="font-semibold text-foreground" data-testid="text-author-name">{author.name}</p>
                 {isAIGenerated && (
-                  <Badge variant="secondary" className="h-5 px-2 text-xs bg-primary/10 text-primary border-primary/20">
+                  <Badge variant="secondary" className="h-5 px-2 text-xs">
                     <Sparkles className="w-3 h-3 mr-1" />
                     AI
                   </Badge>
@@ -87,21 +87,21 @@ export default function FeedPost({
           </DropdownMenu>
         </div>
 
-        <p className="text-card-foreground mb-4 leading-relaxed" data-testid="text-post-content">
+        <p className="text-foreground mb-3 leading-relaxed" data-testid="text-post-content">
           {content}
         </p>
 
         {image && (
-          <div className="relative -mx-4 mb-4">
+          <div className="relative mb-3">
             <img
               src={image}
               alt="Post content"
-              className="w-full aspect-square object-cover"
+              className="w-full rounded-xl aspect-square object-cover"
               data-testid="img-post-content"
             />
             {isAIGenerated && (
               <div className="absolute top-3 right-3">
-                <Badge className="bg-primary/90 backdrop-blur-md border-primary" data-testid="badge-ai-generated">
+                <Badge className="bg-black/70 dark:bg-white/70 backdrop-blur-md border-0 text-white dark:text-black" data-testid="badge-ai-generated">
                   <Sparkles className="w-3 h-3 mr-1" />
                   AI 생성
                 </Badge>
@@ -110,7 +110,7 @@ export default function FeedPost({
           </div>
         )}
 
-        <div className="flex items-center gap-6 pt-3 border-t border-card-border">
+        <div className="flex items-center gap-6 pt-3">
           <Button
             variant="ghost"
             size="sm"
@@ -145,9 +145,9 @@ export default function FeedPost({
       </div>
 
       {showComments && aiComments.length > 0 && (
-        <div className="border-t border-card-border bg-muted/30 px-4 py-3 space-y-3">
+        <div className="pt-3 mt-3 space-y-3">
           {aiComments.map((comment) => (
-            <div key={comment.id} className="flex gap-3 border-l-2 border-primary/40 pl-3" data-testid={`comment-${comment.id}`}>
+            <div key={comment.id} className="flex gap-3 pl-2" data-testid={`comment-${comment.id}`}>
               <Avatar className="w-6 h-6">
                 <AvatarImage src={comment.avatar} alt={comment.author} />
                 <AvatarFallback className="text-xs">{comment.author[0]}</AvatarFallback>

@@ -90,13 +90,13 @@ export default function CreatePostModal({ open, onOpenChange, currentUser }: Cre
           </div>
 
           {aiSuggestion && (
-            <div className="bg-primary/5 border-2 border-primary/20 rounded-xl p-4" data-testid="ai-suggestion-box">
+            <div className="bg-muted border border-border rounded-lg p-4" data-testid="ai-suggestion-box">
               <div className="flex items-start gap-3 mb-3">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <Sparkles className="w-4 h-4 text-primary" />
+                <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="w-5 h-5" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-primary mb-1">AI가 제안한 글</p>
+                  <p className="text-sm font-semibold mb-1">AI가 제안한 글</p>
                   <p className="text-sm text-muted-foreground leading-relaxed" data-testid="text-ai-suggestion">
                     {aiSuggestion}
                   </p>

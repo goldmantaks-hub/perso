@@ -32,13 +32,11 @@ export default function Navbar({ currentUser }: NavbarProps) {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border">
+      <nav className="sticky top-0 z-50 bg-background border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Link href="/feed" className="flex items-center gap-3 hover-elevate rounded-lg px-3 py-2 -ml-3" data-testid="link-home">
-              <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-primary-foreground" />
-              </div>
+            <Link href="/feed" className="flex items-center gap-2" data-testid="link-home">
+              <Sparkles className="w-7 h-7" />
               <span className="text-xl font-bold">PERSO</span>
             </Link>
 

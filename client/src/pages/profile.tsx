@@ -45,7 +45,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-background">
       <Navbar currentUser={currentUser} />
       
-      <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-2xl mx-auto py-4 space-y-0">
         <ProfileHeader {...profileData} isOwnProfile={true} />
 
         <Tabs defaultValue="posts" className="w-full">
