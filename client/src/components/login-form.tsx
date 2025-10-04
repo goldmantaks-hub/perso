@@ -120,10 +120,8 @@ export default function LoginForm({ onSubmit }: LoginFormProps) {
       <div className="text-center space-y-4">
         <p className="text-sm text-muted-foreground">
           계정이 없으신가요?{" "}
-          <Link href="/signup">
-            <a className="text-primary font-medium hover:underline" data-testid="link-signup">
-              회원가입
-            </a>
+          <Link href="/signup" className="text-primary font-medium hover:underline" data-testid="link-signup">
+            회원가입
           </Link>
         </p>
       </div>

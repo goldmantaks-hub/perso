@@ -162,10 +162,8 @@ export default function SignupForm({ onSubmit }: SignupFormProps) {
       <div className="text-center space-y-4">
         <p className="text-sm text-muted-foreground">
           이미 계정이 있으신가요?{" "}
-          <Link href="/login">
-            <a className="text-primary font-medium hover:underline" data-testid="link-login">
-              로그인
-            </a>
+          <Link href="/login" className="text-primary font-medium hover:underline" data-testid="link-login">
+            로그인
           </Link>
         </p>
       </div>
