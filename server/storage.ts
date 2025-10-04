@@ -30,6 +30,7 @@ export interface IStorage {
   // Persona methods
   createPersona(persona: InsertPersona): Promise<Persona>;
   getPersonaByUserId(userId: string): Promise<Persona | undefined>;
+  getPersona(id: string): Promise<Persona | undefined>;
   
   // Post methods
   getPosts(): Promise<Post[]>;
@@ -76,6 +77,11 @@ export class DbStorage implements IStorage {
 
   async getPersonaByUserId(userId: string): Promise<Persona | undefined> {
     const [persona] = await db.select().from(personas).where(eq(personas.userId, userId));
+    return persona;
+  }
+
+  async getPersona(id: string): Promise<Persona | undefined> {
+    const [persona] = await db.select().from(personas).where(eq(personas.id, id));
     return persona;
   }
 

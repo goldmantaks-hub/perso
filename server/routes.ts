@@ -13,9 +13,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const allPosts = await storage.getPosts();
       
-      // 각 게시물의 좋아요 수와 댓글 수 가져오기
+      // 각 게시물의 사용자 정보, 페르소나 정보, 통계 가져오기
       const postsWithStats = await Promise.all(
         allPosts.map(async (post) => {
+          const user = await storage.getUser(post.userId);
+          const persona = await storage.getPersonaByUserId(post.userId);
           const likesCount = await storage.getLikesByPost(post.id);
           const comments = await storage.getCommentsByPost(post.id);
           const isLiked = await storage.checkUserLike(post.id, CURRENT_USER_ID);
@@ -23,6 +25,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           return {
             ...post,
+            author: {
+              id: user?.id,
+              name: user?.name,
+              username: user?.username,
+              profileImage: user?.profileImage,
+            },
+            persona: persona ? {
+              id: persona.id,
+              name: persona.name,
+              image: persona.image,
+            } : null,
             likesCount,
             commentsCount: comments.length,
             isLiked,
@@ -100,7 +113,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/perso/:postId/messages", async (req, res) => {
     try {
       const messages = await storage.getMessagesByPost(req.params.postId);
-      res.json(messages);
+      
+      // 각 메시지에 사용자/페르소나 정보 추가
+      const messagesWithInfo = await Promise.all(
+        messages.map(async (msg) => {
+          if (msg.isAI && msg.personaId) {
+            const persona = await storage.getPersona(msg.personaId);
+            return {
+              ...msg,
+              persona: persona ? {
+                name: persona.name,
+                image: persona.image,
+              } : null,
+            };
+          } else if (!msg.isAI && msg.userId) {
+            const user = await storage.getUser(msg.userId);
+            return {
+              ...msg,
+              user: user ? {
+                name: user.name,
+                username: user.username,
+                profileImage: user.profileImage,
+              } : null,
+            };
+          }
+          return msg;
+        })
+      );
+      
+      res.json(messagesWithInfo);
     } catch (error) {
       res.status(500).json({ message: "메시지를 가져오는데 실패했습니다" });
     }
