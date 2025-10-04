@@ -14,6 +14,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // 임시 현재 사용자 ID (추후 인증 시스템과 통합)
   const CURRENT_USER_ID = "temp-user-id";
 
+  // GET /api/user/persona - 현재 사용자의 페르소나 가져오기
+  app.get("/api/user/persona", async (req, res) => {
+    try {
+      const persona = await storage.getPersonaByUserId(CURRENT_USER_ID);
+      if (!persona) {
+        return res.status(404).json({ message: "페르소나를 찾을 수 없습니다" });
+      }
+      res.json(persona);
+    } catch (error) {
+      res.status(500).json({ message: "페르소나를 가져오는데 실패했습니다" });
+    }
+  });
+
   // GET /api/posts - 모든 게시물 가져오기
   app.get("/api/posts", async (req, res) => {
     try {

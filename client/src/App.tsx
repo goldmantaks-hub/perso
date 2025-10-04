@@ -11,6 +11,7 @@ import ProfilePage from "@/pages/profile";
 import SearchPage from "@/pages/search";
 import ActivityPage from "@/pages/activity";
 import PersoPage from "@/pages/perso";
+import ChatPage from "@/pages/chat";
 
 function Router() {
   return (
@@ -22,6 +23,7 @@ function Router() {
       <Route path="/search" component={SearchPage} />
       <Route path="/activity" component={ActivityPage} />
       <Route path="/profile" component={ProfilePage} />
+      <Route path="/chat" component={ChatPage} />
       <Route path="/perso/:postId" component={PersoPage} />
       <Route component={NotFound} />
     </Switch>

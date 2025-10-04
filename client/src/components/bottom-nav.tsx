@@ -1,4 +1,4 @@
-import { Home, Search, Plus, Heart, User } from "lucide-react";
+import { Home, Search, Plus, MessageCircle, User } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useState } from "react";
 import CreatePostModal from "./create-post-modal";
@@ -56,14 +56,14 @@ export default function BottomNav({ currentUser }: BottomNavProps) {
 
           {/* 오른쪽 버튼들 */}
           <div className="flex justify-around items-center w-2/5">
-            <Link href="/activity">
+            <Link href="/chat">
               <button
                 className={`flex flex-col items-center ${
-                  isActive("/activity") ? "text-primary" : "text-muted-foreground"
+                  isActive("/chat") ? "text-primary" : "text-muted-foreground"
                 }`}
-                data-testid="bottom-nav-활동"
+                data-testid="bottom-nav-대화"
               >
-                <Heart className="w-7 h-7" />
+                <MessageCircle className="w-7 h-7" />
               </button>
             </Link>
             <Link href="/profile">
