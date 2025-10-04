@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect"/>
+<link as="style" href="https://fonts.googleapis.com/css2?display=swap&amp;family=Plus+Jakarta+Sans%3Awght%40400%3B500%3B700%3B800" onload="this.rel='stylesheet'" rel="stylesheet"/>
+<title>PERSO - My Page</title>
+<link href="data:image/x-icon;base64," rel="icon" type="image/x-icon"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>tailwind.config = {darkMode: "class", theme: {extend: {colors: {primary: "#359EFF", "background-light": "#f5f7f8", "background-dark": "#0f1923", "content-light": "#333333", "content-dark": "#e5e5e5", "subtle-light": "#cccccc", "subtle-dark": "#444444", "border-light": "#e0e0e0", "border-dark": "#333333"}, fontFamily: {display: "Plus Jakarta Sans"}, borderRadius: {DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px"}}}};</script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col">
+<header class="sticky top-0 z-10 flex items-center justify-between border-b border-border-light dark:border-border-dark bg-background-light/80 dark:bg-background-dark/80 p-4 backdrop-blur-sm">
+<button class="flex h-10 w-10 items-center justify-center rounded-full text-content-light dark:text-content-dark">
+<span class="material-symbols-outlined">
+                    language
+                </span>
+</button>
+<h1 class="text-lg font-bold text-content-light dark:text-content-dark">Sophia</h1>
+<div class="flex items-center gap-2">
+<button class="flex h-10 w-10 items-center justify-center rounded-full text-content-light dark:text-content-dark">
+<span class="material-symbols-outlined">
+                        ios_share
+                    </span>
+</button>
+<button class="flex h-10 w-10 items-center justify-center rounded-full text-content-light dark:text-content-dark">
+<span class="material-symbols-outlined">
+                        more_horiz
+                    </span>
+</button>
+</div>
+</header>
+<main class="flex-grow">
+<div class="p-4">
+<div class="flex items-start justify-between gap-4">
+<div class="flex flex-col">
+<h2 class="text-2xl font-bold text-content-light dark:text-content-dark">Sophia</h2>
+<p class="text-base text-subtle-light dark:text-subtle-dark">@sophia</p>
+</div>
+<div class="h-20 w-20 flex-shrink-0 rounded-full bg-cover bg-center" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC2HpSfxAtm5o6W-Bw6KhpQ1hVVLdUHUemVs21-qu2ji9_gGjWlyFLqiDnSFbwh4yG-vj8LTdwp7GmtYaCwGkC8T4GsQWx8CoAnOKycHvWQbv2ZD_a33E9Zla6cI99_GE7tZ9L7DMdqi3li1fEv6lFj6oUFixkoyCl1rfbPZN2VEgCQor_vzGSdLLorwgpIdenyILwk4OLijA88xBXn8yXaMyc-GaHIpNGcmjEYZ1W-0zAxWmBmUfCwGbGV23it1_I6Z5bCEe6nhx8");'></div>
+</div>
+<p class="mt-2 text-base text-content-light dark:text-content-dark">Enthusiast exploring the frontiers of machine learning.</p>
+<div class="mt-4 flex items-center gap-4 text-sm text-subtle-light dark:text-subtle-dark">
+<div class="flex items-center gap-1">
+<span class="font-bold text-content-light dark:text-content-dark">1.2K</span>
+<span>followers</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="font-bold text-content-light dark:text-content-dark">500</span>
+<span>following</span>
+</div>
+</div>
+<div class="mt-4 flex w-full gap-3">
+<button class="flex-1 rounded-lg bg-subtle-light/30 dark:bg-subtle-dark/50 py-2 text-sm font-bold text-content-light dark:text-content-dark">Edit profile</button>
+<button class="flex-1 rounded-lg bg-subtle-light/30 dark:bg-subtle-dark/50 py-2 text-sm font-bold text-content-light dark:text-content-dark">My Activity</button>
+</div>
+</div>
+<div class="border-b border-border-light dark:border-border-dark">
+<div class="flex overflow-x-auto no-scrollbar">
+<a class="flex-shrink-0 whitespace-nowrap border-b-2 border-transparent px-4 py-3 text-center text-sm font-medium text-subtle-light dark:text-subtle-dark" href="#">
+                        Perso
+                    </a>
+<a class="flex-shrink-0 whitespace-nowrap border-b-2 border-transparent px-4 py-3 text-center text-sm font-medium text-subtle-light dark:text-subtle-dark" href="#">
+                        Persona Activity
+                    </a>
+<a class="flex-shrink-0 whitespace-nowrap border-b-2 border-primary px-4 py-3 text-center text-sm font-bold text-primary" href="#">
+                        Persona Growth
+                    </a>
+<a class="flex-shrink-0 whitespace-nowrap border-b-2 border-transparent px-4 py-3 text-center text-sm font-medium text-subtle-light dark:text-subtle-dark" href="#">
+                        Likes
+                    </a>
+</div>
+</div>
+<div class="p-4">
+<div class="relative rounded-xl bg-background-light dark:bg-subtle-dark/30 p-4">
+<div class="flex items-center gap-4">
+<div class="h-24 w-24 flex-shrink-0 -mt-10 rounded-full border-4 border-background-light dark:border-background-dark bg-cover bg-center" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBG-WpBWjBoXGXAHIjsD62QWUr6MZNu9YwmMN4YN6ZYAEgcbQyeDu0FtonzGvwvCz9sVIZtBZBozOEb6VD0ZfW0zg3STn-h7tfIzI5NPlPBj8XysPHaHl0Ie3mI6lVis39hwGAcT3WWG7_G7CripPMYzan_Chglk7phBAFnZFk2LPo42fQJKrPykxpBLgGljeq_OyCloNXUnfUj1I1WneIhSRbARh9VT2ib7uYLOarPxUeOQ2vYTDzgVvUAxoACYQ2LAb1GpJeZJY8");'>
+</div>
+<div class="flex-grow">
+<h3 class="text-lg font-bold text-content-light dark:text-content-dark">Your Persona</h3>
+<p class="mt-1 text-sm text-subtle-light dark:text-subtle-dark">This is Kai, your creative companion.</p>
+</div>
+</div>
+<div class="mt-4 space-y-4">
+<div>
+<div class="flex justify-between text-sm font-medium text-content-light dark:text-content-dark">
+<span>Empathy</span>
+<span>Level 8</span>
+</div>
+<div class="mt-1 h-2 rounded-full bg-subtle-light/30 dark:bg-subtle-dark/50">
+<div class="h-2 w-4/5 rounded-full bg-primary"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-sm font-medium text-content-light dark:text-content-dark">
+<span>Creativity</span>
+<span>Level 5</span>
+</div>
+<div class="mt-1 h-2 rounded-full bg-subtle-light/30 dark:bg-subtle-dark/50">
+<div class="h-2 w-1/2 rounded-full bg-primary"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-sm font-medium text-content-light dark:text-content-dark">
+<span>Knowledge</span>
+<span>Level 7</span>
+</div>
+<div class="mt-1 h-2 rounded-full bg-subtle-light/30 dark:bg-subtle-dark/50">
+<div class="h-2 w-3/4 rounded-full bg-primary"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-4 rounded-xl bg-background-light dark:bg-subtle-dark/30 p-4">
+<div class="flex items-center justify-between">
+<h3 class="text-lg font-bold text-content-light dark:text-content-dark">Ability Enhancement</h3>
+<div class="flex items-center gap-2 rounded-full bg-primary/10 dark:bg-primary/20 px-3 py-1">
+<span class="material-symbols-outlined text-base text-primary">star</span>
+<span class="font-bold text-primary">150 Points</span>
+</div>
+</div>
+<p class="mt-1 text-sm text-subtle-light dark:text-subtle-dark">Allocate points to upgrade your persona's abilities.</p>
+<div class="mt-4 space-y-4">
+<div class="flex items-center justify-between">
+<div>
+<p class="font-semibold text-content-light dark:text-content-dark">Empathy</p>
+<p class="text-sm text-subtle-light dark:text-subtle-dark">Current Level: 8</p>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex h-8 w-8 items-center justify-center rounded-full bg-subtle-light/30 dark:bg-subtle-dark/50 text-content-light dark:text-content-dark">-</button>
+<span class="w-8 text-center font-semibold text-content-light dark:text-content-dark">0</span>
+<button class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white">+</button>
+</div>
+</div>
+<div class="mt-1 h-2 rounded-full bg-subtle-light/30 dark:bg-subtle-dark/50">
+<div class="h-2 w-4/5 rounded-full bg-primary"></div>
+</div>
+<div class="flex items-center justify-between">
+<div>
+<p class="font-semibold text-content-light dark:text-content-dark">Humor</p>
+<p class="text-sm text-subtle-light dark:text-subtle-dark">Current Level: 4</p>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex h-8 w-8 items-center justify-center rounded-full bg-subtle-light/30 dark:bg-subtle-dark/50 text-content-light dark:text-content-dark">-</button>
+<span class="w-8 text-center font-semibold text-content-light dark:text-content-dark">0</span>
+<button class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white">+</button>
+</div>
+</div>
+<div class="mt-1 h-2 rounded-full bg-subtle-light/30 dark:bg-subtle-dark/50">
+<div class="h-2 w-2/5 rounded-full bg-primary"></div>
+</div>
+<div class="flex items-center justify-between">
+<div>
+<p class="font-semibold text-content-light dark:text-content-dark">Sociability</p>
+<p class="text-sm text-subtle-light dark:text-subtle-dark">Current Level: 6</p>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex h-8 w-8 items-center justify-center rounded-full bg-subtle-light/30 dark:bg-subtle-dark/50 text-content-light dark:text-content-dark">-</button>
+<span class="w-8 text-center font-semibold text-content-light dark:text-content-dark">0</span>
+<button class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white">+</button>
+</div>
+</div>
+<div class="mt-1 h-2 rounded-full bg-subtle-light/30 dark:bg-subtle-dark/50">
+<div class="h-2 w-3/5 rounded-full bg-primary"></div>
+</div>
+</div>
+<button class="mt-6 w-full rounded-lg bg-primary py-3 text-sm font-bold text-white">Apply Upgrades</button>
+</div>
+</div>
+</main>
+<nav class="sticky bottom-0 z-10 grid grid-cols-5 border-t border-border-light dark:border-border-dark bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm">
+<a class="flex items-center justify-center p-3 text-subtle-light dark:text-subtle-dark" href="#">
+<span class="material-symbols-outlined">home</span>
+</a>
+<a class="flex items-center justify-center p-3 text-subtle-light dark:text-subtle-dark" href="#">
+<span class="material-symbols-outlined">search</span>
+</a>
+<a class="flex items-center justify-center p-3 text-subtle-light dark:text-subtle-dark" href="#">
+<span class="material-symbols-outlined">edit_square</span>
+</a>
+<a class="flex items-center justify-center p-3 text-subtle-light dark:text-subtle-dark" href="#">
+<span class="material-symbols-outlined">favorite</span>
+</a>
+<a class="flex items-center justify-center p-3 text-primary dark:text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">person</span>
+</a>
+</nav>
+</div>
+</body></html>
