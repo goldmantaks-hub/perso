@@ -12,6 +12,8 @@ import SearchPage from "@/pages/search";
 import ActivityPage from "@/pages/activity";
 import PersoPage from "@/pages/perso";
 import ChatPage from "@/pages/chat";
+import { useEffect, useState } from "react";
+import { isAuthenticated, setToken, setUser } from "./lib/auth";
 
 function Router() {
   return (
@@ -31,6 +33,38 @@ function Router() {
 }
 
 function App() {
+  const [authInitialized, setAuthInitialized] = useState(false);
+
+  useEffect(() => {
+    // 자동 로그인: 토큰이 없으면 mock 사용자로 로그인
+    async function autoLogin() {
+      if (!isAuthenticated()) {
+        try {
+          const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'jieun_kim' }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            setToken(data.token);
+            setUser(data.user);
+          }
+        } catch (error) {
+          console.error('Auto login failed:', error);
+        }
+      }
+      setAuthInitialized(true);
+    }
+
+    autoLogin();
+  }, []);
+
+  if (!authInitialized) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>

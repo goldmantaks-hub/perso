@@ -48,7 +48,7 @@ function PostCard({ post }: { post: any }) {
       }
 
       // 1. AI 감성 분석
-      const response = await apiRequest("POST", "/ai/analyze", {
+      const response = await apiRequest("POST", "/api/ai/analyze", {
         content: post.title + " " + post.description,
         imageUrl: post.image,
       });
@@ -66,7 +66,7 @@ function PostCard({ post }: { post: any }) {
       const prevMood = { valence: 0, arousal: 0.5 }; // 기본값
       const newMood = updatePersonaMood(prevMood, mood, weight);
       
-      await apiRequest("POST", `/personas/${post.persona.id}/mood/update`, {
+      await apiRequest("POST", `/api/personas/${post.persona.id}/mood/update`, {
         valence: newMood.valence,
         arousal: newMood.arousal,
       });
@@ -79,7 +79,7 @@ function PostCard({ post }: { post: any }) {
       });
 
       // 5. 페르소나 성장 반영
-      await apiRequest("POST", `/personas/${post.persona.id}/growth/auto`, {
+      await apiRequest("POST", `/api/personas/${post.persona.id}/growth/auto`, {
         deltas,
       });
 

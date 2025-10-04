@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertPostSchema, insertLikeSchema, insertCommentSchema, insertPersoMessageSchema } from "@shared/schema";
 import OpenAI from "openai";
+import { authenticateToken, optionalAuthenticateToken, generateToken } from "./middleware/auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -10,14 +11,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   });
-  
-  // 임시 현재 사용자 ID (추후 인증 시스템과 통합)
-  const CURRENT_USER_ID = "temp-user-id";
+
+  // Mock 로그인 엔드포인트
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { username } = req.body;
+      
+      if (!username) {
+        return res.status(400).json({ error: "사용자명이 필요합니다" });
+      }
+
+      // Mock: 실제 비밀번호 검증 없이 사용자 찾기
+      const user = await storage.getUserByUsername(username);
+      
+      if (!user) {
+        return res.status(404).json({ error: "사용자를 찾을 수 없습니다" });
+      }
+
+      // JWT 토큰 생성
+      const token = generateToken({ 
+        userId: user.id, 
+        username: user.username 
+      });
+
+      res.json({ 
+        token, 
+        user: { 
+          id: user.id, 
+          username: user.username, 
+          name: user.name 
+        } 
+      });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ error: "로그인 실패" });
+    }
+  });
 
   // GET /api/user/persona - 현재 사용자의 페르소나 가져오기
-  app.get("/api/user/persona", async (req, res) => {
+  app.get("/api/user/persona", authenticateToken, async (req, res) => {
     try {
-      const persona = await storage.getPersonaByUserId(CURRENT_USER_ID);
+      if (!req.userId) {
+        return res.status(401).json({ message: "인증되지 않은 사용자입니다" });
+      }
+      
+      const persona = await storage.getPersonaByUserId(req.userId);
       if (!persona) {
         return res.status(404).json({ message: "페르소나를 찾을 수 없습니다" });
       }
@@ -28,7 +66,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GET /api/posts - 모든 게시물 가져오기
-  app.get("/api/posts", async (req, res) => {
+  app.get("/api/posts", optionalAuthenticateToken, async (req, res) => {
     try {
       const allPosts = await storage.getPosts();
       
@@ -39,7 +77,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const persona = await storage.getPersonaByUserId(post.userId);
           const likesCount = await storage.getLikesByPost(post.id);
           const comments = await storage.getCommentsByPost(post.id);
-          const isLiked = await storage.checkUserLike(post.id, CURRENT_USER_ID);
+          const isLiked = req.userId ? await storage.checkUserLike(post.id, req.userId) : false;
           
           // 새 스키마에서 conversation 가져오기
           const conversation = await storage.getConversationByPost(post.id);
@@ -116,11 +154,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/posts - 게시물 생성
-  app.post("/api/posts", async (req, res) => {
+  app.post("/api/posts", authenticateToken, async (req, res) => {
     try {
+      if (!req.userId) {
+        return res.status(401).json({ message: "인증되지 않은 사용자입니다" });
+      }
+      
       const validatedData = insertPostSchema.parse({
         ...req.body,
-        userId: CURRENT_USER_ID,
+        userId: req.userId,
       });
       
       const post = await storage.createPost(validatedData);
@@ -131,17 +173,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/likes - 좋아요 토글
-  app.post("/api/likes", async (req, res) => {
+  app.post("/api/likes", authenticateToken, async (req, res) => {
     try {
+      if (!req.userId) {
+        return res.status(401).json({ message: "인증되지 않은 사용자입니다" });
+      }
+      
       const { postId } = req.body;
       
-      const isLiked = await storage.checkUserLike(postId, CURRENT_USER_ID);
+      const isLiked = await storage.checkUserLike(postId, req.userId);
       
       if (isLiked) {
-        await storage.deleteLike(postId, CURRENT_USER_ID);
+        await storage.deleteLike(postId, req.userId);
         res.json({ liked: false });
       } else {
-        await storage.createLike({ postId, userId: CURRENT_USER_ID });
+        await storage.createLike({ postId, userId: req.userId });
         res.json({ liked: true });
       }
     } catch (error) {
@@ -160,11 +206,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/comments - 댓글 작성
-  app.post("/api/comments", async (req, res) => {
+  app.post("/api/comments", authenticateToken, async (req, res) => {
     try {
+      if (!req.userId) {
+        return res.status(401).json({ message: "인증되지 않은 사용자입니다" });
+      }
+      
       const validatedData = insertCommentSchema.parse({
         ...req.body,
-        userId: CURRENT_USER_ID,
+        userId: req.userId,
       });
       
       const comment = await storage.createComment(validatedData);
@@ -249,8 +299,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/perso/:postId/messages - 페르소 메시지 작성 (새 스키마)
-  app.post("/api/perso/:postId/messages", async (req, res) => {
+  app.post("/api/perso/:postId/messages", authenticateToken, async (req, res) => {
     try {
+      if (!req.userId) {
+        return res.status(401).json({ message: "인증되지 않은 사용자입니다" });
+      }
+      
       const { content, isAI, personaId } = req.body;
       const postId = req.params.postId;
       
@@ -259,12 +313,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!conversation) {
         const senderType = isAI ? 'persona' : 'user';
-        const senderId = isAI ? personaId : CURRENT_USER_ID;
+        const senderId = isAI ? personaId : req.userId;
         conversation = await storage.createConversationForPost(postId, senderType, senderId);
       }
       
       const senderType = isAI ? 'persona' : 'user';
-      const senderId = isAI ? personaId : CURRENT_USER_ID;
+      const senderId = isAI ? personaId : req.userId;
       
       // 참가자 자동 추가 (이미 있으면 unique constraint로 무시됨)
       try {

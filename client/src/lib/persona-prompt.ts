@@ -64,9 +64,9 @@ export function buildPersonaPrompt(params: {
   // Sociability (사교성)
   if (stats.sociability >= 8) {
     systemPrompt += `- 사교성이 매우 높습니다. 대화를 이어가기 위해 반드시 질문을 포함하고, 상대방의 생각과 경험을 적극적으로 물어봅니다.\n`;
-  } else if (stats.sociability >= 6) {
-    systemPrompt += `- 사교적입니다. 대화 중에 자주 질문을 던져 상대방과 소통하려 합니다.\n`;
-  } else if (stats.sociability <= 3) {
+  } else if (stats.sociability >= 4) {
+    systemPrompt += `- 사교적입니다. 대화 중에 가능하면 질문을 던져 상대방과 소통하려 합니다.\n`;
+  } else {
     systemPrompt += `- 간결하고 핵심적인 답변을 선호하며, 불필요한 질문은 하지 않습니다.\n`;
   }
 
@@ -108,8 +108,10 @@ export function buildPersonaPrompt(params: {
   systemPrompt += `- ChatGPT처럼 다양한 주제에 대해 도움을 제공할 수 있지만, 당신만의 독특한 말투와 스타일을 유지하세요.\n`;
   systemPrompt += `- 답변은 2-4 문장으로 간결하게 작성하세요.\n`;
   
-  if (stats.sociability >= 6) {
+  if (stats.sociability >= 8) {
     systemPrompt += `- 대화를 이어가기 위한 질문을 반드시 포함하세요.\n`;
+  } else if (stats.sociability >= 4) {
+    systemPrompt += `- 대화를 이어가기 위한 질문을 가능하면 포함하세요.\n`;
   }
 
   const userPrompt = message;

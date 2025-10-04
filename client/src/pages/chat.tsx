@@ -32,13 +32,8 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 현재 사용자의 페르소나 가져오기
-  const { data: persona, isLoading: personaLoading } = useQuery({
+  const { data: persona, isLoading: personaLoading } = useQuery<any>({
     queryKey: ['/api/user/persona'],
-    queryFn: async () => {
-      const res = await fetch('/api/user/persona');
-      if (!res.ok) throw new Error('페르소나를 찾을 수 없습니다');
-      return res.json();
-    },
   });
 
   // 대화 mutation
