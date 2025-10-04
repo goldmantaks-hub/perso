@@ -1,4 +1,4 @@
-import { Settings, Plus } from "lucide-react";
+import { Settings, Plus, Moon, Sun } from "lucide-react";
 import { Link } from "wouter";
 import BottomNav from "@/components/bottom-nav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -6,8 +6,28 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles } from "lucide-react";
 import logoImage from "@assets/logo.svg";
+import { useState, useEffect } from "react";
 
 export default function FeedPage() {
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return document.documentElement.classList.contains('dark');
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDark]);
+
+  const toggleTheme = () => {
+    setIsDark(!isDark);
+  };
+
   const currentUser = {
     name: "김지은",
     username: "jieun_kim",
@@ -110,8 +130,12 @@ export default function FeedPage() {
           className="h-36 dark:invert-0 invert" 
           data-testid="img-logo" 
         />
-        <button className="text-foreground" data-testid="button-settings">
-          <Settings className="w-6 h-6" />
+        <button 
+          onClick={toggleTheme}
+          className="text-foreground" 
+          data-testid="button-theme-toggle"
+        >
+          {isDark ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
         </button>
       </header>
 
