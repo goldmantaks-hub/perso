@@ -8,6 +8,8 @@ import SignupPage from "@/pages/signup";
 import LoginPage from "@/pages/login";
 import FeedPage from "@/pages/feed";
 import ProfilePage from "@/pages/profile";
+import SearchPage from "@/pages/search";
+import ActivityPage from "@/pages/activity";
 
 function Router() {
   return (
@@ -16,6 +18,8 @@ function Router() {
       <Route path="/signup" component={SignupPage} />
       <Route path="/login" component={LoginPage} />
       <Route path="/feed" component={FeedPage} />
+      <Route path="/search" component={SearchPage} />
+      <Route path="/activity" component={ActivityPage} />
       <Route path="/profile" component={ProfilePage} />
       <Route component={NotFound} />
     </Switch>

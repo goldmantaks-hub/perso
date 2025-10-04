@@ -1,4 +1,5 @@
 import Navbar from "@/components/navbar";
+import BottomNav from "@/components/bottom-nav";
 import FeedPost from "@/components/feed-post";
 
 export default function FeedPage() {
@@ -77,7 +78,7 @@ export default function FeedPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-16 md:pb-0">
       <Navbar currentUser={currentUser} />
       
       <main className="max-w-2xl mx-auto py-4 space-y-0">
@@ -85,6 +86,8 @@ export default function FeedPage() {
           <FeedPost key={post.id} {...post} />
         ))}
       </main>
+
+      <BottomNav currentUser={currentUser} />
     </div>
   );
 }
