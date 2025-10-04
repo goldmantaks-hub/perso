@@ -107,7 +107,7 @@ export default function FeedPage() {
         <img 
           src={logoImage} 
           alt="PERSO" 
-          className="h-8 dark:invert-0 invert" 
+          className="h-24 dark:invert-0 invert" 
           data-testid="img-logo" 
         />
         <button className="text-foreground" data-testid="button-settings">
