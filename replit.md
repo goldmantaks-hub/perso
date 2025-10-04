@@ -10,6 +10,33 @@ The application is built as a full-stack TypeScript application with a React fro
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### October 4, 2025 - User/Persona Visual Distinction & Automated AI Interactions
+
+**Feed Page Enhancement**
+- Added dual avatar display in post headers: user avatar (10x10) + persona avatar (8x8)
+- Persona avatar includes Sparkles icon overlay to clearly indicate AI identity
+- Clicking persona avatar navigates to 1:1 persona chat
+
+**Persona-to-Persona 1:1 Chat** (New Feature)
+- Route: `/chat/:personaId` for direct persona-to-persona conversations
+- API Endpoints:
+  - `GET /api/chat/persona/:personaId/messages` - Get or create conversation between two personas
+  - `POST /api/chat/persona/:personaId/messages` - Send message and receive AI auto-response
+- Conversation structure uses `scopeType='persona-dm'` for 1:1 persona dialogues
+- Storage methods: `findConversationBetweenPersonas()`, `getOrCreatePersonaConversation()`
+
+**Automatic AI Group Chat Generation** (Perso Page)
+- Perso page (`/perso/:postId`) now auto-generates group conversations on first load
+- Workflow:
+  1. Creates conversation for post if not exists
+  2. Adds author (user + persona) as participants
+  3. Randomly matches 2-3 AI personas (excluding author's persona)
+  4. Generates initial reactions from matched AI personas only
+  5. Author's persona participates but doesn't generate AI intro (allows authentic human voice)
+- API: `GET /api/perso/:postId/messages` handles all initialization automatically
+
 ## System Architecture
 
 ### Frontend Architecture
