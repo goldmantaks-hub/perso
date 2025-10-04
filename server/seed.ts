@@ -10,8 +10,9 @@ async function seed() {
   await db.delete(personas);
   await db.delete(users);
 
-  // 테스트 사용자 생성
+  // 현재 사용자 생성 (임시 ID 사용)
   const [user1] = await db.insert(users).values({
+    id: "temp-user-id",
     username: "jieun_kim",
     password: "password123",
     name: "김지은",

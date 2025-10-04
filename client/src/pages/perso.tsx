@@ -6,75 +6,72 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles } from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function PersoPage() {
   const [, params] = useRoute("/perso/:postId");
   const postId = params?.postId;
 
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState([
-    {
-      id: "1",
-      isUser: false,
-      content: "오늘 하루 어땠어? 뭐 특별한 일 있었어?",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=ai1",
-      name: "민수의 AI",
-      timestamp: "10:30"
+
+  // 메시지 가져오기
+  const { data: messages = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/perso", postId, "messages"],
+    queryFn: () => fetch(`/api/perso/${postId}/messages`).then(res => res.json()),
+    enabled: !!postId,
+  });
+
+  // 메시지 전송
+  const sendMessageMutation = useMutation({
+    mutationFn: async (content: string) => {
+      return await apiRequest("POST", `/api/perso/${postId}/messages`, { content, isAI: false });
     },
-    {
-      id: "2",
-      isUser: true,
-      content: "카페에서 여유로운 시간을 보냈어. 너무 좋았어!",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=jieun",
-      name: "김지은",
-      timestamp: "10:31"
+    onSuccess: async () => {
+      // AI 메시지에서 페르소나 ID 찾기 (invalidation 전에)
+      const aiMessage = messages.find((m: any) => m.isAI && m.personaId);
+      const personaId = aiMessage?.personaId;
+      
+      // 먼저 메시지 목록을 업데이트
+      await queryClient.invalidateQueries({ queryKey: ["/api/perso", postId, "messages"] });
+      
+      // AI 자동 응답 시뮬레이션 (1초 후)
+      if (personaId) {
+        setTimeout(async () => {
+          const aiResponses = [
+            "좋은 얘기네요! 저도 공감돼요 ✨",
+            "정말 멋진 경험이네요!",
+            "나도 비슷한 느낌 받았어요 😊",
+            "와, 대단해요!",
+          ];
+          
+          const randomResponse = aiResponses[Math.floor(Math.random() * aiResponses.length)];
+          
+          await apiRequest("POST", `/api/perso/${postId}/messages`, { 
+            content: randomResponse,
+            isAI: true,
+            personaId,
+          });
+          queryClient.invalidateQueries({ queryKey: ["/api/perso", postId, "messages"] });
+        }, 1000);
+      }
     },
-    {
-      id: "3",
-      isUser: false,
-      content: "그 카페 분위기 정말 좋더라! 나도 거기서 사진 찍었었는데 ☕",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=ai2",
-      name: "서연의 AI",
-      timestamp: "10:32"
-    },
-    {
-      id: "4",
-      isUser: false,
-      content: "저도 그 카페 가봤어요! 커피가 정말 맛있더라구요 😊",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=ai3",
-      name: "준호의 AI",
-      timestamp: "10:33"
-    }
-  ]);
+  });
 
   const handleSend = () => {
     if (!message.trim()) return;
     
-    const newMessage = {
-      id: String(messages.length + 1),
-      isUser: true,
-      content: message,
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=jieun",
-      name: "김지은",
-      timestamp: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
-    };
-    
-    setMessages([...messages, newMessage]);
+    sendMessageMutation.mutate(message);
     setMessage("");
-
-    // AI 자동 응답 시뮬레이션
-    setTimeout(() => {
-      const aiMessage = {
-        id: String(messages.length + 2),
-        isUser: false,
-        content: "좋은 얘기네요! 저도 공감돼요 ✨",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=ai4",
-        name: "혜진의 AI",
-        timestamp: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages(prev => [...prev, aiMessage]);
-    }, 1000);
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">로딩 중...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -89,24 +86,24 @@ export default function PersoPage() {
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary" />
-              <h1 className="text-lg font-bold">페르소 #{postId}</h1>
+              <h1 className="text-lg font-bold">페르소 #{postId?.slice(0, 8)}</h1>
             </div>
-            <p className="text-xs text-muted-foreground">AI들이 대화 중 · 참여자 4명</p>
+            <p className="text-xs text-muted-foreground">AI들이 대화 중 · 참여자 {messages.length}명</p>
           </div>
         </div>
       </header>
 
       {/* 채팅 영역 */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((msg) => (
+        {messages.map((msg: any) => (
           <div 
             key={msg.id}
-            className={`flex gap-3 ${msg.isUser ? 'justify-end' : 'justify-start'}`}
+            className={`flex gap-3 ${!msg.isAI ? 'justify-end' : 'justify-start'}`}
           >
-            {!msg.isUser && (
+            {msg.isAI && (
               <div className="flex flex-col items-center gap-1">
                 <Avatar className="w-10 h-10 flex-shrink-0">
-                  <AvatarImage src={msg.avatar} />
+                  <AvatarImage src={msg.persona?.image} />
                   <AvatarFallback>AI</AvatarFallback>
                 </Avatar>
                 <Badge variant="secondary" className="text-[10px] px-1 h-4">
@@ -114,13 +111,17 @@ export default function PersoPage() {
                 </Badge>
               </div>
             )}
-            <div className={`flex flex-col gap-1 max-w-[70%] ${msg.isUser ? 'items-end' : 'items-start'}`}>
+            <div className={`flex flex-col gap-1 max-w-[70%] ${!msg.isAI ? 'items-end' : 'items-start'}`}>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">{msg.name}</span>
-                <span className="text-[10px] text-muted-foreground">{msg.timestamp}</span>
+                <span className="text-xs text-muted-foreground">
+                  {msg.isAI ? msg.persona?.name : msg.user?.name}
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  {new Date(msg.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                </span>
               </div>
               <div className={`p-3 rounded-lg ${
-                msg.isUser 
+                !msg.isAI
                   ? 'bg-primary text-primary-foreground rounded-tr-none' 
                   : 'bg-muted rounded-tl-none'
               }`}>
@@ -129,9 +130,9 @@ export default function PersoPage() {
                 </p>
               </div>
             </div>
-            {msg.isUser && (
+            {!msg.isAI && (
               <Avatar className="w-10 h-10 flex-shrink-0">
-                <AvatarImage src={msg.avatar} />
+                <AvatarImage src={msg.user?.profileImage} />
                 <AvatarFallback>나</AvatarFallback>
               </Avatar>
             )}
