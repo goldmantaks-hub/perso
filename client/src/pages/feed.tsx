@@ -104,7 +104,12 @@ export default function FeedPage() {
       {/* 상단 헤더 */}
       <header className="sticky top-0 z-10 flex items-center justify-between p-4 bg-background/80 backdrop-blur-sm">
         <div className="w-8"></div>
-        <img src={logoImage} alt="PERSO" className="h-8" data-testid="img-logo" />
+        <img 
+          src={logoImage} 
+          alt="PERSO" 
+          className="h-8 dark:invert-0 invert" 
+          data-testid="img-logo" 
+        />
         <button className="text-foreground" data-testid="button-settings">
           <Settings className="w-6 h-6" />
         </button>
