@@ -319,6 +319,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Mock API: /ai/analyze - 감성 분석
+  app.post("/ai/analyze", async (req, res) => {
+    try {
+      const { content, imageUrl } = req.body;
+      
+      // Mock 감성 분석 결과
+      const positive = Math.random() * 0.5 + 0.4; // 0.4~0.9
+      const negative = Math.random() * 0.2; // 0~0.2
+      const neutral = 1 - positive - negative;
+      
+      // Mock tones
+      const allTones = ['humorous', 'playful', 'informative', 'analytical', 'serene', 'nostalgic', 'excited', 'calm'];
+      const tones = allTones.slice(0, Math.floor(Math.random() * 3) + 1);
+      
+      // Mock image scores (이미지가 있을 때만)
+      const media_scores = imageUrl ? {
+        aesthetics: Math.random() * 0.4 + 0.6, // 0.6~1.0
+        quality: Math.random() * 0.3 + 0.7, // 0.7~1.0
+      } : undefined;
+      
+      res.json({
+        positive,
+        neutral,
+        negative,
+        tones,
+        media_scores
+      });
+    } catch (error) {
+      res.status(500).json({ message: "분석에 실패했습니다" });
+    }
+  });
+  
+  // Mock API: /personas/:id/mood/update - 페르소나 무드 업데이트
+  app.post("/personas/:id/mood/update", async (req, res) => {
+    try {
+      const personaId = req.params.id;
+      const { valence, arousal } = req.body;
+      
+      console.log(`[PERSONA MOOD UPDATE] Persona ${personaId}:`, { valence, arousal });
+      
+      // Mock: 페르소나 무드 저장 (실제로는 DB 업데이트)
+      res.json({
+        success: true,
+        personaId,
+        mood: { valence, arousal }
+      });
+    } catch (error) {
+      res.status(500).json({ message: "무드 업데이트 실패" });
+    }
+  });
+  
+  // Mock API: /personas/:id/growth/auto - 페르소나 성장 자동 반영
+  app.post("/personas/:id/growth/auto", async (req, res) => {
+    try {
+      const personaId = req.params.id;
+      const { deltas } = req.body;
+      
+      console.log(`[PERSONA GROWTH] Persona ${personaId} deltas:`, deltas);
+      
+      // Mock: 페르소나 스탯 업데이트 (실제로는 DB 업데이트)
+      res.json({
+        success: true,
+        personaId,
+        deltas
+      });
+    } catch (error) {
+      res.status(500).json({ message: "성장 반영 실패" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
