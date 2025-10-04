@@ -21,7 +21,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const likesCount = await storage.getLikesByPost(post.id);
           const comments = await storage.getCommentsByPost(post.id);
           const isLiked = await storage.checkUserLike(post.id, CURRENT_USER_ID);
-          const messages = await storage.getMessagesByPost(post.id);
+          
+          // 새 스키마에서 conversation 가져오기
+          const conversation = await storage.getConversationByPost(post.id);
+          const messages = conversation 
+            ? await storage.getMessagesByConversation(conversation.id)
+            : [];
           
           // 최근 메시지 3개 가져오기 (최신순으로 정렬 후 3개 선택)
           const sortedMessages = [...messages].sort((a, b) => 
@@ -29,27 +34,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
           );
           const recentMessages = await Promise.all(
             sortedMessages.slice(0, 3).map(async (msg) => {
-              if (msg.isAI && msg.personaId) {
-                const msgPersona = await storage.getPersona(msg.personaId);
+              if (msg.senderType === 'persona') {
+                const msgPersona = await storage.getPersona(msg.senderId);
                 return {
                   ...msg,
+                  isAI: true,
+                  personaId: msg.senderId,
                   persona: msgPersona ? {
                     name: msgPersona.name,
                     image: msgPersona.image,
                   } : null,
                 };
-              } else if (!msg.isAI && msg.userId) {
-                const msgUser = await storage.getUser(msg.userId);
+              } else if (msg.senderType === 'user') {
+                const msgUser = await storage.getUser(msg.senderId);
                 return {
                   ...msg,
+                  isAI: false,
+                  userId: msg.senderId,
                   user: msgUser ? {
                     name: msgUser.name,
                     username: msgUser.username,
                     profileImage: msgUser.profileImage,
                   } : null,
                 };
+              } else {
+                // 시스템 메시지 또는 알 수 없는 타입
+                return {
+                  ...msg,
+                  isAI: false,
+                  userId: null,
+                };
               }
-              return msg;
             })
           );
           
@@ -140,36 +155,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GET /api/perso/:postId/messages - 페르소 메시지 가져오기
+  // GET /api/perso/:postId/messages - 페르소 메시지 가져오기 (새 스키마)
   app.get("/api/perso/:postId/messages", async (req, res) => {
     try {
       const post = await storage.getPost(req.params.postId);
-      const messages = await storage.getMessagesByPost(req.params.postId);
+      const conversation = await storage.getConversationByPost(req.params.postId);
+      
+      if (!conversation) {
+        return res.json({
+          messages: [],
+          post: post ? {
+            id: post.id,
+            title: post.title,
+            description: post.description,
+            tags: post.tags,
+            sentiment: post.sentiment,
+          } : null,
+        });
+      }
+      
+      const messages = await storage.getMessagesByConversation(conversation.id);
       
       // 각 메시지에 사용자/페르소나 정보 추가
       const messagesWithInfo = await Promise.all(
         messages.map(async (msg) => {
-          if (msg.isAI && msg.personaId) {
-            const persona = await storage.getPersona(msg.personaId);
+          if (msg.senderType === 'persona') {
+            const persona = await storage.getPersona(msg.senderId);
             return {
               ...msg,
+              isAI: true,
+              personaId: msg.senderId,
               persona: persona ? {
                 name: persona.name,
                 image: persona.image,
               } : null,
             };
-          } else if (!msg.isAI && msg.userId) {
-            const user = await storage.getUser(msg.userId);
+          } else if (msg.senderType === 'user') {
+            const user = await storage.getUser(msg.senderId);
             return {
               ...msg,
+              isAI: false,
+              userId: msg.senderId,
               user: user ? {
                 name: user.name,
                 username: user.username,
                 profileImage: user.profileImage,
               } : null,
             };
+          } else {
+            // 시스템 메시지 또는 알 수 없는 타입
+            return {
+              ...msg,
+              isAI: false,
+              userId: null,
+              content: msg.content,
+            };
           }
-          return msg;
         })
       );
       
@@ -188,22 +229,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/perso/:postId/messages - 페르소 메시지 작성
+  // POST /api/perso/:postId/messages - 페르소 메시지 작성 (새 스키마)
   app.post("/api/perso/:postId/messages", async (req, res) => {
     try {
       const { content, isAI, personaId } = req.body;
+      const postId = req.params.postId;
       
-      const validatedData = insertPersoMessageSchema.parse({
-        postId: req.params.postId,
+      // Conversation 가져오기 또는 생성
+      let conversation = await storage.getConversationByPost(postId);
+      
+      if (!conversation) {
+        const senderType = isAI ? 'persona' : 'user';
+        const senderId = isAI ? personaId : CURRENT_USER_ID;
+        conversation = await storage.createConversationForPost(postId, senderType, senderId);
+      }
+      
+      const senderType = isAI ? 'persona' : 'user';
+      const senderId = isAI ? personaId : CURRENT_USER_ID;
+      
+      // 참가자 자동 추가 (이미 있으면 unique constraint로 무시됨)
+      try {
+        await storage.addParticipant({
+          conversationId: conversation.id,
+          participantType: senderType,
+          participantId: senderId,
+          role: 'member',
+        });
+      } catch (error) {
+        // Unique constraint 에러는 무시 (이미 참가자임)
+      }
+      
+      // 메시지 생성
+      const message = await storage.createMessageInConversation({
+        conversationId: conversation.id,
+        senderType,
+        senderId,
         content,
-        isAI: isAI || false,
-        personaId: isAI ? personaId : null,
-        userId: isAI ? null : CURRENT_USER_ID,
+        messageType: 'text',
       });
       
-      const message = await storage.createMessage(validatedData);
       res.json(message);
     } catch (error) {
+      console.error('메시지 작성 에러:', error);
       res.status(400).json({ message: "메시지 작성에 실패했습니다" });
     }
   });

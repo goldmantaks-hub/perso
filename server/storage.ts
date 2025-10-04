@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, isNull } from "drizzle-orm";
 import {
   type User,
   type InsertUser,
@@ -13,12 +13,22 @@ import {
   type InsertComment,
   type PersoMessage,
   type InsertPersoMessage,
+  type Conversation,
+  type InsertConversation,
+  type ConversationParticipant,
+  type InsertConversationParticipant,
+  type Message,
+  type InsertMessage,
   users,
   personas,
   posts,
   likes,
   comments,
   persoMessages,
+  conversations,
+  conversationParticipants,
+  messages,
+  postConversations,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -48,9 +58,17 @@ export interface IStorage {
   getCommentsByPost(postId: string): Promise<Comment[]>;
   createComment(comment: InsertComment): Promise<Comment>;
   
-  // PersoMessage methods
+  // PersoMessage methods (legacy)
   getMessagesByPost(postId: string): Promise<PersoMessage[]>;
   createMessage(message: InsertPersoMessage): Promise<PersoMessage>;
+  
+  // Conversation methods (new)
+  getConversationByPost(postId: string): Promise<Conversation | undefined>;
+  getMessagesByConversation(conversationId: string): Promise<Message[]>;
+  createConversation(conversation: InsertConversation): Promise<Conversation>;
+  createConversationForPost(postId: string, createdByType: 'user' | 'persona', createdById: string): Promise<Conversation>;
+  addParticipant(participant: InsertConversationParticipant): Promise<ConversationParticipant>;
+  createMessageInConversation(message: InsertMessage): Promise<Message>;
 }
 
 export class DbStorage implements IStorage {
@@ -145,13 +163,85 @@ export class DbStorage implements IStorage {
     return comment;
   }
 
-  // PersoMessage methods
+  // PersoMessage methods (legacy)
   async getMessagesByPost(postId: string): Promise<PersoMessage[]> {
     return await db.select().from(persoMessages).where(eq(persoMessages.postId, postId)).orderBy(persoMessages.createdAt);
   }
 
   async createMessage(insertMessage: InsertPersoMessage): Promise<PersoMessage> {
     const [message] = await db.insert(persoMessages).values(insertMessage).returning();
+    return message;
+  }
+
+  // Conversation methods (new)
+  async getConversationByPost(postId: string): Promise<Conversation | undefined> {
+    const [postConv] = await db
+      .select()
+      .from(postConversations)
+      .where(eq(postConversations.postId, postId));
+    
+    if (!postConv) return undefined;
+    
+    const [conversation] = await db
+      .select()
+      .from(conversations)
+      .where(eq(conversations.id, postConv.conversationId));
+    
+    return conversation;
+  }
+
+  async getMessagesByConversation(conversationId: string): Promise<Message[]> {
+    return await db
+      .select()
+      .from(messages)
+      .where(and(eq(messages.conversationId, conversationId), isNull(messages.deletedAt)))
+      .orderBy(messages.createdAt);
+  }
+
+  async createConversation(insertConversation: InsertConversation): Promise<Conversation> {
+    const [conversation] = await db
+      .insert(conversations)
+      .values(insertConversation)
+      .returning();
+    return conversation;
+  }
+
+  async createConversationForPost(
+    postId: string,
+    createdByType: 'user' | 'persona',
+    createdById: string
+  ): Promise<Conversation> {
+    const [conversation] = await db
+      .insert(conversations)
+      .values({
+        scopeType: 'post',
+        scopeId: postId,
+        createdByType,
+        createdById,
+      })
+      .returning();
+
+    await db.insert(postConversations).values({
+      postId,
+      conversationId: conversation.id,
+    });
+
+    return conversation;
+  }
+
+  async addParticipant(insertParticipant: InsertConversationParticipant): Promise<ConversationParticipant> {
+    const [participant] = await db
+      .insert(conversationParticipants)
+      .values(insertParticipant)
+      .returning();
+    return participant;
+  }
+
+  async createMessageInConversation(insertMessage: InsertMessage): Promise<Message> {
+    const [message] = await db
+      .insert(messages)
+      .values(insertMessage)
+      .returning();
     return message;
   }
 }
