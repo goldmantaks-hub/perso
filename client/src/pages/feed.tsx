@@ -243,12 +243,37 @@ export default function FeedPage() {
                 {post.hasPerso && (
                   <div className="border-t border-border pt-4">
                     <div className="px-4">
-                      <h3 className="font-bold flex items-center gap-2">
+                      <h3 className="font-bold flex items-center gap-2 mb-3">
                         <Sparkles className="w-4 h-4 text-primary" />
                         경험이 공감되어 페르소가 열렸습니다.
                       </h3>
+                      
+                      {/* 최근 메시지 미리보기 */}
+                      {post.recentMessages && post.recentMessages.length > 0 && (
+                        <div className="space-y-2 mb-3">
+                          {post.recentMessages.map((msg: any) => {
+                            const displayContent = msg.content.length > 80 
+                              ? msg.content.substring(0, 80) + '...' 
+                              : msg.content;
+                            
+                            return (
+                              <div key={msg.id} className="flex gap-2 items-start" data-testid={`preview-message-${msg.id}`}>
+                                <Avatar className="w-6 h-6 flex-shrink-0">
+                                  <AvatarImage src={msg.isAI ? msg.persona?.image : msg.user?.profileImage} />
+                                  <AvatarFallback>{msg.isAI ? 'AI' : 'U'}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    <span className="font-medium">{msg.isAI ? msg.persona?.name : msg.user?.name}</span>: {displayContent}
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                    <div className="p-4">
+                    <div className="p-4 pt-0">
                       <Link href={`/perso/${post.id}`}>
                         <Button 
                           className="w-full bg-primary/10 text-primary hover:bg-primary/20 font-bold"

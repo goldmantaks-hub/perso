@@ -23,6 +23,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const isLiked = await storage.checkUserLike(post.id, CURRENT_USER_ID);
           const messages = await storage.getMessagesByPost(post.id);
           
+          // 최근 메시지 3개 가져오기 (최신순으로 정렬 후 3개 선택)
+          const sortedMessages = [...messages].sort((a, b) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+          const recentMessages = await Promise.all(
+            sortedMessages.slice(0, 3).map(async (msg) => {
+              if (msg.isAI && msg.personaId) {
+                const msgPersona = await storage.getPersona(msg.personaId);
+                return {
+                  ...msg,
+                  persona: msgPersona ? {
+                    name: msgPersona.name,
+                    image: msgPersona.image,
+                  } : null,
+                };
+              } else if (!msg.isAI && msg.userId) {
+                const msgUser = await storage.getUser(msg.userId);
+                return {
+                  ...msg,
+                  user: msgUser ? {
+                    name: msgUser.name,
+                    username: msgUser.username,
+                    profileImage: msgUser.profileImage,
+                  } : null,
+                };
+              }
+              return msg;
+            })
+          );
+          
           return {
             ...post,
             author: {
@@ -40,6 +70,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             commentsCount: comments.length,
             isLiked,
             hasPerso: messages.length > 0,
+            recentMessages: recentMessages,
           };
         })
       );
