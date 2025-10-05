@@ -13,6 +13,42 @@ The application is built as a full-stack TypeScript application with a React fro
 
 ## Recent Changes
 
+### October 5, 2025 - PERSO Sentiment Analysis & Growth System
+
+**Sentiment Analysis Engine** (`POST /api/analyze`)
+- Implemented complete sentiment analysis and persona growth pipeline
+- Mock sentiment analyzer generates normalized scores (positive, neutral, negative)
+- Tone detection system identifies content characteristics (humorous, informative, serene, nostalgic, etc.)
+- Image aesthetic scoring for creative content analysis
+- Real-time persona delta calculation based on sentiment and content analysis
+
+**Persona Growth Logic** (`computePersonaDeltas`)
+- Growth rules implementation:
+  - **Empathy**: +2 for highly positive sentiment (≥0.9), +1 for positive (≥0.7)
+  - **Humor**: +1 for humorous tone detection
+  - **Knowledge**: +1 for informative content
+  - **Sociability**: +1 for serene/nostalgic tone with neutral sentiment (≥0.6)
+  - **Creativity**: +1 for high aesthetic image scores (≥0.75)
+- Priority-based delta limiting (max 2 points per analysis)
+- Console logging with formatted output: `[PERSONA GROWTH] Empathy +1 · Creativity +1`
+
+**API Response Structure**
+```json
+{
+  "sentiment": { "positive": 0.7, "neutral": 0.2, "negative": 0.1 },
+  "tones": ["humorous", "informative"],
+  "imageScores": { "aesthetics": 0.8, "quality": 0.75 },
+  "deltas": { "empathy": 1, "humor": 1, "creativity": 1, ... },
+  "deltaLog": "Empathy +1 · Humor +1 · Creativity +1"
+}
+```
+
+**Testing & Validation**
+- Verified delta calculation accuracy across multiple test cases
+- Confirmed priority system limits total growth to 2 points maximum
+- Console logs successfully show growth patterns in real-time
+- Ready for integration with persona stat persistence system
+
 ### October 5, 2025 - PERSO Project Foundation Setup
 
 **Core Engine Architecture**

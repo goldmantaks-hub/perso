@@ -6,19 +6,68 @@ interface PersonaDelta {
   knowledge?: number;
 }
 
-interface SentimentData {
-  sentiment: number;
-  emotions: string[];
-  tones: string[];
+interface SentimentScore {
+  positive: number;
+  neutral: number;
+  negative: number;
 }
 
-export function computePersonaDeltas(
-  personaId: string,
-  sentimentData: SentimentData,
-  context?: any
-): PersonaDelta {
-  const deltas: PersonaDelta = {};
+interface ImageScores {
+  aesthetics?: number;
+  quality?: number;
+}
+
+interface AnalysisInput {
+  sentiment: SentimentScore;
+  tones: string[];
+  contentType?: string;
+  imageScores?: ImageScores;
+}
+
+export function computePersonaDeltas(input: AnalysisInput): PersonaDelta {
+  const deltas: PersonaDelta = { 
+    empathy: 0, 
+    creativity: 0, 
+    humor: 0, 
+    knowledge: 0, 
+    sociability: 0 
+  };
+
+  const { sentiment, tones, imageScores } = input;
+
+  if (sentiment.positive >= 0.9) {
+    deltas.empathy! += 2;
+  } else if (sentiment.positive >= 0.7) {
+    deltas.empathy! += 1;
+  }
+
+  if (tones.includes("humorous")) {
+    deltas.humor! += 1;
+  }
+
+  if (tones.includes("informative")) {
+    deltas.knowledge! += 1;
+  }
+
+  if ((tones.includes("serene") || tones.includes("nostalgic")) && sentiment.neutral >= 0.6) {
+    deltas.sociability! += 1;
+  }
+
+  if (imageScores?.aesthetics && imageScores.aesthetics >= 0.75) {
+    deltas.creativity! += 1;
+  }
+
+  const priority = ["empathy", "creativity", "humor", "knowledge", "sociability"];
+  let total = Object.values(deltas).reduce((a, b) => a + b, 0);
   
+  while (total > 2) {
+    const last = priority.pop();
+    if (last && deltas[last as keyof PersonaDelta]) {
+      deltas[last as keyof PersonaDelta] = Math.max(0, deltas[last as keyof PersonaDelta]! - 1);
+    }
+    total = Object.values(deltas).reduce((a, b) => a + b, 0);
+  }
+
   return deltas;
 }
 

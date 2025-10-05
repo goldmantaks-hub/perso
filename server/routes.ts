@@ -7,6 +7,7 @@ import { authenticateToken, optionalAuthenticateToken, generateToken } from "./m
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import type { SocketServer } from "./websocket";
+import { analyzeSentiment } from "./api/analyze.js";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // WebSocket 서버 참조를 위한 헬퍼 함수
@@ -52,6 +53,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "로그인 실패" });
     }
   });
+
+  // POST /api/analyze - 감성 분석 + 페르소나 델타 계산
+  app.post("/api/analyze", analyzeSentiment);
 
   // POST /api/ai/analyze - AI 감성 분석 (Mock)
   app.post("/api/ai/analyze", async (req, res) => {
@@ -810,49 +814,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/analyze - AI 게시물 분석 (Mock)
-  app.post("/api/analyze", async (req, res) => {
-    try {
-      const { postId, content, mediaUrl } = req.body;
-      
-      // Mock AI 분석 결과 생성
-      const mockTags = [
-        ["일상", "힐링", "카페"],
-        ["여행", "풍경", "자연"],
-        ["음식", "맛집", "디저트"],
-        ["운동", "건강", "피트니스"],
-        ["독서", "책", "감성"],
-      ];
-      
-      const randomTags = mockTags[Math.floor(Math.random() * mockTags.length)];
-      const sentiment = Math.random() * 0.4 + 0.6; // 0.6~1.0 사이 긍정적인 값
-      
-      const personaEffect = {
-        empathy: Math.floor(Math.random() * 3) + 1,
-        creativity: Math.floor(Math.random() * 3) + 1,
-        knowledge: Math.floor(Math.random() * 2) + 1,
-        humor: Math.floor(Math.random() * 2) + 1,
-        sociability: Math.floor(Math.random() * 3) + 1,
-      };
-      
-      // 데이터베이스에 분석 결과 저장
-      if (postId) {
-        await storage.updatePostAnalysis(postId, {
-          tags: randomTags,
-          sentiment,
-          personaEffect,
-        });
-      }
-      
-      res.json({
-        tags: randomTags,
-        sentiment,
-        persona_effect: personaEffect,
-      });
-    } catch (error) {
-      res.status(500).json({ message: "분석에 실패했습니다" });
-    }
-  });
 
   // GET /api/chat/persona/:personaId/messages - 페르소나와의 1:1 대화 메시지 조회
   app.get("/api/chat/persona/:personaId/messages", authenticateToken, async (req, res) => {
