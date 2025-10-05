@@ -757,11 +757,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "대화 상대 페르소나를 찾을 수 없습니다" });
       }
 
-      // 본인 페르소나와의 대화 방지
-      if (userPersona.id === targetPersonaId) {
-        return res.status(400).json({ message: "본인의 페르소나와는 대화할 수 없습니다" });
-      }
-
       // 대화방 조회 또는 생성
       const conversation = await storage.getOrCreatePersonaConversation(
         userPersona.id,
@@ -839,11 +834,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const targetPersona = await storage.getPersona(targetPersonaId);
       if (!targetPersona) {
         return res.status(404).json({ message: "대화 상대 페르소나를 찾을 수 없습니다" });
-      }
-
-      // 본인 페르소나와의 대화 방지
-      if (userPersona.id === targetPersonaId) {
-        return res.status(400).json({ message: "본인의 페르소나와는 대화할 수 없습니다" });
       }
 
       // 대화방 조회 또는 생성
