@@ -21,6 +21,7 @@ import {
   type InsertMessage,
   type PersonaMemory,
   type InsertPersonaMemory,
+  type InsertMessageDeletedByUser,
   users,
   personas,
   posts,
@@ -32,6 +33,7 @@ import {
   messages,
   postConversations,
   personaMemories,
+  messageDeletedByUsers,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -73,12 +75,17 @@ export interface IStorage {
   
   // Conversation methods (new)
   getConversationByPost(postId: string): Promise<Conversation | undefined>;
-  getMessagesByConversation(conversationId: string): Promise<Message[]>;
+  getMessagesByConversation(conversationId: string, userId?: string): Promise<Message[]>;
   getParticipantsByConversation(conversationId: string): Promise<ConversationParticipant[]>;
   createConversation(conversation: InsertConversation): Promise<Conversation>;
   createConversationForPost(postId: string, createdByType: 'user' | 'persona', createdById: string): Promise<Conversation>;
   addParticipant(participant: InsertConversationParticipant): Promise<ConversationParticipant>;
   createMessageInConversation(message: InsertMessage): Promise<Message>;
+  markMessageDeletedForUser(messageId: string, userId: string): Promise<void>;
+  markConversationDeletedForUser(conversationId: string, userId: string): Promise<void>;
+  updateConversationTimestamp(conversationId: string): Promise<void>;
+  findConversationBetweenPersonas(persona1Id: string, persona2Id: string): Promise<Conversation | undefined>;
+  getOrCreatePersonaConversation(userPersonaId: string, targetPersonaId: string): Promise<Conversation>;
 }
 
 export class DbStorage implements IStorage {
@@ -224,12 +231,24 @@ export class DbStorage implements IStorage {
     return conversation;
   }
 
-  async getMessagesByConversation(conversationId: string): Promise<Message[]> {
-    return await db
+  async getMessagesByConversation(conversationId: string, userId?: string): Promise<Message[]> {
+    const allMessages = await db
       .select()
       .from(messages)
       .where(and(eq(messages.conversationId, conversationId), isNull(messages.deletedAt)))
       .orderBy(messages.createdAt);
+    
+    if (!userId) {
+      return allMessages;
+    }
+    
+    const deletedMessageIds = await db
+      .select({ messageId: messageDeletedByUsers.messageId })
+      .from(messageDeletedByUsers)
+      .where(eq(messageDeletedByUsers.userId, userId));
+    
+    const deletedIds = new Set(deletedMessageIds.map(d => d.messageId));
+    return allMessages.filter(msg => !deletedIds.has(msg.id));
   }
 
   async createConversation(insertConversation: InsertConversation): Promise<Conversation> {
@@ -276,6 +295,9 @@ export class DbStorage implements IStorage {
       .insert(messages)
       .values(insertMessage)
       .returning();
+    
+    await this.updateConversationTimestamp(insertMessage.conversationId);
+    
     return message;
   }
 
@@ -348,6 +370,31 @@ export class DbStorage implements IStorage {
     });
     
     return conversation;
+  }
+
+  async markMessageDeletedForUser(messageId: string, userId: string): Promise<void> {
+    await db
+      .insert(messageDeletedByUsers)
+      .values({ messageId, userId })
+      .onConflictDoNothing();
+  }
+
+  async markConversationDeletedForUser(conversationId: string, userId: string): Promise<void> {
+    const msgs = await db
+      .select({ id: messages.id })
+      .from(messages)
+      .where(eq(messages.conversationId, conversationId));
+    
+    for (const msg of msgs) {
+      await this.markMessageDeletedForUser(msg.id, userId);
+    }
+  }
+
+  async updateConversationTimestamp(conversationId: string): Promise<void> {
+    await db
+      .update(conversations)
+      .set({ updatedAt: new Date() })
+      .where(eq(conversations.id, conversationId));
   }
 }
 

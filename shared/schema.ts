@@ -101,6 +101,17 @@ export const messages = pgTable("messages", {
   deletedAt: timestamp("deleted_at"),
 });
 
+export const messageDeletedByUsers = pgTable("message_deleted_by_users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  messageId: varchar("message_id").notNull().references(() => messages.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  deletedAt: timestamp("deleted_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    uniqueUserMessage: sql`UNIQUE (${table.messageId}, ${table.userId})`,
+  };
+});
+
 export const postConversations = pgTable("post_conversations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   postId: varchar("post_id").notNull().references(() => posts.id, { onDelete: 'cascade' }),
@@ -170,6 +181,11 @@ export const insertPersonaMemorySchema = createInsertSchema(personaMemories).omi
   createdAt: true,
 });
 
+export const insertMessageDeletedByUserSchema = createInsertSchema(messageDeletedByUsers).omit({
+  id: true,
+  deletedAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -203,3 +219,6 @@ export type PostConversation = typeof postConversations.$inferSelect;
 
 export type InsertPersonaMemory = z.infer<typeof insertPersonaMemorySchema>;
 export type PersonaMemory = typeof personaMemories.$inferSelect;
+
+export type InsertMessageDeletedByUser = z.infer<typeof insertMessageDeletedByUserSchema>;
+export type MessageDeletedByUser = typeof messageDeletedByUsers.$inferSelect;

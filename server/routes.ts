@@ -386,7 +386,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const messages = await storage.getMessagesByConversation(conversation.id);
+      const messages = await storage.getMessagesByConversation(conversation.id, req.userId);
       const participants = await storage.getParticipantsByConversation(conversation.id);
       
       // 각 메시지에 사용자/페르소나 정보 추가
@@ -525,18 +525,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // DELETE /api/perso/:postId/messages/clear - 대화 기록 삭제 (테스트용)
+  // DELETE /api/perso/:postId/messages/clear - 대화 기록 삭제 (사용자별)
   app.delete("/api/perso/:postId/messages/clear", authenticateToken, async (req, res) => {
     try {
       const postId = req.params.postId;
+      
+      if (!req.userId) {
+        return res.status(401).json({ message: "로그인이 필요합니다" });
+      }
       
       const conversation = await storage.getConversationByPost(postId);
       if (!conversation) {
         return res.status(404).json({ message: "대화방을 찾을 수 없습니다" });
       }
 
-      // 대화 내역 삭제
-      await db.delete(messages).where(eq(messages.conversationId, conversation.id));
+      // 현재 사용자에 대해서만 대화 내역 삭제 (soft delete)
+      await storage.markConversationDeletedForUser(conversation.id, req.userId);
       
       res.json({ success: true, message: "대화 기록이 삭제되었습니다" });
     } catch (error) {
@@ -763,8 +767,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         targetPersonaId
       );
 
-      // 메시지 가져오기
-      const messages = await storage.getMessagesByConversation(conversation.id);
+      // 메시지 가져오기 (사용자별 삭제 필터링)
+      const messages = await storage.getMessagesByConversation(conversation.id, userId);
 
       // 메시지에 페르소나 정보 추가
       const messagesWithInfo = await Promise.all(
