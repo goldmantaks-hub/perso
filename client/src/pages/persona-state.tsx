@@ -683,15 +683,23 @@ function EmotionTimeline() {
   const containerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
-  const emotionData = [
-    { day: '월', value: 3, emotion: '보통', icon: 'Meh' },
-    { day: '화', value: 5, emotion: '행복', icon: 'Smile' },
-    { day: '수', value: 4, emotion: '차분함', icon: 'Smile' },
-    { day: '목', value: 7, emotion: '기쁨', icon: 'Smile' },
-    { day: '금', value: 6, emotion: '호기심', icon: 'Smile' },
-    { day: '토', value: 8, emotion: '흥분', icon: 'Smile' },
-    { day: '일', value: 5, emotion: '행복', icon: 'Smile' },
+  // 실제 API에서 감정 타임라인 데이터 가져오기
+  const { data: emotionData = [], isLoading } = useQuery<any[]>({
+    queryKey: ['/api/user/persona/emotion-timeline'],
+  });
+
+  // 기본값 설정 (로딩 중이거나 데이터가 없을 때)
+  const defaultEmotionData = [
+    { day: '월', value: 5, emotion: '보통', icon: 'Meh' },
+    { day: '화', value: 5, emotion: '보통', icon: 'Meh' },
+    { day: '수', value: 5, emotion: '보통', icon: 'Meh' },
+    { day: '목', value: 5, emotion: '보통', icon: 'Meh' },
+    { day: '금', value: 5, emotion: '보통', icon: 'Meh' },
+    { day: '토', value: 5, emotion: '보통', icon: 'Meh' },
+    { day: '일', value: 5, emotion: '보통', icon: 'Meh' },
   ];
+
+  const displayData = isLoading || emotionData.length === 0 ? defaultEmotionData : emotionData;
 
   useEffect(() => {
     if (!svgRef.current || !containerRef.current || !tooltipRef.current) return;
@@ -710,15 +718,15 @@ function EmotionTimeline() {
       const margin = { top: 20, right: 20, bottom: 30, left: 20 };
 
       const x = d3.scalePoint()
-        .domain(emotionData.map(d => d.day))
+        .domain(displayData.map(d => d.day))
         .range([margin.left, width - margin.right])
         .padding(0.5);
 
       const y = d3.scaleLinear()
-        .domain([0, d3.max(emotionData, d => d.value)! + 2])
+        .domain([0, d3.max(displayData, d => d.value)! + 2])
         .range([height - margin.bottom, margin.top]);
 
-      const line = d3.line<typeof emotionData[0]>()
+      const line = d3.line<typeof displayData[0]>()
         .x(d => x(d.day)!)
         .y(d => y(d.value))
         .curve(d3.curveMonotoneX);
@@ -745,7 +753,7 @@ function EmotionTimeline() {
       svg.select(".grid").select(".domain").remove();
 
       svg.append("path")
-        .datum(emotionData)
+        .datum(displayData)
         .attr("fill", "none")
         .attr("stroke", primaryColor)
         .attr("stroke-width", 2.5)
@@ -792,7 +800,7 @@ function EmotionTimeline() {
             }
           });
 
-          const d = emotionData[closestIndex];
+          const d = displayData[closestIndex];
           focus.attr("transform", `translate(${x(d.day)},${y(d.value)})`);
 
           const tooltipNode = tooltip.node() as HTMLElement;
@@ -823,7 +831,7 @@ function EmotionTimeline() {
     return () => {
       resizeObserver.disconnect();
     };
-  }, []);
+  }, [displayData]);
 
   return (
     <div ref={containerRef} className="relative h-48" data-testid="emotion-timeline">
@@ -1008,6 +1016,10 @@ export default function PersonaStatePage() {
     queryKey: ["/api/user/persona"],
   });
 
+  const { data: growthHistory = [] } = useQuery<any[]>({
+    queryKey: ["/api/user/persona/growth-history"],
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -1180,32 +1192,36 @@ export default function PersonaStatePage() {
               <section>
                 <h3 className="text-lg font-bold">성장 히스토리 & 로그</h3>
                 <div className="mt-4 flow-root">
-                  <ul className="-mb-8">
-                    <GrowthLogItem
-                      IconComponent={Brain}
-                      title="새로운 주제 발견"
-                      description="'머신러닝'에 대해 학습했습니다. 지식 +1"
-                      isLast={false}
-                    />
-                    <GrowthLogItem
-                      IconComponent={Smile}
-                      title="감정 변화"
-                      description="긍정적인 상호작용 후 '기쁨'을 느꼈습니다. 공감 +1"
-                      isLast={false}
-                    />
-                    <GrowthLogItem
-                      IconComponent={Palette}
-                      title="기억 연결"
-                      description="'AI 윤리'를 '철학'과 연결했습니다."
-                      isLast={false}
-                    />
-                    <GrowthLogItem
-                      IconComponent={Sparkles}
-                      title="페르소나 레벨업"
-                      description="레벨 5에 도달했습니다. 새로운 특성을 잠금 해제했습니다."
-                      isLast={true}
-                    />
-                  </ul>
+                  {growthHistory.length > 0 ? (
+                    <ul className="-mb-8">
+                      {growthHistory.map((item, idx) => {
+                        const getIcon = () => {
+                          switch(item.icon) {
+                            case 'Brain': return Brain;
+                            case 'Smile': return Smile;
+                            case 'Sparkles': return Sparkles;
+                            case 'Award': return Award;
+                            case 'Palette': return Palette;
+                            default: return Brain;
+                          }
+                        };
+                        
+                        return (
+                          <GrowthLogItem
+                            key={idx}
+                            IconComponent={getIcon()}
+                            title={item.title}
+                            description={item.description}
+                            isLast={idx === growthHistory.length - 1}
+                          />
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      아직 성장 히스토리가 없습니다.
+                    </p>
+                  )}
                 </div>
               </section>
 
@@ -1224,19 +1240,19 @@ export default function PersonaStatePage() {
                   <div className="flex items-center justify-between p-4" data-testid="current-tone">
                     <span className="text-muted-foreground">현재 톤:</span>
                     <span className="font-medium flex items-center gap-1">
-                      차분함 <Smile className="w-4 h-4" />
+                      {userPersona.empathy >= 7 ? '공감적' : userPersona.knowledge >= 7 ? '분석적' : '차분함'} <Smile className="w-4 h-4" />
                     </span>
                   </div>
                   <div className="flex items-center justify-between p-4" data-testid="evolution-direction">
                     <span className="text-muted-foreground">진화 방향:</span>
                     <span className="font-medium flex items-center gap-1">
-                      열정적 <Zap className="w-4 h-4" />
+                      {userPersona.creativity >= 7 ? '창의적' : userPersona.humor >= 7 ? '유쾌한' : '열정적'} <Zap className="w-4 h-4" />
                     </span>
                   </div>
                   <div className="flex items-center justify-between p-4" data-testid="triggers">
-                    <span className="text-muted-foreground">트리거:</span>
+                    <span className="text-muted-foreground">특성:</span>
                     <span className="font-medium">
-                      데이터 <TrendingUp className="w-4 h-4 inline" />, 지식 <Brain className="w-4 h-4 inline" />
+                      {userPersona.description || '지식 기반 페르소나'}
                     </span>
                   </div>
                 </div>
@@ -1248,14 +1264,16 @@ export default function PersonaStatePage() {
                 <div className="mt-4 divide-y divide-border rounded-xl bg-muted">
                   <div className="flex justify-between p-4" data-testid="total-points">
                     <span className="text-muted-foreground">총 성장 포인트:</span>
-                    <span className="font-medium">1500 P</span>
+                    <span className="font-medium">{(userPersona.empathy + userPersona.humor + userPersona.sociability + userPersona.creativity + userPersona.knowledge) * 100} P</span>
                   </div>
                   <div className="p-4">
-                    <p className="mb-2 font-medium">보상 히스토리:</p>
+                    <p className="mb-2 font-medium">스탯 요약:</p>
                     <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground" data-testid="reward-history">
-                      <li>+100 포인트 '새로운 주제 발견'</li>
-                      <li>+50 포인트 '감정 변화'</li>
-                      <li>+75 포인트 '기억 연결'</li>
+                      <li>공감: {userPersona.empathy} / 10</li>
+                      <li>창의성: {userPersona.creativity} / 10</li>
+                      <li>유머: {userPersona.humor} / 10</li>
+                      <li>지식: {userPersona.knowledge} / 10</li>
+                      <li>사교성: {userPersona.sociability} / 10</li>
                     </ul>
                   </div>
                 </div>

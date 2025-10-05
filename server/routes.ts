@@ -226,6 +226,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/user/persona/growth-history - 성장 히스토리 가져오기
+  app.get("/api/user/persona/growth-history", authenticateToken, async (req, res) => {
+    try {
+      if (!req.userId) {
+        return res.status(401).json({ message: "인증되지 않은 사용자입니다" });
+      }
+      
+      const persona = await storage.getPersonaByUserId(req.userId);
+      if (!persona) {
+        return res.status(404).json({ message: "페르소나를 찾을 수 없습니다" });
+      }
+
+      // 실제로는 DB에서 성장 로그를 가져와야 하지만, 현재는 페르소나 스탯 기반으로 생성
+      const growthHistory = [
+        {
+          type: 'stat_increase',
+          icon: 'Brain',
+          title: '지식 성장',
+          description: `지식 스탯이 ${persona.knowledge}로 증가했습니다`,
+          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+        },
+        {
+          type: 'stat_increase',
+          icon: 'Smile',
+          title: '공감 성장',
+          description: `공감 스탯이 ${persona.empathy}로 증가했습니다`,
+          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
+        },
+        {
+          type: 'stat_increase',
+          icon: 'Sparkles',
+          title: '창의성 성장',
+          description: `창의성 스탯이 ${persona.creativity}로 증가했습니다`,
+          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(),
+        },
+        {
+          type: 'level_up',
+          icon: 'Award',
+          title: '레벨업',
+          description: `레벨 ${Math.floor((persona.empathy + persona.humor + persona.sociability + persona.creativity + persona.knowledge) / 5)}에 도달했습니다`,
+          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 96).toISOString(),
+        },
+      ];
+      
+      res.json(growthHistory);
+    } catch (error) {
+      console.error("Get growth history error:", error);
+      res.status(500).json({ message: "성장 히스토리를 가져오는데 실패했습니다" });
+    }
+  });
+
+  // GET /api/user/persona/emotion-timeline - 감정 타임라인 가져오기
+  app.get("/api/user/persona/emotion-timeline", authenticateToken, async (req, res) => {
+    try {
+      if (!req.userId) {
+        return res.status(401).json({ message: "인증되지 않은 사용자입니다" });
+      }
+      
+      const persona = await storage.getPersonaByUserId(req.userId);
+      if (!persona) {
+        return res.status(404).json({ message: "페르소나를 찾을 수 없습니다" });
+      }
+
+      // 7일간 감정 변화 데이터 생성 (실제로는 DB에서 가져와야 함)
+      const days = ['월', '화', '수', '목', '금', '토', '일'];
+      const emotionTimeline = days.map((day, idx) => {
+        const value = Math.floor(Math.random() * 5) + 3; // 3-8 사이
+        const emotions = ['보통', '행복', '차분함', '기쁨', '호기심', '흥분'];
+        return {
+          day,
+          value,
+          emotion: emotions[Math.min(value - 3, emotions.length - 1)],
+          icon: 'Smile'
+        };
+      });
+      
+      res.json(emotionTimeline);
+    } catch (error) {
+      console.error("Get emotion timeline error:", error);
+      res.status(500).json({ message: "감정 타임라인을 가져오는데 실패했습니다" });
+    }
+  });
+
   // GET /api/user/persona - 현재 사용자의 페르소나 가져오기
   app.get("/api/user/persona", authenticateToken, async (req, res) => {
     try {
