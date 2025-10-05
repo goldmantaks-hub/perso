@@ -316,18 +316,28 @@ export class DbStorage implements IStorage {
       .from(conversations)
       .where(eq(conversations.scopeType, 'persona-dm'));
     
+    const isSelfChat = persona1Id === persona2Id;
+    
     for (const conv of allConversations) {
       const participants = await this.getParticipantsByConversation(conv.id);
       const personaIds = participants
         .filter(p => p.participantType === 'persona')
         .map(p => p.participantId);
       
-      if (
-        personaIds.length === 2 &&
-        personaIds.includes(persona1Id) &&
-        personaIds.includes(persona2Id)
-      ) {
-        return conv;
+      if (isSelfChat) {
+        // 본인 페르소나와의 대화: 참가자가 1명이고 그게 본인
+        if (personaIds.length === 1 && personaIds[0] === persona1Id) {
+          return conv;
+        }
+      } else {
+        // 다른 페르소나와의 대화: 참가자가 2명이고 둘 다 포함
+        if (
+          personaIds.length === 2 &&
+          personaIds.includes(persona1Id) &&
+          personaIds.includes(persona2Id)
+        ) {
+          return conv;
+        }
       }
     }
     
@@ -354,7 +364,7 @@ export class DbStorage implements IStorage {
       })
       .returning();
     
-    // 두 페르소나를 participant로 추가
+    // 페르소나를 participant로 추가
     await this.addParticipant({
       conversationId: conversation.id,
       participantType: 'persona',
@@ -362,12 +372,15 @@ export class DbStorage implements IStorage {
       role: 'member',
     });
     
-    await this.addParticipant({
-      conversationId: conversation.id,
-      participantType: 'persona',
-      participantId: targetPersonaId,
-      role: 'member',
-    });
+    // 다른 페르소나인 경우에만 추가 (본인 페르소나와의 대화인 경우 중복 추가 방지)
+    if (userPersonaId !== targetPersonaId) {
+      await this.addParticipant({
+        conversationId: conversation.id,
+        participantType: 'persona',
+        participantId: targetPersonaId,
+        role: 'member',
+      });
+    }
     
     return conversation;
   }
