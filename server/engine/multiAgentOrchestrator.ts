@@ -81,14 +81,23 @@ export function selectNextSpeaker(
   const totalScore = scoreArray.reduce((sum, [_, score]) => sum + score, 0);
   
   if (totalScore === 0) {
-    return scoreArray[Math.floor(Math.random() * scoreArray.length)][0];
+    const fallback = scoreArray[Math.floor(Math.random() * scoreArray.length)][0];
+    console.log(`[REASONING] Zero total score, random fallback selected: ${fallback}`);
+    return fallback;
   }
   
   const normalizedScores = new Map(
     scoreArray.map(([id, score]) => [id, score / totalScore])
   );
   
-  return weightedRandomSelection(normalizedScores, 0.7);
+  const selected = weightedRandomSelection(normalizedScores, 0.7);
+  const topScores = scoreArray
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([id, score]) => `${id}(${(score/totalScore).toFixed(2)})`)
+    .join(', ');
+  console.log(`[REASONING] Selected ${selected} from scores: ${topScores}`);
+  return selected;
 }
 
 function findLastTurnIndex(personaId: string, history: ConversationMessage[]): number {

@@ -94,6 +94,8 @@ export async function multiAgentDialogueOrchestrator(
     
     const message = await personaTalk(nextSpeaker, post, analysis, personaContext);
     
+    console.log(`[CHAT] ${nextSpeaker}: "${message}"`);
+    
     messages.push({
       persona: nextSpeaker,
       message,
