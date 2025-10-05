@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PERSO - Persona Network Map</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#389cfa",
+                        "background-light": "#f5f7f8",
+                        "background-dark": "#0f1923",
+                        "joy": "#ffdb58",
+                        "sadness": "#6495ed",
+                        "anger": "#ff6347",
+                        "neutral": "#d3d3d3"
+                    },
+                    fontFamily: {
+                        display: ["Spline Sans", "Noto Sans KR", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.25rem",
+                        lg: "0.5rem",
+                        xl: "0.75rem",
+                        full: "9999px"
+                    },
+                },
+            },
+        };
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+        }
+        .group:hover .group-hover\:block {
+            display: block;
+        }
+    </style>
+<style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-800 dark:text-gray-200">
+<div class="flex h-screen flex-col">
+<main class="flex-1 overflow-y-auto pt-8">
+<div class="p-4">
+<h2 class="text-xl font-bold text-gray-900 dark:text-white">Persona Network Map</h2>
+<p class="mt-1 text-sm text-gray-600 dark:text-gray-400">나와 다른 페르소나의 관계를 시각적으로 확인해보세요.</p>
+</div>
+<div class="px-4">
+<div class="relative aspect-square w-full rounded-lg bg-gray-100 dark:bg-gray-800/50 flex items-center justify-center">
+<svg class="absolute inset-0 h-full w-full" viewBox="0 0 400 400">
+<line class="stroke-current text-gray-300 dark:text-gray-600" stroke-width="6" x1="200" x2="200" y1="152" y2="120"></line>
+<line class="stroke-current text-gray-300 dark:text-gray-600" stroke-width="2" x1="176" x2="104" y1="176" y2="162"></line>
+<line class="stroke-current text-gray-300 dark:text-gray-600" stroke-width="4" x1="171.1" x2="145.7" y1="228.9" y2="265.7"></line>
+<line class="stroke-current text-gray-300 dark:text-gray-600" stroke-width="1.5" x1="222.9" x2="279.4" y1="222.9" y2="280.9"></line>
+<line class="stroke-current text-gray-300 dark:text-gray-600" stroke-width="3" x1="224" x2="295.4" y1="200" y2="189.6"></line>
+</svg>
+<div class="absolute z-10" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
+<div class="flex flex-col items-center">
+<div class="w-24 h-24 rounded-full bg-primary flex items-center justify-center text-white font-bold text-center text-lg leading-tight">
+                            나의<br/>페르소나
+                        </div>
+</div>
+</div>
+<div class="absolute group z-10" style="top: 80px; left: 50%; transform: translate(-50%, -50%);">
+<div class="flex flex-col items-center cursor-pointer">
+<div class="w-20 h-20 rounded-full bg-joy flex items-center justify-center text-black font-bold text-sm">Milo</div>
+<div class="hidden group-hover:block absolute -bottom-14 w-max bg-gray-800 text-white text-xs rounded py-1 px-2 z-10 text-center">
+                            Milo와의 공감도 0.75 / 최근 5회 대화
+                        </div>
+</div>
+</div>
+<div class="absolute group z-10" style="top: 150px; left: 80px; transform: translate(-50%, -50%);">
+<div class="flex flex-col items-center cursor-pointer">
+<div class="w-12 h-12 rounded-full bg-anger flex items-center justify-center text-white font-bold text-xs">Alex</div>
+<div class="hidden group-hover:block absolute -bottom-14 w-max bg-gray-800 text-white text-xs rounded py-1 px-2 z-10 text-center">
+                            Alex와의 공감도 0.45 / 최근 2회 대화
+                        </div>
+</div>
+</div>
+<div class="absolute group z-10" style="top: 280px; left: 120px; transform: translate(-50%, -50%);">
+<div class="flex flex-col items-center cursor-pointer">
+<div class="w-16 h-16 rounded-full bg-sadness flex items-center justify-center text-white font-bold text-sm">Nara</div>
+<div class="hidden group-hover:block absolute -bottom-14 w-max bg-gray-800 text-white text-xs rounded py-1 px-2 z-10 text-center">
+                            Nara와의 공감도 0.68 / 최근 4회 대화
+                        </div>
+</div>
+</div>
+<div class="absolute group z-10" style="top: 290px; left: 300px; transform: translate(-50%, -50%);">
+<div class="flex flex-col items-center cursor-pointer">
+<div class="w-10 h-10 rounded-full bg-neutral flex items-center justify-center text-black font-bold text-xs">Leo</div>
+<div class="hidden group-hover:block absolute -bottom-14 w-max bg-gray-800 text-white text-xs rounded py-1 px-2 z-10 text-center">
+                            Leo와의 공감도 0.55 / 최근 1회 대화
+                        </div>
+</div>
+</div>
+<div class="absolute group z-10" style="top: 180px; left: 320px; transform: translate(-50%, -50%);">
+<div class="flex flex-col items-center cursor-pointer">
+<div class="w-14 h-14 rounded-full bg-joy flex items-center justify-center text-black font-bold text-sm">Luna</div>
+<div class="hidden group-hover:block absolute -bottom-14 w-max bg-gray-800 text-white text-xs rounded py-1 px-2 z-10 text-center">
+                            Luna와의 공감도 0.82 / 최근 3회 대화
+                        </div>
+</div>
+</div>
+</div>
+</div>
+<div class="flex flex-wrap gap-2 p-4">
+<button class="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/20 dark:bg-primary/20 dark:hover:bg-primary/30">
+<span>감정별 보기</span>
+<span class="material-symbols-outlined text-base"> expand_more </span>
+</button>
+<button class="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/20 dark:bg-primary/20 dark:hover:bg-primary/30">
+<span>페르소나 타입별 보기</span>
+<span class="material-symbols-outlined text-base"> expand_more </span>
+</button>
+</div>
+<div class="p-4">
+<div class="rounded-lg border border-primary/20 bg-primary/10 p-4 dark:border-primary/30 dark:bg-primary/20">
+<div class="flex items-start gap-4">
+<span class="material-symbols-outlined mt-1 text-primary"> lightbulb </span>
+<div class="flex-1">
+<p class="font-bold text-primary">Insight Box</p>
+<p class="mt-1 text-sm text-gray-700 dark:text-gray-300">Milo는 최근 유머형 대화가 급증했습니다.</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+</body></html>
