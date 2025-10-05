@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { getToken } from '@/lib/auth';
 
 interface UseWebSocketOptions {
   conversationId?: string;
@@ -27,7 +28,7 @@ export function useWebSocket({
   useEffect(() => {
     if (!enabled) return;
 
-    const token = localStorage.getItem('token');
+    const token = getToken();
     if (!token) {
       console.warn('[WS] No auth token found');
       return;
