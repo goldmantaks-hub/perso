@@ -133,6 +133,33 @@ The application is a full-stack TypeScript application, utilizing React for the 
 
 ## Recent Changes
 
+### October 5, 2025 - Extended AI Persona Routing System
+
+**AI Persona Routing System** - Implemented intelligent routing system for automatic persona selection:
+- **Configuration Files:**
+  - `personaProfiles.json` - 9 persona profiles (Kai, Espri, Luna, Namu, Milo, Eden, Ava, Rho, Noir) with detailed characteristics
+  - `personaRoutingConfig.json` - Weighted routing rules based on content type, topics, sentiment, tones, and image scores
+  - `personaFilters.json` - Emotion-based and persona-type-based filter configurations with lucide-react icons
+
+- **Backend Implementation:**
+  - `server/engine/featureDetector.ts` - `detectFeatures()` function analyzes content using OpenAI to extract features
+  - `server/engine/personaRouter.ts` - `routePersonas()` function implements weighted selection with family deduplication
+  - API Endpoints:
+    - `POST /api/content/analyze` - Analyzes content and returns features
+    - `POST /api/personas/route` - Routes personas based on features (fixed Map serialization issue)
+    - `GET /api/personas/filters` - Returns filter configuration
+
+- **Frontend Implementation:**
+  - `client/src/hooks/useContentAnalysis.ts` - Custom hook for content analysis and routing
+  - `client/src/hooks/usePersonaFilters.ts` - Custom hook for loading filter data
+  - `client/src/components/persona-tabs.tsx` - Tab navigation (🏠 Perso, 🧠 Persona, 💬 Chat, 📊 Growth, 👥 Network)
+  - `client/src/components/insight-box.tsx` - Insight display component
+  - Updated `client/src/pages/persona-network.tsx` with tabs and insights
+
+**Bug Fix:**
+- Fixed critical Map serialization issue in `/api/personas/route` endpoint by converting Map to plain object using `Object.fromEntries()`
+- Updated TypeScript types to use `Record<string, number>` instead of `Map<string, number>` for JSON compatibility
+
 ### October 5, 2025 - Step 8: Comprehensive Integration & Logging System
 
 **Enhanced Logging System** - All systems now use standardized console log formats:
