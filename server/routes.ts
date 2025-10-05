@@ -6,8 +6,11 @@ import OpenAI from "openai";
 import { authenticateToken, optionalAuthenticateToken, generateToken } from "./middleware/auth";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
+import type { SocketServer } from "./websocket";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // WebSocket 서버 참조를 위한 헬퍼 함수
+  const getIO = (): SocketServer | undefined => app.get("io");
   
   // OpenAI 클라이언트 초기화
   const openai = new OpenAI({
@@ -523,16 +526,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Unique constraint 에러는 무시 (이미 참가자임)
       }
       
-      // 메시지 생성
-      const message = await storage.createMessageInConversation({
+      // 임시 메시지 ID 생성 (클라이언트에게 즉시 반환)
+      const tempMessageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const tempMessage = {
+        id: tempMessageId,
         conversationId: conversation.id,
         senderType,
         senderId,
         content,
         messageType: 'text',
+        createdAt: new Date().toISOString(),
+      };
+      
+      // WebSocket으로 즉시 브로드캐스트
+      const io = getIO();
+      if (io) {
+        let messageWithInfo: any = { ...tempMessage };
+        
+        if (senderType === 'persona') {
+          const persona = await storage.getPersona(senderId);
+          messageWithInfo.isAI = true;
+          messageWithInfo.personaId = senderId;
+          messageWithInfo.persona = persona ? {
+            id: persona.id,
+            name: persona.name,
+            image: persona.image,
+          } : null;
+        } else {
+          const user = await storage.getUser(senderId);
+          messageWithInfo.isAI = false;
+          messageWithInfo.userId = senderId;
+          messageWithInfo.user = user ? {
+            id: user.id,
+            name: user.name,
+            username: user.username,
+            profileImage: user.profileImage,
+          } : null;
+        }
+        
+        io.to(`conversation:${conversation.id}`).emit('message:new', messageWithInfo);
+      }
+      
+      // DB 저장은 비동기로 (await 없이, 성능 향상)
+      storage.createMessageInConversation({
+        conversationId: conversation.id,
+        senderType,
+        senderId,
+        content,
+        messageType: 'text',
+      }).catch(error => {
+        console.error('[MESSAGE SAVE ERROR]', error);
+        // TODO: 에러 시 재시도 로직 또는 Dead Letter Queue
       });
       
-      res.json(message);
+      res.json(tempMessage);
     } catch (error) {
       console.error('메시지 작성 에러:', error);
       res.status(400).json({ message: "메시지 작성에 실패했습니다" });
@@ -874,6 +921,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         content,
         messageType: 'text',
       });
+      
+      // WebSocket으로 사용자 메시지 즉시 브로드캐스트
+      const io = getIO();
+      if (io) {
+        const userMessageWithInfo = {
+          ...userMessage,
+          isAI: false,
+          senderType: 'persona',
+          senderId: userPersona.id,
+          persona: {
+            id: userPersona.id,
+            name: userPersona.name,
+            image: userPersona.image,
+          },
+        };
+        io.to(`conversation:${conversation.id}`).emit('message:new', userMessageWithInfo);
+      }
 
       // 대상 페르소나의 자동 응답 생성
       const stats = {
@@ -927,29 +991,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // OpenAI API 호출
-      const completion = await openai.chat.completions.create({
+      // OpenAI 스트리밍 API 호출
+      const startTime = Date.now();
+      let firstTokenTime: number | null = null;
+      let fullResponse = "";
+      const tempAiMessageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      const stream = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: contextMessages,
         temperature: 0.8,
         max_tokens: 300,
+        stream: true,
       });
 
-      const aiResponse = completion.choices[0]?.message?.content || "...";
+      // 스트리밍 시작 알림
+      if (io) {
+        io.to(`conversation:${conversation.id}`).emit('message:stream:start', {
+          id: tempAiMessageId,
+          personaId: targetPersonaId,
+          conversationId: conversation.id,
+        });
+      }
 
-      // AI 응답 저장
-      await storage.createMessageInConversation({
+      // 스트리밍 처리
+      for await (const chunk of stream) {
+        const delta = chunk.choices[0]?.delta?.content || '';
+        
+        // 첫 토큰 시간 측정
+        if (!firstTokenTime && delta) {
+          firstTokenTime = Date.now();
+          const ttft = firstTokenTime - startTime;
+          console.log(`[LLM STREAMING] First token time: ${ttft}ms`);
+        }
+        
+        if (delta) {
+          fullResponse += delta;
+          
+          // WebSocket으로 스트리밍 청크 전송
+          if (io) {
+            io.to(`conversation:${conversation.id}`).emit('message:stream:chunk', {
+              id: tempAiMessageId,
+              chunk: delta,
+              content: fullResponse,
+            });
+          }
+        }
+      }
+
+      const endTime = Date.now();
+      console.log(`[LLM STREAMING] Total time: ${endTime - startTime}ms, Response length: ${fullResponse.length}`);
+
+      // AI 응답 DB 저장 (비동기)
+      storage.createMessageInConversation({
         conversationId: conversation.id,
         senderType: 'persona',
         senderId: targetPersonaId,
-        content: aiResponse,
+        content: fullResponse,
         messageType: 'text',
+      }).catch(error => {
+        console.error('[AI MESSAGE SAVE ERROR]', error);
       });
+      
+      // 스트리밍 완료 알림
+      if (io) {
+        const aiMessageWithInfo = {
+          id: tempAiMessageId,
+          conversationId: conversation.id,
+          isAI: true,
+          senderType: 'persona',
+          senderId: targetPersonaId,
+          content: fullResponse,
+          createdAt: new Date().toISOString(),
+          persona: {
+            id: targetPersona.id,
+            name: targetPersona.name,
+            image: targetPersona.image,
+          },
+        };
+        io.to(`conversation:${conversation.id}`).emit('message:stream:end', aiMessageWithInfo);
+      }
 
       res.json({ 
         success: true,
         userMessage,
-        aiResponse,
+        aiResponse: fullResponse,
       });
     } catch (error) {
       console.error('[PERSONA CHAT SEND ERROR]', error);

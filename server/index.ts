@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { setupWebSocket } from "./websocket";
 
 const app = express();
 app.use(express.json());
@@ -38,6 +39,12 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app);
+  
+  // WebSocket 서버 초기화
+  const io = setupWebSocket(server);
+  
+  // io 객체를 app에 저장해서 라우트에서 접근 가능하도록
+  app.set("io", io);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { ArrowLeft, Send } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -8,6 +8,7 @@ import { Sparkles } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useWebSocket } from "@/hooks/useWebSocket";
 
 export default function PersonaChatPage() {
   const [, params] = useRoute("/chat/:personaId");
@@ -26,6 +27,107 @@ export default function PersonaChatPage() {
   const messages = data?.messages || [];
   const targetPersona = data?.targetPersona;
   const userPersona = data?.userPersona;
+  const conversationId = data?.conversation?.id;
+
+  // 스트리밍 메시지 상태 (임시 메시지 ID -> 내용)
+  const streamingMessagesRef = useRef<Map<string, string>>(new Map());
+
+  // WebSocket으로 실시간 메시지 수신
+  const handleNewMessage = useCallback((newMessage: any) => {
+    queryClient.setQueryData(["/api/chat/persona", personaId, "messages"], (old: any) => {
+      if (!old) return old;
+      
+      // 중복 메시지 체크
+      const existingMessage = old.messages?.find((m: any) => 
+        m.id === newMessage.id ||
+        (m.content === newMessage.content && 
+         Math.abs(new Date(m.createdAt).getTime() - new Date(newMessage.createdAt).getTime()) < 1000)
+      );
+      
+      if (existingMessage) {
+        return old;
+      }
+      
+      return {
+        ...old,
+        messages: [...(old.messages || []), newMessage],
+      };
+    });
+  }, [personaId]);
+
+  // 스트리밍 시작
+  const handleStreamStart = useCallback((data: { id: string; personaId: string }) => {
+    streamingMessagesRef.current.set(data.id, '');
+    
+    queryClient.setQueryData(["/api/chat/persona", personaId, "messages"], (old: any) => {
+      if (!old) return old;
+      
+      const streamingMessage = {
+        id: data.id,
+        isAI: true,
+        senderType: 'persona',
+        senderId: data.personaId,
+        content: '',
+        createdAt: new Date().toISOString(),
+        streaming: true,
+        persona: targetPersona,
+      };
+      
+      return {
+        ...old,
+        messages: [...(old.messages || []), streamingMessage],
+      };
+    });
+  }, [personaId, targetPersona]);
+
+  // 스트리밍 청크 수신
+  const handleStreamChunk = useCallback((data: { id: string; chunk: string; content: string }) => {
+    streamingMessagesRef.current.set(data.id, data.content);
+    
+    queryClient.setQueryData(["/api/chat/persona", personaId, "messages"], (old: any) => {
+      if (!old) return old;
+      
+      const updatedMessages = old.messages.map((msg: any) => 
+        msg.id === data.id
+          ? { ...msg, content: data.content, streaming: true }
+          : msg
+      );
+      
+      return {
+        ...old,
+        messages: updatedMessages,
+      };
+    });
+  }, [personaId]);
+
+  // 스트리밍 완료
+  const handleStreamEnd = useCallback((message: any) => {
+    streamingMessagesRef.current.delete(message.id);
+    
+    queryClient.setQueryData(["/api/chat/persona", personaId, "messages"], (old: any) => {
+      if (!old) return old;
+      
+      const updatedMessages = old.messages.map((msg: any) => 
+        msg.id === message.id
+          ? { ...msg, content: message.content, streaming: false }
+          : msg
+      );
+      
+      return {
+        ...old,
+        messages: updatedMessages,
+      };
+    });
+  }, [personaId]);
+
+  useWebSocket({
+    conversationId,
+    onMessage: handleNewMessage,
+    onStreamStart: handleStreamStart,
+    onStreamChunk: handleStreamChunk,
+    onStreamEnd: handleStreamEnd,
+    enabled: !!conversationId,
+  });
 
   // 메시지 전송 (낙관적 업데이트)
   const sendMessageMutation = useMutation({

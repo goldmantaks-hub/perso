@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ArrowLeft, Send, Trash2 } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -9,6 +9,7 @@ import { Sparkles } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useWebSocket } from "@/hooks/useWebSocket";
 
 export default function PersoPage() {
   const [, params] = useRoute("/perso/:postId");
@@ -17,11 +18,10 @@ export default function PersoPage() {
 
   const [message, setMessage] = useState("");
 
-  // 메시지 및 게시물 정보 가져오기 (5초마다 폴링하여 점진적 메시지 표시)
+  // 메시지 및 게시물 정보 가져오기 (WebSocket으로 실시간 업데이트)
   const { data, isLoading } = useQuery<any>({
     queryKey: ["/api/perso", postId, "messages"],
     enabled: !!postId,
-    refetchInterval: 5000, // 5초마다 새 메시지 확인
   });
 
   // 사용자 페르소나 가져오기 (AI 응답에 사용)
@@ -34,6 +34,36 @@ export default function PersoPage() {
   const messages = data?.messages || [];
   const participants = data?.participants || [];
   const post = data?.post;
+  const conversationId = data?.conversation?.id;
+
+  // WebSocket으로 실시간 메시지 수신
+  const handleNewMessage = useCallback((newMessage: any) => {
+    queryClient.setQueryData(["/api/perso", postId, "messages"], (old: any) => {
+      if (!old) return old;
+      
+      // 중복 메시지 체크 (임시 ID와 실제 ID 모두 확인)
+      const existingMessage = old.messages?.find((m: any) => 
+        m.id === newMessage.id || 
+        (m.content === newMessage.content && 
+         Math.abs(new Date(m.createdAt).getTime() - new Date(newMessage.createdAt).getTime()) < 1000)
+      );
+      
+      if (existingMessage) {
+        return old;
+      }
+      
+      return {
+        ...old,
+        messages: [...(old.messages || []), newMessage],
+      };
+    });
+  }, [postId]);
+
+  useWebSocket({
+    conversationId,
+    onMessage: handleNewMessage,
+    enabled: !!conversationId,
+  });
 
   // 메시지 전송 (낙관적 업데이트)
   const sendMessageMutation = useMutation({

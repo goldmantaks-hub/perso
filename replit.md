@@ -12,6 +12,32 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### October 5, 2025 - WebSocket Real-time Messaging & LLM Streaming
+
+**WebSocket Infrastructure**
+- Implemented Socket.IO server with JWT authentication
+- Real-time message broadcasting to conversation participants
+- WebSocket events: `join:conversation`, `leave:conversation`, `message:new`
+- Removed HTTP polling (refetchInterval) for real-time updates
+
+**Performance Optimizations**
+- Asynchronous DB message persistence (fire-and-forget pattern)
+- Messages broadcast via WebSocket immediately, DB save happens in background
+- Temporary message IDs generated for instant client response
+- Target: P95 latency <200ms
+
+**LLM Streaming**
+- OpenAI streaming API integration for persona chat responses
+- WebSocket events: `message:stream:start`, `message:stream:chunk`, `message:stream:end`
+- First-token time tracking and logging for performance monitoring
+- Real-time streaming text display on frontend
+
+**Frontend Updates**
+- Custom `useWebSocket` hook for connection management
+- Optimistic UI updates remain, now combined with WebSocket sync
+- Streaming message rendering in persona chat
+- Automatic duplicate message detection and prevention
+
 ### October 4, 2025 - User/Persona Visual Distinction & Automated AI Interactions
 
 **Feed Page Enhancement**
@@ -64,6 +90,7 @@ Preferred communication style: Simple, everyday language.
 
 **Server Framework**
 - **Express.js** as the HTTP server
+- **Socket.IO** for WebSocket real-time communication
 - **TypeScript** with ES modules throughout the codebase
 - Development uses `tsx` for running TypeScript directly
 - Production build uses `esbuild` for bundling
@@ -77,6 +104,18 @@ Preferred communication style: Simple, everyday language.
 - Prepared for session management with `connect-pg-simple` (PostgreSQL session store)
 - Cookie-based authentication infrastructure in place
 - User authentication flow ready for implementation
+
+**Real-time Communication**
+- WebSocket server integrated with Express HTTP server
+- JWT-based authentication for WebSocket connections
+- Conversation-based room system for targeted broadcasting
+- Support for streaming LLM responses via WebSocket
+
+**Performance Strategy**
+- Asynchronous message persistence (non-blocking DB writes)
+- Optimistic UI updates combined with real-time sync
+- First-token latency monitoring for LLM responses
+- Target P95 end-to-end latency: <200ms
 
 ### Database & ORM
 
@@ -136,6 +175,10 @@ Preferred communication style: Simple, everyday language.
 - Toast notifications using Radix UI Toast primitives
 
 ## External Dependencies
+
+### Real-time & Communication
+- **Socket.IO** - WebSocket server and client for real-time bidirectional communication
+- **OpenAI** - LLM API with streaming support for chat completions
 
 ### Third-Party UI Libraries
 - **Radix UI** - Headless UI component primitives (accordion, dialog, dropdown, popover, etc.)
