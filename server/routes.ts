@@ -1,9 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertPostSchema, insertLikeSchema, insertCommentSchema, insertPersoMessageSchema } from "@shared/schema";
+import { insertPostSchema, insertLikeSchema, insertCommentSchema, insertPersoMessageSchema, messages } from "@shared/schema";
 import OpenAI from "openai";
 import { authenticateToken, optionalAuthenticateToken, generateToken } from "./middleware/auth";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -500,6 +502,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('메시지 작성 에러:', error);
       res.status(400).json({ message: "메시지 작성에 실패했습니다" });
+    }
+  });
+
+  // DELETE /api/perso/:postId/messages/clear - 대화 기록 삭제 (테스트용)
+  app.delete("/api/perso/:postId/messages/clear", authenticateToken, async (req, res) => {
+    try {
+      const postId = req.params.postId;
+      
+      const conversation = await storage.getConversationByPost(postId);
+      if (!conversation) {
+        return res.status(404).json({ message: "대화방을 찾을 수 없습니다" });
+      }
+
+      // 대화 내역 삭제
+      await db.delete(messages).where(eq(messages.conversationId, conversation.id));
+      
+      res.json({ success: true, message: "대화 기록이 삭제되었습니다" });
+    } catch (error) {
+      console.error('대화 기록 삭제 에러:', error);
+      res.status(500).json({ message: "대화 기록 삭제에 실패했습니다" });
     }
   });
 

@@ -81,6 +81,10 @@ export const conversationParticipants = pgTable("conversation_participants", {
   role: varchar("role", { length: 20 }).notNull().default('member'),
   joinedAt: timestamp("joined_at").notNull().defaultNow(),
   lastReadMessageId: varchar("last_read_message_id"),
+}, (table) => {
+  return {
+    uniqueParticipant: sql`UNIQUE (${table.conversationId}, ${table.participantType}, ${table.participantId})`,
+  };
 });
 
 export const messages = pgTable("messages", {

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { ArrowLeft, Send } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowLeft, Send, Trash2 } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,45 @@ export default function PersoPage() {
   const messages = data?.messages || [];
   const participants = data?.participants || [];
   const post = data?.post;
+
+  // AI 자동 대화 (15초마다)
+  useEffect(() => {
+    if (!postId || participants.length === 0) return;
+
+    const aiParticipants = participants.filter((p: any) => p && p.type === 'persona');
+    if (aiParticipants.length < 2) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const personaIds = aiParticipants.map((p: any) => p.personaId);
+        const recentMessages = messages.slice(-5);
+
+        const response = await apiRequest("POST", "/api/ai/converse", {
+          postId,
+          personaIds,
+          recentMessages,
+        });
+
+        const conversationData = await response.json();
+        
+        if (conversationData.responses && conversationData.responses.length > 0) {
+          for (const resp of conversationData.responses) {
+            await apiRequest("POST", `/api/perso/${postId}/messages`, {
+              content: resp.content,
+              isAI: true,
+              personaId: resp.personaId,
+            });
+          }
+          
+          queryClient.invalidateQueries({ queryKey: ["/api/perso", postId, "messages"] });
+        }
+      } catch (error) {
+        console.error('AI 자동 대화 실패:', error);
+      }
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [postId, participants, messages]);
 
   // 메시지 전송
   const sendMessageMutation = useMutation({
@@ -122,6 +161,27 @@ export default function PersoPage() {
     setMessage("");
   };
 
+  // 대화 기록 삭제
+  const clearChatMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("DELETE", `/api/perso/${postId}/messages/clear`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/perso", postId, "messages"] });
+      toast({
+        title: "대화 기록 삭제됨",
+        description: "새로운 대화가 시작됩니다.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "삭제 실패",
+        description: "대화 기록 삭제에 실패했습니다.",
+        variant: "destructive",
+      });
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -135,15 +195,26 @@ export default function PersoPage() {
       {/* 헤더 */}
       <header className="sticky top-0 z-10 bg-background border-b border-border">
         <div className="flex items-center gap-3 p-4">
-          <Link href="/feed">
-            <button className="text-foreground" data-testid="button-back">
-              <ArrowLeft className="w-6 h-6" />
-            </button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/feed">
+              <button className="text-foreground" data-testid="button-back">
+                <ArrowLeft className="w-6 h-6" />
+              </button>
+            </Link>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => clearChatMutation.mutate()}
+              disabled={clearChatMutation.isPending}
+              data-testid="button-clear-chat"
+            >
+              <Trash2 className="w-5 h-5" />
+            </Button>
+          </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary" />
-              <h1 className="text-lg font-bold">페르소</h1>
+              <h1 className="text-lg font-bold">{post?.author?.username?.split('_')?.[0] ?? '누구'}의 페르소</h1>
             </div>
             <p className="text-xs text-muted-foreground">AI들이 대화 중 · 참여자 {participants.length}명</p>
           </div>
@@ -154,26 +225,16 @@ export default function PersoPage() {
           <div className="px-4 pb-3">
             <div className="flex items-center gap-2 overflow-x-auto pb-2">
               <span className="text-xs text-muted-foreground shrink-0">참여 중:</span>
-              {participants.filter((p: any) => p).map((p: any) => (
-                <div key={p.id} className="flex items-center gap-1.5 bg-muted rounded-full pl-1 pr-2 py-0.5 shrink-0" data-testid={`participant-${p.id}`}>
-                  {p.type === 'persona' ? (
-                    <>
-                      <Avatar className="w-5 h-5">
-                        <AvatarImage src={p.personaImage} />
-                        <AvatarFallback>AI</AvatarFallback>
-                      </Avatar>
-                      <span className="text-xs">{p.personaName}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Avatar className="w-5 h-5">
-                        <AvatarImage src={p.profileImage} />
-                        <AvatarFallback>{p.name?.[0]}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-xs">{p.name}</span>
-                    </>
-                  )}
-                </div>
+              {participants.filter((p: any) => p && p.type === 'persona').map((p: any) => (
+                <Link key={p.id} href={`/chat/${p.personaId}`}>
+                  <div className="flex items-center gap-1.5 bg-muted rounded-full pl-1 pr-2 py-0.5 shrink-0 hover-elevate" data-testid={`participant-${p.id}`}>
+                    <Avatar className="w-5 h-5">
+                      <AvatarImage src={p.personaImage} />
+                      <AvatarFallback>AI</AvatarFallback>
+                    </Avatar>
+                    <span className="text-xs">{p.personaName}</span>
+                  </div>
+                </Link>
               ))}
             </div>
           </div>
@@ -207,28 +268,30 @@ export default function PersoPage() {
             className={`flex gap-3 ${!msg.isAI ? 'justify-end' : 'justify-start'}`}
           >
             {msg.isAI && (
-              <div className="flex flex-col items-center gap-1">
-                <Avatar className="w-10 h-10 flex-shrink-0">
-                  <AvatarImage src={msg.persona?.image} />
-                  <AvatarFallback>AI</AvatarFallback>
-                </Avatar>
-                {(() => {
-                  const participant = participants.find((p: any) => p && p.type === 'persona' && p.personaId === msg.personaId);
-                  if (!participant) {
+              <Link href={`/chat/${msg.personaId}`}>
+                <div className="flex flex-col items-center gap-1">
+                  <Avatar className="w-10 h-10 flex-shrink-0">
+                    <AvatarImage src={msg.persona?.image} />
+                    <AvatarFallback>AI</AvatarFallback>
+                  </Avatar>
+                  {(() => {
+                    const participant = participants.find((p: any) => p && p.type === 'persona' && p.personaId === msg.personaId);
+                    if (!participant) {
+                      return (
+                        <Badge variant="secondary" className="text-[10px] px-1 h-4">
+                          AI
+                        </Badge>
+                      );
+                    }
+                    const username = participant.username?.split('_')?.[0] ?? '알 수 없음';
                     return (
                       <Badge variant="secondary" className="text-[10px] px-1 h-4">
-                        AI
+                        PS
                       </Badge>
                     );
-                  }
-                  const username = participant.username?.split('_')?.[0] ?? '알 수 없음';
-                  return (
-                    <Badge variant="secondary" className="text-[10px] px-1 h-4">
-                      @{username}의 AI
-                    </Badge>
-                  );
-                })()}
-              </div>
+                  })()}
+                </div>
+              </Link>
             )}
             <div className={`flex flex-col gap-1 max-w-[70%] ${!msg.isAI ? 'items-end' : 'items-start'}`}>
               <div className="flex items-center gap-2">
