@@ -518,18 +518,6 @@ export default function PersonaStatePage() {
                 <span>네트워크</span>
               </button>
               <button
-                onClick={() => setActiveTab("myperso")}
-                className={`flex items-center gap-1 whitespace-nowrap px-3 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === "myperso"
-                    ? "border-primary text-primary font-bold"
-                    : "border-transparent text-muted-foreground"
-                }`}
-                data-testid="tab-myperso"
-              >
-                <User className="w-4 h-4" />
-                <span>내 퍼소</span>
-              </button>
-              <button
                 onClick={() => setActiveTab("activity")}
                 className={`flex items-center gap-1 whitespace-nowrap px-3 py-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === "activity"
@@ -919,12 +907,6 @@ export default function PersonaStatePage() {
                 </div>
               </section>
             </>
-          )}
-
-          {activeTab === "myperso" && (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">My Perso 탭 내용은 추후 구현 예정</p>
-            </div>
           )}
 
           {activeTab === "activity" && (
