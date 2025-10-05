@@ -49,6 +49,7 @@ export function useWebSocket({
       
       // 대화방 참여
       if (conversationId) {
+        console.log('[WS] Emitting join:conversation for', conversationId);
         socket.emit('join:conversation', conversationId);
       }
     });
@@ -75,7 +76,10 @@ export function useWebSocket({
     
     // 시스템 메시지 수신
     if (onSystemMessage) {
-      socket.on('message:system', onSystemMessage);
+      socket.on('message:system', (msg) => {
+        console.log('[WS] Received system message:', msg);
+        onSystemMessage(msg);
+      });
     }
     
     // 스트리밍 이벤트
@@ -123,7 +127,12 @@ export function useWebSocket({
     
     // 새 핸들러 등록
     if (onMessage) socket.on('message:new', onMessage);
-    if (onSystemMessage) socket.on('message:system', onSystemMessage);
+    if (onSystemMessage) {
+      socket.on('message:system', (msg) => {
+        console.log('[WS] Received system message:', msg);
+        onSystemMessage(msg);
+      });
+    }
     if (onStreamStart) socket.on('message:stream:start', onStreamStart);
     if (onStreamChunk) socket.on('message:stream:chunk', onStreamChunk);
     if (onStreamEnd) socket.on('message:stream:end', onStreamEnd);
@@ -158,6 +167,7 @@ export function useWebSocket({
   const leaveConversation = useCallback(() => {
     const socket = socketRef.current;
     if (socket && socket.connected && conversationId) {
+      console.log('[WS] Emitting leave:conversation for', conversationId);
       socket.emit('leave:conversation', conversationId);
     }
   }, [conversationId]);

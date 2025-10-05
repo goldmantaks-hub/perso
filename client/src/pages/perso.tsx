@@ -323,7 +323,7 @@ export default function PersoPage() {
       {/* 채팅 영역 */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((msg: any) => {
-          if (msg.messageType === 'join' || msg.senderType === 'system') {
+          if (msg.messageType === 'join' || msg.messageType === 'leave' || msg.senderType === 'system') {
             return (
               <div key={msg.id} className="flex justify-center">
                 <div className="bg-muted rounded-full px-3 py-1">
