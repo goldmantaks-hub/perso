@@ -1,0 +1,186 @@
+🎯 목표  
+페르소(PERSO) 플랫폼의 확장된 AI 페르소나 라우팅 시스템을 구축합니다.  
+입력된 게시물(텍스트·이미지 등)을 분석하여, 감성·톤·주제·형태에 따라  
+적절한 페르소나(Kai, Espri, Luna, Namu, Milo, Eden, Ava, Rho, Noir)가 자동 선택되어 반응하고,  
+각자의 관점으로 다중 대화를 생성하는 구조를 구현하세요.
+
+---
+
+🧩 1️⃣ 기본 데이터 세팅  
+아래의 `personaProfiles.json`을 프로젝트 루트에 생성하고 로드하세요.
+
+```json
+[
+  {"id":"kai","role":"knowledge","tone":"neutral"},
+  {"id":"espri","role":"empathy","tone":"warm"},
+  {"id":"luna","role":"creative","tone":"poetic"},
+  {"id":"namu","role":"analyst","tone":"rational"},
+  {"id":"milo","role":"humor","tone":"playful"},
+  {"id":"eden","role":"philosopher","tone":"reflective"},
+  {"id":"ava","role":"trend","tone":"energetic"},
+  {"id":"rho","role":"tech","tone":"precise"},
+  {"id":"noir","role":"mystic","tone":"cryptic"}
+]
+⚙️ 2️⃣ 입력 분석 모듈 구현
+detectFeatures(input) 함수를 만들어 게시물의 특성을 아래와 같은 구조로 반환하세요.
+
+js
+코드 복사
+{
+  contentType: "text" | "image" | "video" | "audio",
+  topics: ["food","travel","ai","philosophy"],
+  sentiment: {"positive":0.6,"neutral":0.2,"negative":0.2},
+  tones: ["informative","emotional"],
+  imageScores: {"aesthetics":0.85,"brand":"Starbucks"},
+  sourceTrust: 0.9
+}
+🧭 3️⃣ 페르소나 라우팅 규칙 설계
+감정/주제별로 어느 페르소나가 선택될지 가중치 기반으로 정의하세요.
+
+json
+코드 복사
+{
+  "routing": {
+    "weights": {
+      "text.factual": ["kai:2","namu:2","rho:1"],
+      "text.emotional": ["espri:2","eden:1","milo:1"],
+      "image.aestheticHigh": ["luna:2","ava:1"],
+      "image.brandDetected": ["ava:2","kai:1"],
+      "memeOrJoke": ["milo:2","luna:1"],
+      "mysteryOrMissingContext": ["noir:2","namu:1"],
+      "techTopic": ["rho:2","kai:1"],
+      "ethicsOrValues": ["eden:2","kai:1"]
+    },
+    "selection": {
+      "topK": 3,
+      "dedupeByFamily": [
+        ["kai","namu","rho"],
+        ["luna","milo","ava"],
+        ["eden","noir"]
+      ],
+      "minConfidence": 0.4
+    }
+  }
+}
+🧩 4️⃣ 라우터 함수 구현 (routePersonas())
+
+js
+코드 복사
+function routePersonas(features, config) {
+  const scores = new Map();
+  const add = (id, w=1) => scores.set(id, (scores.get(id)||0)+w);
+
+  if (features.contentType === "text" && features.tones.includes("informative"))
+    config.routing.weights["text.factual"].forEach(s => { const [id,w]=s.split(":"); add(id, +w); });
+
+  if (features.contentType === "text" && features.tones.includes("emotional"))
+    config.routing.weights["text.emotional"].forEach(s => { const [id,w]=s.split(":"); add(id, +w); });
+
+  if (features.imageScores?.aesthetics >= 0.7)
+    config.routing.weights["image.aestheticHigh"].forEach(s => { const [id,w]=s.split(":"); add(id, +w); });
+
+  if (features.imageScores?.brand)
+    config.routing.weights["image.brandDetected"].forEach(s => { const [id,w]=s.split(":"); add(id, +w); });
+
+  if (features.topics.includes("technology"))
+    config.routing.weights["techTopic"].forEach(s => { const [id,w]=s.split(":"); add(id, +w); });
+
+  const selected = Array.from(scores.entries()).sort((a,b)=>b[1]-a[1]).map(([id])=>id);
+  const families = config.routing.selection.dedupeByFamily;
+  const final = [];
+
+  for (const id of selected) {
+    const fam = families.find(group => group.includes(id));
+    if (!fam || !final.some(x => fam.includes(x))) final.push(id);
+    if (final.length >= config.routing.selection.topK) break;
+  }
+  return final;
+}
+💬 5️⃣ 감정별 / 타입별 보기 필터 구성
+감정별 보기와 페르소나 타입별 보기에서 사용할 필터를 아래 JSON 구조로 정의하세요.
+lucide-react 아이콘(Smile, Brain, Cpu, Heart, Moon, Eye, etc.)을 사용합니다.
+
+json
+코드 복사
+{
+  "filters": {
+    "emotion": [
+      {"icon":"Smile","label":"행복","value":"joy"},
+      {"icon":"Frown","label":"슬픔","value":"sadness"},
+      {"icon":"Angry","label":"분노","value":"anger"},
+      {"icon":"Meh","label":"중립","value":"neutral"}
+    ],
+    "personaType": [
+      {"icon":"Brain","label":"지식형(Kai)","value":"knowledge"},
+      {"icon":"Heart","label":"감성형(Espri)","value":"empathy"},
+      {"icon":"Moon","label":"창의형(Luna)","value":"creative"},
+      {"icon":"BarChart","label":"분석형(Namu)","value":"analyst"},
+      {"icon":"Laugh","label":"유머형(Milo)","value":"humor"},
+      {"icon":"Feather","label":"철학형(Eden)","value":"philosopher"},
+      {"icon":"Sparkles","label":"트렌드형(Ava)","value":"trend"},
+      {"icon":"Cpu","label":"테크형(Rho)","value":"tech"},
+      {"icon":"Eye","label":"미스터리형(Noir)","value":"mystic"}
+    ]
+  }
+}
+📊 6️⃣ 결과 출력 구조
+각 페르소나의 반응 정보를 구조화하여 반환하세요.
+
+json
+코드 복사
+{
+  "postId": "uuid",
+  "personas": [
+    {
+      "id": "kai",
+      "reason": "정보형 텍스트, 사실 검증 필요",
+      "summary": "제품 A의 공식 스펙과 출시일 근거 정리",
+      "actions": ["공식문서 링크 확인", "가격 변동 추세 분석"]
+    },
+    {
+      "id": "espri",
+      "reason": "긍정 감정 + 관계 언급",
+      "summary": "공감 포인트 강조 및 감정적 피드백 생성"
+    }
+  ]
+}
+🧠 7️⃣ UI 통합 계획
+
+상단 탭: [🏠 Perso] [🧠 Persona] [💬 Chat] [📊 Growth] [👥 Network]
+
+Network 탭 내 드롭다운 메뉴:
+
+감정별 보기 → lucide 아이콘 + 한글 레이블
+
+타입별 보기 → lucide 아이콘 + 한글/영문 병기
+
+Insight Box: “최근 Milo의 유머 대화 급증 → 감정지수 +15%”
+
+Hover 시 툴팁: “Kai와의 상호작용 12회 · 공감도 0.8 · 최근 대화 3일 전”
+
+✅ 8️⃣ 개발 체크리스트
+
+ personaProfiles.json 로드
+
+ detectFeatures() 구현
+
+ routePersonas() 완성
+
+ 감정별/타입별 필터 UI 구성
+
+ personaOutputs 구조 반환
+
+ Network/Persona/Growth 탭 연동 및 시각화
+
+🪄 요청 요약
+➡ 이 프롬프트를 기반으로 Replit AI가 다음을 단계별 구현하게 하세요.
+
+다중 페르소나 분석 로직 구축
+
+감정·주제 기반 라우팅
+
+lucide-react 기반 필터 UI
+
+NetworkMap 및 GrowthView와 연동되는 시각화 구현
+
+✅ 사진 내 여러 subject/context 감지 
