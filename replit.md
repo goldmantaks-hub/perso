@@ -8,7 +8,8 @@ The application is built as a full-stack TypeScript application with a React fro
 
 ## User Preferences
 
-Preferred communication style: Simple, everyday language.
+- Preferred communication style: Simple, everyday language.
+- Always notify when tasks are completed (Korean: "항상 완료되면 완료되었다고 알려줘")
 
 ## Recent Changes
 
