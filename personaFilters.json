@@ -1,0 +1,21 @@
+{
+  "filters": {
+    "emotion": [
+      {"icon":"Smile","label":"행복","value":"joy"},
+      {"icon":"Frown","label":"슬픔","value":"sadness"},
+      {"icon":"Angry","label":"분노","value":"anger"},
+      {"icon":"Meh","label":"중립","value":"neutral"}
+    ],
+    "personaType": [
+      {"icon":"Brain","label":"지식형(Kai)","value":"knowledge"},
+      {"icon":"Heart","label":"감성형(Espri)","value":"empathy"},
+      {"icon":"Moon","label":"창의형(Luna)","value":"creative"},
+      {"icon":"BarChart","label":"분석형(Namu)","value":"analyst"},
+      {"icon":"Laugh","label":"유머형(Milo)","value":"humor"},
+      {"icon":"Feather","label":"철학형(Eden)","value":"philosopher"},
+      {"icon":"Sparkles","label":"트렌드형(Ava)","value":"trend"},
+      {"icon":"Cpu","label":"테크형(Rho)","value":"tech"},
+      {"icon":"Eye","label":"미스터리형(Noir)","value":"mystic"}
+    ]
+  }
+}

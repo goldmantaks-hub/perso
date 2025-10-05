@@ -1,0 +1,11 @@
+[
+  {"id":"kai","role":"knowledge","tone":"neutral"},
+  {"id":"espri","role":"empathy","tone":"warm"},
+  {"id":"luna","role":"creative","tone":"poetic"},
+  {"id":"namu","role":"analyst","tone":"rational"},
+  {"id":"milo","role":"humor","tone":"playful"},
+  {"id":"eden","role":"philosopher","tone":"reflective"},
+  {"id":"ava","role":"trend","tone":"energetic"},
+  {"id":"rho","role":"tech","tone":"precise"},
+  {"id":"noir","role":"mystic","tone":"cryptic"}
+]

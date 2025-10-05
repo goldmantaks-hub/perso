@@ -9,6 +9,8 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { Card } from "@/components/ui/card";
+import { PersonaTabs } from "@/components/persona-tabs";
+import { InsightBox } from "@/components/insight-box";
 import { 
   ChevronDown, 
   Home,
@@ -327,6 +329,24 @@ export default function PersonaNetworkPage() {
   const SelectedEmotionIcon = getSelectedEmotionIcon();
   const SelectedPersonaIcon = getSelectedPersonaTypeIcon();
 
+  const mockInsights = [
+    { 
+      type: "trend" as const, 
+      message: "최근 Milo의 유머 대화 급증", 
+      value: "감정지수 +15%" 
+    },
+    { 
+      type: "interaction" as const, 
+      message: "Kai와의 상호작용 12회 · 공감도 0.8", 
+      value: "최근 3일 전" 
+    },
+    { 
+      type: "activity" as const, 
+      message: "Luna의 창의적 반응이 가장 활발", 
+      value: "24시간" 
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
@@ -342,7 +362,10 @@ export default function PersonaNetworkPage() {
         </div>
       </header>
 
+      <PersonaTabs />
+
       <div className="container mx-auto px-4 py-6">
+        <InsightBox insights={mockInsights} />
         <Card className="p-6">
           <div className="flex flex-wrap items-center gap-3 mb-6">
             <DropdownMenu>

@@ -58,6 +58,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/analyze - 감성 분석 + 페르소나 델타 계산
   app.post("/api/analyze", analyzeSentiment);
 
+  // POST /api/content/analyze - 콘텐츠 특성 분석 (새로운 라우팅 시스템)
+  app.post("/api/content/analyze", async (req, res) => {
+    try {
+      const { content, imageUrl, userId } = req.body;
+      
+      if (!content) {
+        return res.status(400).json({ error: "콘텐츠가 필요합니다" });
+      }
+
+      const { detectFeatures } = await import('./engine/featureDetector.js');
+      const features = await detectFeatures({ content, imageUrl, userId });
+      
+      res.json(features);
+    } catch (error) {
+      console.error("Content analyze error:", error);
+      res.status(500).json({ error: "콘텐츠 분석 실패" });
+    }
+  });
+
+  // POST /api/personas/route - 페르소나 라우팅
+  app.post("/api/personas/route", async (req, res) => {
+    try {
+      const { features, postId } = req.body;
+      
+      if (!features) {
+        return res.status(400).json({ error: "특성 데이터가 필요합니다" });
+      }
+
+      const { routePersonas, generatePersonaOutput } = await import('./engine/personaRouter.js');
+      const routingResult = routePersonas(features);
+      const output = generatePersonaOutput(postId || 'unknown', routingResult, features);
+      
+      res.json({
+        routing: {
+          selectedPersonas: routingResult.selectedPersonas,
+          scores: Object.fromEntries(routingResult.scores),
+          reasons: routingResult.reasons
+        },
+        output
+      });
+    } catch (error) {
+      console.error("Persona routing error:", error);
+      res.status(500).json({ error: "페르소나 라우팅 실패" });
+    }
+  });
+
+  // GET /api/personas/filters - 필터 설정 가져오기
+  app.get("/api/personas/filters", async (req, res) => {
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      const filtersPath = path.join(process.cwd(), 'personaFilters.json');
+      const filters = JSON.parse(fs.readFileSync(filtersPath, 'utf-8'));
+      res.json(filters);
+    } catch (error) {
+      console.error("Get filters error:", error);
+      res.status(500).json({ error: "필터 설정을 가져오는데 실패했습니다" });
+    }
+  });
+
   // POST /api/perso/open - 페르소 오픈
   app.post("/api/perso/open", authenticateToken, async (req, res) => {
     try {

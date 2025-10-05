@@ -1,0 +1,28 @@
+{
+  "routing": {
+    "weights": {
+      "text.factual": ["kai:2","namu:2","rho:1"],
+      "text.emotional": ["espri:2","eden:1","milo:1"],
+      "image.aestheticHigh": ["luna:2","ava:1"],
+      "image.brandDetected": ["ava:2","kai:1"],
+      "memeOrJoke": ["milo:2","luna:1"],
+      "mysteryOrMissingContext": ["noir:2","namu:1"],
+      "techTopic": ["rho:2","kai:1"],
+      "ethicsOrValues": ["eden:2","kai:1"],
+      "food": ["milo:2","espri:1"],
+      "travel": ["ava:2","luna:1"],
+      "philosophy": ["eden:2","noir:1"],
+      "art": ["luna:2","ava:1"],
+      "science": ["kai:2","rho:1"]
+    },
+    "selection": {
+      "topK": 3,
+      "dedupeByFamily": [
+        ["kai","namu","rho"],
+        ["luna","milo","ava"],
+        ["eden","noir"]
+      ],
+      "minConfidence": 0.4
+    }
+  }
+}
