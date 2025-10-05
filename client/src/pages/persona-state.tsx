@@ -909,7 +909,7 @@ function InfluenceMap() {
   });
 
   // API 데이터를 D3 형식으로 변환
-  const d3Data = influenceData ? {
+  const d3Data: { nodes: InfluenceNode[]; links: InfluenceLink[] } = influenceData ? {
     nodes: influenceData.nodes.map(node => ({
       id: node.id,
       group: node.id === influenceData.nodes[0]?.id ? 0 : 1,
@@ -1100,8 +1100,8 @@ export default function PersonaStatePage() {
   const level = Math.floor((userPersona.empathy + userPersona.humor + userPersona.sociability + userPersona.creativity + userPersona.knowledge) / 5);
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto w-full max-w-md">
+    <div className="bg-background">
+      <div className="mx-auto w-full max-w-md pb-8">
         {/* 헤더 */}
         <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm">
           <div className="flex items-center justify-between p-4">
@@ -1120,7 +1120,7 @@ export default function PersonaStatePage() {
           </div>
         </header>
 
-        <main className="space-y-8 p-4">
+        <main className="space-y-6 p-4">
           {/* 프로필 섹션 */}
           <section className="text-center">
             <div className="mx-auto h-32 w-32 rounded-full overflow-hidden bg-muted">
