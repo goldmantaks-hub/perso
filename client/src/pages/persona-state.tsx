@@ -1,10 +1,11 @@
-import { ArrowLeft, Settings, UserCircle, TrendingUp, Users, User, History, Brain, Smile, Palette, Sparkles, Zap, Award } from "lucide-react";
+import { ArrowLeft, Settings, UserCircle, TrendingUp, Users, User, History, Brain, Smile, Palette, Sparkles, Zap, Award, Meh, Frown } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import * as d3 from "d3";
 
 export default function PersonaStatePage() {
   const [, setLocation] = useLocation();
@@ -188,11 +189,9 @@ export default function PersonaStatePage() {
               {/* 감정 타임라인 */}
               <section>
                 <h3 className="text-lg font-bold">Emotion Timeline</h3>
-                <div className="mt-4 rounded-md bg-muted/50 p-4">
+                <div className="mt-4 rounded-xl bg-muted p-4">
                   <p className="text-sm text-muted-foreground">7-Day Emotion Changes</p>
-                  <div className="relative h-48 flex items-center justify-center mt-4">
-                    <p className="text-muted-foreground text-sm">차트는 추후 구현 예정</p>
-                  </div>
+                  <EmotionTimeline />
                 </div>
               </section>
 
@@ -312,7 +311,7 @@ export default function PersonaStatePage() {
 }
 
 function StatBar({ label, value, max, testId }: { label: string; value: number; max: number; testId: string }) {
-  const percentage = (value / max) * 100;
+  const percentage = Math.min((value / max) * 100, 100);
   
   return (
     <div className="grid grid-cols-[auto,1fr,auto,auto] items-center gap-2">
@@ -366,5 +365,166 @@ function GrowthLogItem({ IconComponent, title, description, isLast }: { IconComp
         </div>
       </div>
     </li>
+  );
+}
+
+function EmotionTimeline() {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+
+  const emotionData = [
+    { day: 'Mon', value: 3, emotion: 'Neutral', icon: 'Meh' },
+    { day: 'Tue', value: 5, emotion: 'Happy', icon: 'Smile' },
+    { day: 'Wed', value: 4, emotion: 'Calm', icon: 'Smile' },
+    { day: 'Thu', value: 7, emotion: 'Joyful', icon: 'Smile' },
+    { day: 'Fri', value: 6, emotion: 'Curious', icon: 'Smile' },
+    { day: 'Sat', value: 8, emotion: 'Excited', icon: 'Smile' },
+    { day: 'Sun', value: 5, emotion: 'Happy', icon: 'Smile' },
+  ];
+
+  useEffect(() => {
+    if (!svgRef.current || !containerRef.current || !tooltipRef.current) return;
+
+    const renderChart = () => {
+      const svg = d3.select(svgRef.current);
+      const tooltip = d3.select(tooltipRef.current);
+      const container = containerRef.current;
+      
+      if (!container) return;
+
+      svg.selectAll("*").remove();
+
+      const width = container.clientWidth;
+      const height = 192;
+      const margin = { top: 20, right: 20, bottom: 30, left: 20 };
+
+      const x = d3.scalePoint()
+        .domain(emotionData.map(d => d.day))
+        .range([margin.left, width - margin.right])
+        .padding(0.5);
+
+      const y = d3.scaleLinear()
+        .domain([0, d3.max(emotionData, d => d.value)! + 2])
+        .range([height - margin.bottom, margin.top]);
+
+      const line = d3.line<typeof emotionData[0]>()
+        .x(d => x(d.day)!)
+        .y(d => y(d.value))
+        .curve(d3.curveMonotoneX);
+
+      const isDark = document.documentElement.classList.contains('dark');
+      const primaryColor = "hsl(var(--primary))";
+      const textColor = isDark ? "#e2e8f0" : "#475569";
+      const gridColor = isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)";
+
+      svg.append("g")
+        .attr("transform", `translate(0,${height - margin.bottom})`)
+        .call(d3.axisBottom(x).tickSize(0).tickPadding(10))
+        .attr("color", textColor)
+        .select(".domain").remove();
+
+      svg.append("g")
+        .attr("class", "grid")
+        .call(d3.axisLeft(y).ticks(5).tickSize(-width + margin.left + margin.right).tickFormat("" as any))
+        .attr("transform", `translate(${margin.left}, 0)`)
+        .selectAll("line")
+        .attr("stroke", gridColor)
+        .attr("stroke-dasharray", "2,2");
+
+      svg.select(".grid").select(".domain").remove();
+
+      svg.append("path")
+        .datum(emotionData)
+        .attr("fill", "none")
+        .attr("stroke", primaryColor)
+        .attr("stroke-width", 2.5)
+        .attr("d", line);
+
+      const focus = svg.append("g")
+        .attr("class", "focus")
+        .style("display", "none");
+
+      focus.append("circle")
+        .attr("r", 6)
+        .attr("fill", primaryColor)
+        .attr("stroke", "hsl(var(--background))")
+        .attr("stroke-width", 2);
+
+      svg.append("rect")
+        .attr("class", "overlay")
+        .attr("width", width)
+        .attr("height", height)
+        .style("fill", "none")
+        .style("pointer-events", "all")
+        .on("mouseover", () => {
+          focus.style("display", null);
+          tooltip.style("opacity", "0.9");
+        })
+        .on("mouseout", () => {
+          focus.style("display", "none");
+          tooltip.style("opacity", "0");
+        })
+        .on("mousemove", function(event) {
+          const [mouseX] = d3.pointer(event);
+          const domain = x.domain();
+          const range = x.range();
+          const rangePoints = domain.map(d => x(d)!);
+          
+          let closestIndex = 0;
+          let minDistance = Math.abs(rangePoints[0] - mouseX);
+          
+          rangePoints.forEach((point, i) => {
+            const distance = Math.abs(point - mouseX);
+            if (distance < minDistance) {
+              minDistance = distance;
+              closestIndex = i;
+            }
+          });
+
+          const d = emotionData[closestIndex];
+          focus.attr("transform", `translate(${x(d.day)},${y(d.value)})`);
+
+          const tooltipNode = tooltip.node() as HTMLElement;
+          const tooltipWidth = tooltipNode?.offsetWidth || 0;
+          const tooltipHeight = tooltipNode?.offsetHeight || 0;
+          
+          let left = event.pageX + 15;
+          if (left + tooltipWidth > window.innerWidth - 20) {
+            left = event.pageX - tooltipWidth - 15;
+          }
+
+          tooltip.html(`<strong>${d.day}</strong>: ${d.emotion}`)
+            .style("left", `${left}px`)
+            .style("top", `${event.pageY - tooltipHeight - 15}px`);
+        });
+    };
+
+    renderChart();
+
+    const resizeObserver = new ResizeObserver(() => {
+      renderChart();
+    });
+
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
+  return (
+    <div ref={containerRef} className="relative h-48" data-testid="emotion-timeline">
+      <svg ref={svgRef} className="w-full h-full" id="emotion-chart"></svg>
+      <div 
+        ref={tooltipRef}
+        id="emotion-tooltip"
+        data-testid="tooltip-emotion"
+        className="absolute text-center px-2 py-1 text-xs bg-slate-700 text-white rounded-lg pointer-events-none opacity-0 transition-opacity"
+        style={{ position: 'absolute' }}
+      ></div>
+    </div>
   );
 }

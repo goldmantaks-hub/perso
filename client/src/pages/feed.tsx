@@ -439,7 +439,7 @@ export default function FeedPage() {
           </div>
         </div>
         <div className="w-full bg-muted rounded-full h-2 mb-1.5">
-          <div className="bg-primary h-2 rounded-full" style={{ width: `${userPersona ? (userPersona.empathy / 10 * 100) : 60}%` }}></div>
+          <div className="bg-primary h-2 rounded-full" style={{ width: `${userPersona ? Math.min((userPersona.empathy / 10 * 100), 100) : 60}%` }}></div>
         </div>
         <p className="text-xs text-muted-foreground">
           {userPersona ? `감성 ${userPersona.empathy * 10} · 유머 ${userPersona.humor * 10} · 사교성 ${userPersona.sociability * 10}` : '감성 80 · 유머 60 · 사교성 75'}
