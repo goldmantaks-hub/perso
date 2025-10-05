@@ -683,13 +683,40 @@ function EmotionTimeline() {
   const containerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
+  // 감정별 색상 매핑
+  const emotionColors: { [key: string]: string } = {
+    '행복': '#fbbf24',       // 노랑
+    '매우 행복': '#f59e0b',  // 진한 노랑
+    '기쁨': '#fcd34d',       // 밝은 노랑
+    '흥분': '#fb923c',       // 주황
+    '호기심': '#60a5fa',     // 하늘색
+    '차분함': '#93c5fd',     // 밝은 파랑
+    '보통': '#94a3b8',       // 회색
+    '슬픔': '#3b82f6',       // 파랑
+    '매우 슬픔': '#2563eb',  // 진한 파랑
+  };
+
+  interface EmotionDataPoint {
+    day: string;
+    value: number;
+    emotion: string;
+    icon: string;
+  }
+
   // 실제 API에서 감정 타임라인 데이터 가져오기
-  const { data: emotionData = [], isLoading } = useQuery<any[]>({
+  const { data: emotionData = [], isLoading } = useQuery<EmotionDataPoint[]>({
     queryKey: ['/api/user/persona/emotion-timeline'],
   });
 
+  // 데이터 로드 완료 시 콘솔 로그
+  useEffect(() => {
+    if (!isLoading && emotionData.length > 0) {
+      console.log('[EMOTION TIMELINE] Loaded from DB:', emotionData);
+    }
+  }, [isLoading, emotionData]);
+
   // 기본값 설정 (로딩 중이거나 데이터가 없을 때)
-  const defaultEmotionData = [
+  const defaultEmotionData: EmotionDataPoint[] = [
     { day: '월', value: 5, emotion: '보통', icon: 'Meh' },
     { day: '화', value: 5, emotion: '보통', icon: 'Meh' },
     { day: '수', value: 5, emotion: '보통', icon: 'Meh' },
@@ -700,6 +727,10 @@ function EmotionTimeline() {
   ];
 
   const displayData = isLoading || emotionData.length === 0 ? defaultEmotionData : emotionData;
+  
+  if (isLoading) {
+    console.log('[EMOTION TIMELINE] Loading emotion data...');
+  }
 
   useEffect(() => {
     if (!svgRef.current || !containerRef.current || !tooltipRef.current) return;
@@ -752,6 +783,7 @@ function EmotionTimeline() {
 
       svg.select(".grid").select(".domain").remove();
 
+      // 그라데이션 라인 (감정별 색상 적용)
       svg.append("path")
         .datum(displayData)
         .attr("fill", "none")
@@ -759,14 +791,27 @@ function EmotionTimeline() {
         .attr("stroke-width", 2.5)
         .attr("d", line);
 
+      // 감정별 색상 포인트 추가
+      svg.selectAll(".emotion-point")
+        .data(displayData)
+        .enter()
+        .append("circle")
+        .attr("class", "emotion-point")
+        .attr("cx", d => x(d.day)!)
+        .attr("cy", d => y(d.value))
+        .attr("r", 5)
+        .attr("fill", d => emotionColors[d.emotion] || primaryColor)
+        .attr("stroke", "hsl(var(--background))")
+        .attr("stroke-width", 2);
+
       const focus = svg.append("g")
         .attr("class", "focus")
         .style("display", "none");
 
       focus.append("circle")
-        .attr("r", 6)
-        .attr("fill", primaryColor)
-        .attr("stroke", "hsl(var(--background))")
+        .attr("r", 8)
+        .attr("fill", "transparent")
+        .attr("stroke", primaryColor)
         .attr("stroke-width", 2);
 
       svg.append("rect")
@@ -801,7 +846,10 @@ function EmotionTimeline() {
           });
 
           const d = displayData[closestIndex];
+          const emotionColor = emotionColors[d.emotion] || primaryColor;
+          
           focus.attr("transform", `translate(${x(d.day)},${y(d.value)})`);
+          focus.select("circle").attr("stroke", emotionColor);
 
           const tooltipNode = tooltip.node() as HTMLElement;
           const tooltipWidth = tooltipNode?.offsetWidth || 0;
@@ -812,7 +860,12 @@ function EmotionTimeline() {
             left = event.pageX - tooltipWidth - 15;
           }
 
-          tooltip.html(`<strong>${d.day}</strong>: ${d.emotion}`)
+          tooltip.html(`
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <div style="width: 12px; height: 12px; border-radius: 50%; background-color: ${emotionColor};"></div>
+              <strong>${d.day}</strong>: ${d.emotion} (${d.value})
+            </div>
+          `)
             .style("left", `${left}px`)
             .style("top", `${event.pageY - tooltipHeight - 15}px`);
         });

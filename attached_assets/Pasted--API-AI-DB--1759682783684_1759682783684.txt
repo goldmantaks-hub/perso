@@ -1,0 +1,81 @@
+ 목표:
+현재 감정 타임라인이 매 API 호출 시 랜덤 값으로 생성되고 있습니다.
+이를 실제 AI 감정 분석 데이터 기반으로 변경하고, DB에 저장/재사용되도록 수정해주세요.
+
+---
+
+🎯 요구사항:
+
+1️⃣ 기존 문제
+- 감정 점수(value)가 3~8 사이 랜덤 생성됨
+- 감정(emotion)도 배열 ['보통', '행복', '차분함', '기쁨', '호기심', '흥분'] 중 랜덤 선택
+- DB 저장 없이 호출 시마다 초기화됨
+
+---
+
+2️⃣ 개선 방향
+- 게시물 분석 시 AI 감정 분석 결과(sentiment, tone, emotion) 기반으로 점수 계산
+- 최근 7일간의 감정 흐름을 DB에 저장하고, 재호출 시 캐싱된 데이터를 우선 사용
+- 하루 단위로 업데이트 (새 게시물 업로드 시 갱신)
+
+---
+
+3️⃣ 구현 단계
+
+① DB 스키마 (emotion_timeline)
+| 컬럼명       | 타입     | 설명 |
+|---------------|----------|------|
+| id            | UUID     | 기본 키 |
+| user_id       | UUID     | 사용자 ID |
+| persona_id    | UUID     | 페르소나 ID |
+| day           | VARCHAR  | 'Mon', 'Tue', ... |
+| emotion       | VARCHAR  | 감정 라벨 ('행복', '슬픔' 등) |
+| score         | INTEGER  | 감정 강도 (1~10) |
+| updated_at    | TIMESTAMP| 갱신 시각 |
+
+② AI 분석 로직
+- /api/ai/analyze 호출 시, 반환 데이터에 감정 점수 포함
+  예: { sentiment: {positive: 0.9}, tone: 'joyful', emotion: '행복' }
+- computeEmotionScore 함수로 score 변환 (예: positive*10)
+- DB에 upsert(day, emotion, score)
+
+③ API 엔드포인트
+- GET /api/emotion-timeline?personaId=xxx
+  → DB에서 최근 7일 데이터 반환
+- POST /api/emotion-timeline/update
+  → 새 감정 분석 결과로 최신값 갱신
+
+④ UI 반영
+- emotionTimeline을 DB 데이터 기반으로 로드
+- 랜덤 생성 로직 제거
+- “Loading Emotion Data…” → 실제 분석 중일 때 표시
+- 감정별 색상 매핑 추가 (행복=노랑, 슬픔=파랑, 분노=빨강 등)
+
+---
+
+💻 예시 코드
+```js
+async function fetchEmotionTimeline(personaId) {
+  const res = await fetch(`/api/emotion-timeline?personaId=${personaId}`);
+  const data = await res.json();
+  if (!data || data.timeline.length === 0) {
+    console.log('No cached data, fetching AI analysis...');
+    const analysis = await fetch(`/api/ai/analyze?personaId=${personaId}`).then(r => r.json());
+    await fetch(`/api/emotion-timeline/update`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ personaId, timeline: analysis.timeline }),
+    });
+    return analysis.timeline;
+  }
+  return data.timeline;
+}
+✅ 완료 조건:
+
+감정 타임라인이 랜덤이 아니라 실제 분석값 기반으로 표시됨
+
+데이터가 DB에 저장되어 새로고침해도 유지됨
+
+감정별 색상/이모지 UI 매핑이 적용됨
+
+콘솔에 "Loaded from DB" 또는 "Updated from AI" 로그 출력

@@ -292,6 +292,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // DB에서 최근 7일간 감정 로그 가져오기
       const emotionLogs = await storage.getEmotionLogsByPersona(persona.id, 7);
       
+      console.log(`[EMOTION TIMELINE] Loaded ${emotionLogs.length} emotion logs from DB for persona ${persona.id}`);
+      
       // 날짜별로 그룹화하여 평균 계산
       const days = ['월', '화', '수', '목', '금', '토', '일'];
       const today = new Date();
@@ -339,6 +341,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      console.log(`[EMOTION TIMELINE] Returning ${emotionTimeline.length} days of emotion data`);
       res.json(emotionTimeline);
     } catch (error) {
       console.error("Get emotion timeline error:", error);
