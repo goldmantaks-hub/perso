@@ -1073,6 +1073,10 @@ export default function PersonaStatePage() {
     queryKey: ["/api/user/persona/growth-history"],
   });
 
+  const { data: personaTone } = useQuery<{ tone: string; style: string }>({
+    queryKey: ["/api/user/persona/tone"],
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -1293,13 +1297,13 @@ export default function PersonaStatePage() {
                   <div className="flex items-center justify-between p-4" data-testid="current-tone">
                     <span className="text-muted-foreground">현재 톤:</span>
                     <span className="font-medium flex items-center gap-1">
-                      {userPersona.empathy >= 7 ? '공감적' : userPersona.knowledge >= 7 ? '분석적' : '차분함'} <Smile className="w-4 h-4" />
+                      {personaTone?.tone || '균형잡힌'} <Smile className="w-4 h-4" />
                     </span>
                   </div>
                   <div className="flex items-center justify-between p-4" data-testid="evolution-direction">
-                    <span className="text-muted-foreground">진화 방향:</span>
+                    <span className="text-muted-foreground">스타일:</span>
                     <span className="font-medium flex items-center gap-1">
-                      {userPersona.creativity >= 7 ? '창의적' : userPersona.humor >= 7 ? '유쾌한' : '열정적'} <Zap className="w-4 h-4" />
+                      {personaTone?.style || 'default'} <Zap className="w-4 h-4" />
                     </span>
                   </div>
                   <div className="flex items-center justify-between p-4" data-testid="triggers">

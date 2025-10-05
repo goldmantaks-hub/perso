@@ -238,42 +238,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "페르소나를 찾을 수 없습니다" });
       }
 
-      // 실제로는 DB에서 성장 로그를 가져와야 하지만, 현재는 페르소나 스탯 기반으로 생성
-      const growthHistory = [
-        {
-          type: 'stat_increase',
-          icon: 'Brain',
-          title: '지식 성장',
-          description: `지식 스탯이 ${persona.knowledge}로 증가했습니다`,
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-        },
-        {
-          type: 'stat_increase',
-          icon: 'Smile',
-          title: '공감 성장',
-          description: `공감 스탯이 ${persona.empathy}로 증가했습니다`,
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
-        },
-        {
-          type: 'stat_increase',
-          icon: 'Sparkles',
-          title: '창의성 성장',
-          description: `창의성 스탯이 ${persona.creativity}로 증가했습니다`,
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(),
-        },
-        {
-          type: 'level_up',
-          icon: 'Award',
-          title: '레벨업',
-          description: `레벨 ${Math.floor((persona.empathy + persona.humor + persona.sociability + persona.creativity + persona.knowledge) / 5)}에 도달했습니다`,
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 96).toISOString(),
-        },
-      ];
+      // DB에서 실제 성장 로그 가져오기
+      const growthLogs = await storage.getGrowthLogsByPersona(persona.id, 20);
+      
+      // UI를 위한 아이콘 매핑
+      const statToIcon: Record<string, string> = {
+        'Empathy': 'Heart',
+        'Humor': 'Smile',
+        'Sociability': 'Users',
+        'Creativity': 'Sparkles',
+        'Knowledge': 'Brain',
+      };
+      
+      const growthHistory = growthLogs.map((log) => ({
+        type: 'stat_increase',
+        icon: statToIcon[log.stat] || 'TrendingUp',
+        title: `${log.stat} 성장`,
+        description: `${log.stat} 스탯이 +${log.delta} 증가했습니다 (${log.trigger})`,
+        timestamp: log.createdAt.toISOString(),
+      }));
       
       res.json(growthHistory);
     } catch (error) {
       console.error("Get growth history error:", error);
       res.status(500).json({ message: "성장 히스토리를 가져오는데 실패했습니다" });
+    }
+  });
+
+  // GET /api/user/persona/tone - AI 톤 및 스타일 가져오기
+  app.get("/api/user/persona/tone", authenticateToken, async (req, res) => {
+    try {
+      if (!req.userId) {
+        return res.status(401).json({ message: "인증되지 않은 사용자입니다" });
+      }
+      
+      const persona = await storage.getPersonaByUserId(req.userId);
+      if (!persona) {
+        return res.status(404).json({ message: "페르소나를 찾을 수 없습니다" });
+      }
+
+      res.json({
+        tone: persona.tone || '균형잡힌',
+        style: persona.style || 'default',
+      });
+    } catch (error) {
+      console.error("Get persona tone error:", error);
+      res.status(500).json({ message: "AI 톤을 가져오는데 실패했습니다" });
+    }
+  });
+
+  // GET /api/user/persona/interactions - 영향력 맵 가져오기
+  app.get("/api/user/persona/interactions", authenticateToken, async (req, res) => {
+    try {
+      if (!req.userId) {
+        return res.status(401).json({ message: "인증되지 않은 사용자입니다" });
+      }
+      
+      const persona = await storage.getPersonaByUserId(req.userId);
+      if (!persona) {
+        return res.status(404).json({ message: "페르소나를 찾을 수 없습니다" });
+      }
+
+      const interactions = await storage.getPersonaInteractions(persona.id);
+      
+      // 노드와 링크 형식으로 변환
+      const nodes = new Set<string>();
+      nodes.add(persona.id);
+      
+      interactions.forEach(interaction => {
+        nodes.add(interaction.fromPersonaId);
+        nodes.add(interaction.toPersonaId);
+      });
+      
+      // 각 노드에 대한 페르소나 정보 가져오기
+      const allPersonas = await storage.getAllPersonas();
+      const personaMap = new Map(allPersonas.map(p => [p.id, p]));
+      
+      const nodeList = Array.from(nodes).map(id => {
+        const p = personaMap.get(id);
+        return {
+          id,
+          name: p?.name || 'Unknown',
+          influence: (p?.empathy || 0) + (p?.sociability || 0) + (p?.creativity || 0),
+        };
+      });
+      
+      const links = interactions.map(interaction => ({
+        source: interaction.fromPersonaId,
+        target: interaction.toPersonaId,
+        strength: interaction.strength,
+        type: interaction.interactionType,
+      }));
+      
+      res.json({ nodes: nodeList, links });
+    } catch (error) {
+      console.error("Get persona interactions error:", error);
+      res.status(500).json({ message: "영향력 맵을 가져오는데 실패했습니다" });
     }
   });
 
