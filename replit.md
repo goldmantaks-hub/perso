@@ -13,6 +13,27 @@ The application is built as a full-stack TypeScript application with a React fro
 
 ## Recent Changes
 
+### October 5, 2025 - Persona State Page: D3.js Emotion Timeline & UI Fixes
+
+**D3.js Emotion Timeline Chart**
+- Implemented interactive emotion timeline using D3.js v7
+- Displays 7-day emotion history with line chart visualization
+- Interactive tooltip shows emotion type and date on hover
+- Responsive chart with ResizeObserver for dynamic sizing
+- Theme-aware colors adapting to light/dark mode
+- Chart isolates D3 DOM work in React useEffect for clean integration
+
+**Gauge Bar Overflow Fix**
+- Fixed visual overflow bug where stat values exceeding max (e.g., 17/10, 16/10) caused progress bars to break layout
+- Applied `Math.min()` clamping to limit bar width to 100% maximum
+- Fix applied to both persona-state.tsx StatBar component and feed.tsx empathy gauge
+- Text values still display correctly (e.g., "17/10") while bars remain contained
+
+**Technical Notes**
+- D3.js library added for data visualizations
+- Current emotion data is stubbed; will be replaced with real API payload
+- Future enhancement: Live theme updates for chart colors via ThemeProvider integration
+
 ### October 5, 2025 - WebSocket Real-time Messaging & LLM Streaming
 
 **WebSocket Infrastructure**
