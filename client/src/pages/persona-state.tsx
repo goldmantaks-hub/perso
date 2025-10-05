@@ -1,4 +1,4 @@
-import { ArrowLeft, Settings, UserCircle, TrendingUp, Users, User, History, Brain, Smile, Palette, Sparkles, Zap, Award, Meh, Frown } from "lucide-react";
+import { ArrowLeft, Settings, UserCircle, TrendingUp, Users, User, History, Brain, Smile, Palette, Sparkles, Zap, Award, Meh, Frown, Network, BarChart3, List, MessageCircle, Heart, Lightbulb } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,22 @@ interface InfluenceLink {
   target: string | InfluenceNode;
   value: number;
 }
+
+interface NetworkPersona {
+  id: string;
+  name: string;
+  emotion: string;
+  empathy: number;
+  recentChats: number;
+  color: string;
+  size: number;
+  lineWidth: number;
+  type: string;
+  insight: string;
+}
+
+type ViewMode = 'network' | 'emotion' | 'rank';
+type FilterType = 'all' | 'joy' | 'sad' | 'angry' | 'neutral';
 
 function StatBar({ label, value, max, testId }: { label: string; value: number; max: number; testId: string }) {
   const percentage = Math.min((value / max) * 100, 100);
@@ -81,6 +97,399 @@ function GrowthLogItem({ IconComponent, title, description, isLast }: { IconComp
         </div>
       </div>
     </li>
+  );
+}
+
+function NetworkTab() {
+  const [selectedPersona, setSelectedPersona] = useState<NetworkPersona | null>(null);
+  const [emotionFilter, setEmotionFilter] = useState<FilterType>('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('network');
+
+  const networkPersonas: NetworkPersona[] = [
+    {
+      id: '1',
+      name: 'Milo',
+      emotion: '기쁨',
+      empathy: 0.75,
+      recentChats: 5,
+      color: 'bg-yellow-400',
+      size: 20,
+      lineWidth: 6,
+      type: 'joy',
+      insight: 'Milo와 대화를 늘리면 유머 스탯이 상승할 수 있습니다.'
+    },
+    {
+      id: '2',
+      name: 'Alex',
+      emotion: '슬픔',
+      empathy: 0.45,
+      recentChats: 2,
+      color: 'bg-red-400',
+      size: 12,
+      lineWidth: 2,
+      type: 'sad',
+      insight: 'Alex와 대화하면 공감 능력을 키울 수 있습니다.'
+    },
+    {
+      id: '3',
+      name: 'Nara',
+      emotion: '평온',
+      empathy: 0.68,
+      recentChats: 4,
+      color: 'bg-blue-400',
+      size: 16,
+      lineWidth: 4,
+      type: 'neutral',
+      insight: 'Nara와의 대화가 안정적인 성장을 이끌고 있습니다.'
+    },
+    {
+      id: '4',
+      name: 'Leo',
+      emotion: '중립',
+      empathy: 0.55,
+      recentChats: 1,
+      color: 'bg-gray-400',
+      size: 10,
+      lineWidth: 1.5,
+      type: 'neutral',
+      insight: 'Leo와 새로운 주제로 대화를 시작해보세요.'
+    },
+    {
+      id: '5',
+      name: 'Luna',
+      emotion: '기쁨',
+      empathy: 0.82,
+      recentChats: 3,
+      color: 'bg-yellow-400',
+      size: 14,
+      lineWidth: 3,
+      type: 'joy',
+      insight: 'Luna와의 강한 유대감이 창의성 발달에 도움이 됩니다.'
+    }
+  ];
+
+  const filteredPersonas = emotionFilter === 'all' 
+    ? networkPersonas 
+    : networkPersonas.filter(p => p.type === emotionFilter);
+
+  const getEmotionIcon = (emotion: string) => {
+    switch(emotion) {
+      case '기쁨': return <Smile className="w-4 h-4" />;
+      case '슬픔': return <Frown className="w-4 h-4" />;
+      default: return <Meh className="w-4 h-4" />;
+    }
+  };
+
+  return (
+    <>
+      {/* Network Map Header */}
+      <section>
+        <h2 className="text-xl font-bold">페르소나 네트워크 맵</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          나와 다른 페르소나의 관계를 시각적으로 확인해보세요.
+        </p>
+      </section>
+
+      {/* Graph Guide/Legend */}
+      <section className="rounded-lg bg-muted/50 p-4">
+        <h3 className="text-sm font-semibold mb-3">그래프 가이드</h3>
+        <div className="grid grid-cols-1 gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              <div className="w-6 h-6 rounded-full bg-primary border-2 border-primary"></div>
+              <span className="text-muted-foreground">→</span>
+              <div className="w-4 h-4 rounded-full bg-yellow-400"></div>
+            </div>
+            <span className="text-muted-foreground">노드 크기: 공감도 (클수록 높음)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-0.5 bg-border"></div>
+              <span className="text-muted-foreground">→</span>
+              <div className="w-3 h-1 bg-border"></div>
+            </div>
+            <span className="text-muted-foreground">선 굵기: 최근 대화 빈도 (두꺼울수록 많음)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1">
+              <div className="w-4 h-4 rounded-full bg-yellow-400"></div>
+              <div className="w-4 h-4 rounded-full bg-red-400"></div>
+              <div className="w-4 h-4 rounded-full bg-blue-400"></div>
+              <div className="w-4 h-4 rounded-full bg-gray-400"></div>
+            </div>
+            <span className="text-muted-foreground">노드 색상: 주요 감정 상태</span>
+          </div>
+        </div>
+      </section>
+
+      {/* View Mode Toggle */}
+      <section className="flex gap-2 rounded-lg bg-muted/50 p-1">
+        <button
+          onClick={() => setViewMode('network')}
+          className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            viewMode === 'network' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
+          }`}
+          data-testid="view-network"
+        >
+          <Network className="w-4 h-4" />
+          <span>Network</span>
+        </button>
+        <button
+          onClick={() => setViewMode('emotion')}
+          className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            viewMode === 'emotion' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
+          }`}
+          data-testid="view-emotion"
+        >
+          <BarChart3 className="w-4 h-4" />
+          <span>Emotion Chart</span>
+        </button>
+        <button
+          onClick={() => setViewMode('rank')}
+          className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            viewMode === 'rank' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
+          }`}
+          data-testid="view-rank"
+        >
+          <List className="w-4 h-4" />
+          <span>Relation Rank</span>
+        </button>
+      </section>
+
+      {/* Network View */}
+      {viewMode === 'network' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Network Visualization */}
+          <section className="lg:col-span-2 relative aspect-square w-full rounded-lg bg-muted/50 flex items-center justify-center">
+            <svg className="absolute inset-0 h-full w-full" viewBox="0 0 400 400">
+              {networkPersonas.map((persona, idx) => {
+                const positions = [
+                  { x: 200, y: 120 },
+                  { x: 104, y: 162 },
+                  { x: 145.7, y: 265.7 },
+                  { x: 279.4, y: 280.9 },
+                  { x: 295.4, y: 189.6 }
+                ];
+                const isFiltered = emotionFilter !== 'all' && persona.type !== emotionFilter;
+                return (
+                  <line
+                    key={persona.id}
+                    className={`stroke-current transition-opacity ${isFiltered ? 'opacity-20' : 'opacity-100'}`}
+                    strokeWidth={persona.lineWidth}
+                    x1="200"
+                    x2={positions[idx].x}
+                    y1="200"
+                    y2={positions[idx].y}
+                    style={{ stroke: 'hsl(var(--muted-foreground))' }}
+                  />
+                );
+              })}
+            </svg>
+            
+            {/* Center Node - My Persona */}
+            <div className="absolute z-10" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+              <div className="flex flex-col items-center">
+                <div className="w-24 h-24 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-center text-lg leading-tight">
+                  나의<br />페르소나
+                </div>
+              </div>
+            </div>
+
+            {/* Connected Nodes */}
+            {networkPersonas.map((persona, idx) => {
+              const positions = [
+                { top: '80px', left: '50%' },
+                { top: '150px', left: '80px' },
+                { top: '280px', left: '120px' },
+                { top: '290px', left: '300px' },
+                { top: '180px', left: '320px' }
+              ];
+              const isFiltered = emotionFilter !== 'all' && persona.type !== emotionFilter;
+              const sizeMap: Record<number, string> = {
+                10: 'w-10 h-10',
+                12: 'w-12 h-12',
+                14: 'w-14 h-14',
+                16: 'w-16 h-16',
+                20: 'w-20 h-20'
+              };
+              
+              return (
+                <div
+                  key={persona.id}
+                  className={`absolute z-10 transition-opacity ${isFiltered ? 'opacity-30' : 'opacity-100'}`}
+                  style={{ ...positions[idx], transform: 'translate(-50%, -50%)' }}
+                >
+                  <div className="flex flex-col items-center">
+                    <button
+                      onClick={() => setSelectedPersona(persona)}
+                      className={`${sizeMap[persona.size]} rounded-full ${persona.color} flex items-center justify-center font-bold cursor-pointer hover:ring-4 hover:ring-primary/50 transition-all ${
+                        selectedPersona?.id === persona.id ? 'ring-4 ring-primary' : ''
+                      }`}
+                      style={{ color: persona.color.includes('yellow') || persona.color.includes('gray') ? '#000' : '#fff' }}
+                      data-testid={`persona-node-${persona.id}`}
+                    >
+                      <span className={persona.size <= 12 ? 'text-xs' : 'text-sm'}>{persona.name}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </section>
+
+          {/* Persona Detail Card */}
+          <section className="lg:col-span-1">
+            {selectedPersona ? (
+              <div className="rounded-lg border bg-card p-4 space-y-4" data-testid="persona-detail-card">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold">{selectedPersona.name}</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      {getEmotionIcon(selectedPersona.emotion)}
+                      <span className="text-sm text-muted-foreground">{selectedPersona.emotion}</span>
+                    </div>
+                  </div>
+                  <div className={`w-12 h-12 rounded-full ${selectedPersona.color}`}></div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Heart className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">공감도</span>
+                    </div>
+                    <span className="font-semibold">{(selectedPersona.empathy * 100).toFixed(0)}%</span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <MessageCircle className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">최근 대화수</span>
+                    </div>
+                    <span className="font-semibold">{selectedPersona.recentChats}회</span>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Lightbulb className="w-4 h-4 text-primary" />
+                    <p className="text-sm font-medium">인사이트</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{selectedPersona.insight}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-lg border bg-card p-6 text-center text-muted-foreground">
+                <p className="text-sm">노드를 클릭하여 상세 정보를 확인하세요</p>
+              </div>
+            )}
+          </section>
+        </div>
+      )}
+
+      {/* Emotion Chart View */}
+      {viewMode === 'emotion' && (
+        <section className="rounded-lg bg-muted/50 p-6">
+          <h3 className="text-lg font-semibold mb-4">감정별 분포</h3>
+          <div className="space-y-4">
+            {[
+              { emotion: '기쁨', count: 2, color: 'bg-yellow-400' },
+              { emotion: '슬픔', count: 1, color: 'bg-red-400' },
+              { emotion: '평온', count: 1, color: 'bg-blue-400' },
+              { emotion: '중립', count: 1, color: 'bg-gray-400' }
+            ].map((item) => (
+              <div key={item.emotion} className="flex items-center gap-4">
+                <div className="w-20 text-sm font-medium">{item.emotion}</div>
+                <div className="flex-1 h-8 bg-muted rounded-full overflow-hidden">
+                  <div className={`h-full ${item.color}`} style={{ width: `${(item.count / 5) * 100}%` }}></div>
+                </div>
+                <div className="w-12 text-sm text-muted-foreground text-right">{item.count}명</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Relation Rank View */}
+      {viewMode === 'rank' && (
+        <section className="rounded-lg bg-muted/50 p-6">
+          <h3 className="text-lg font-semibold mb-4">관계 순위</h3>
+          <div className="space-y-3">
+            {[...networkPersonas].sort((a, b) => b.empathy - a.empathy).map((persona, idx) => (
+              <div key={persona.id} className="flex items-center gap-4 p-3 rounded-lg bg-background">
+                <div className="text-2xl font-bold text-muted-foreground w-8">{idx + 1}</div>
+                <div className={`w-10 h-10 rounded-full ${persona.color}`}></div>
+                <div className="flex-1">
+                  <p className="font-semibold">{persona.name}</p>
+                  <p className="text-sm text-muted-foreground">{persona.emotion}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold">{(persona.empathy * 100).toFixed(0)}%</p>
+                  <p className="text-xs text-muted-foreground">공감도</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Filter Buttons */}
+      <section className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setEmotionFilter('all')}
+          className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+            emotionFilter === 'all' ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary hover:bg-primary/20'
+          }`}
+          data-testid="filter-all"
+        >
+          <span>전체</span>
+        </button>
+        <button
+          onClick={() => setEmotionFilter('joy')}
+          className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+            emotionFilter === 'joy' ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary hover:bg-primary/20'
+          }`}
+          data-testid="filter-joy"
+        >
+          <Smile className="w-3 h-3" />
+          <span>기쁨</span>
+        </button>
+        <button
+          onClick={() => setEmotionFilter('sad')}
+          className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+            emotionFilter === 'sad' ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary hover:bg-primary/20'
+          }`}
+          data-testid="filter-sad"
+        >
+          <Frown className="w-3 h-3" />
+          <span>슬픔</span>
+        </button>
+        <button
+          onClick={() => setEmotionFilter('neutral')}
+          className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+            emotionFilter === 'neutral' ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary hover:bg-primary/20'
+          }`}
+          data-testid="filter-neutral"
+        >
+          <Meh className="w-3 h-3" />
+          <span>평온</span>
+        </button>
+      </section>
+
+      {/* Actionable Insight Box */}
+      <section className="rounded-lg border border-primary/20 bg-primary/10 p-4">
+        <div className="flex items-start gap-4">
+          <Sparkles className="mt-1 text-primary w-5 h-5" />
+          <div className="flex-1">
+            <p className="font-bold text-primary">제안</p>
+            <p className="mt-1 text-sm">
+              {selectedPersona 
+                ? selectedPersona.insight
+                : 'Luna와 Milo의 공감도가 높습니다. 이들과 대화를 이어가면 창의성과 유머 스탯이 함께 성장할 수 있습니다.'}
+            </p>
+          </div>
+        </div>
+      </section>
+    </>
   );
 }
 
@@ -798,116 +1207,7 @@ export default function PersonaStatePage() {
             </>
           )}
 
-          {activeTab === "network" && (
-            <>
-              {/* Network Map Header */}
-              <section>
-                <h2 className="text-xl font-bold">페르소나 네트워크 맵</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  나와 다른 페르소나의 관계를 시각적으로 확인해보세요.
-                </p>
-              </section>
-
-              {/* Network Visualization */}
-              <section className="relative aspect-square w-full rounded-lg bg-muted/50 flex items-center justify-center">
-                <svg className="absolute inset-0 h-full w-full" viewBox="0 0 400 400">
-                  <line className="stroke-current text-muted" strokeWidth="6" x1="200" x2="200" y1="152" y2="120" />
-                  <line className="stroke-current text-muted" strokeWidth="2" x1="176" x2="104" y1="176" y2="162" />
-                  <line className="stroke-current text-muted" strokeWidth="4" x1="171.1" x2="145.7" y1="228.9" y2="265.7" />
-                  <line className="stroke-current text-muted" strokeWidth="1.5" x1="222.9" x2="279.4" y1="222.9" y2="280.9" />
-                  <line className="stroke-current text-muted" strokeWidth="3" x1="224" x2="295.4" y1="200" y2="189.6" />
-                </svg>
-                
-                {/* Center Node - My Persona */}
-                <div className="absolute z-10" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                  <div className="flex flex-col items-center">
-                    <div className="w-24 h-24 rounded-full bg-primary flex items-center justify-center text-white font-bold text-center text-lg leading-tight">
-                      나의<br />페르소나
-                    </div>
-                  </div>
-                </div>
-
-                {/* Connected Nodes */}
-                <div className="absolute group z-10" style={{ top: '80px', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                  <div className="flex flex-col items-center cursor-pointer">
-                    <div className="w-20 h-20 rounded-full bg-yellow-400 flex items-center justify-center text-black font-bold text-sm">
-                      Milo
-                    </div>
-                    <div className="hidden group-hover:block absolute -bottom-14 w-max bg-slate-800 text-white text-xs rounded py-1 px-2 z-10 text-center">
-                      Milo와의 공감도 0.75 / 최근 5회 대화
-                    </div>
-                  </div>
-                </div>
-
-                <div className="absolute group z-10" style={{ top: '150px', left: '80px', transform: 'translate(-50%, -50%)' }}>
-                  <div className="flex flex-col items-center cursor-pointer">
-                    <div className="w-12 h-12 rounded-full bg-red-400 flex items-center justify-center text-white font-bold text-xs">
-                      Alex
-                    </div>
-                    <div className="hidden group-hover:block absolute -bottom-14 w-max bg-slate-800 text-white text-xs rounded py-1 px-2 z-10 text-center">
-                      Alex와의 공감도 0.45 / 최근 2회 대화
-                    </div>
-                  </div>
-                </div>
-
-                <div className="absolute group z-10" style={{ top: '280px', left: '120px', transform: 'translate(-50%, -50%)' }}>
-                  <div className="flex flex-col items-center cursor-pointer">
-                    <div className="w-16 h-16 rounded-full bg-blue-400 flex items-center justify-center text-white font-bold text-sm">
-                      Nara
-                    </div>
-                    <div className="hidden group-hover:block absolute -bottom-14 w-max bg-slate-800 text-white text-xs rounded py-1 px-2 z-10 text-center">
-                      Nara와의 공감도 0.68 / 최근 4회 대화
-                    </div>
-                  </div>
-                </div>
-
-                <div className="absolute group z-10" style={{ top: '290px', left: '300px', transform: 'translate(-50%, -50%)' }}>
-                  <div className="flex flex-col items-center cursor-pointer">
-                    <div className="w-10 h-10 rounded-full bg-gray-400 flex items-center justify-center text-black font-bold text-xs">
-                      Leo
-                    </div>
-                    <div className="hidden group-hover:block absolute -bottom-14 w-max bg-slate-800 text-white text-xs rounded py-1 px-2 z-10 text-center">
-                      Leo와의 공감도 0.55 / 최근 1회 대화
-                    </div>
-                  </div>
-                </div>
-
-                <div className="absolute group z-10" style={{ top: '180px', left: '320px', transform: 'translate(-50%, -50%)' }}>
-                  <div className="flex flex-col items-center cursor-pointer">
-                    <div className="w-14 h-14 rounded-full bg-yellow-400 flex items-center justify-center text-black font-bold text-sm">
-                      Luna
-                    </div>
-                    <div className="hidden group-hover:block absolute -bottom-14 w-max bg-slate-800 text-white text-xs rounded py-1 px-2 z-10 text-center">
-                      Luna와의 공감도 0.82 / 최근 3회 대화
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              {/* Filter Buttons */}
-              <section className="flex flex-wrap gap-2">
-                <button className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/20">
-                  <span>감정별 보기</span>
-                  <span>▼</span>
-                </button>
-                <button className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/20">
-                  <span>페르소나 타입별 보기</span>
-                  <span>▼</span>
-                </button>
-              </section>
-
-              {/* Insight Box */}
-              <section className="rounded-lg border border-primary/20 bg-primary/10 p-4">
-                <div className="flex items-start gap-4">
-                  <Award className="mt-1 text-primary w-5 h-5" />
-                  <div className="flex-1">
-                    <p className="font-bold text-primary">인사이트 박스</p>
-                    <p className="mt-1 text-sm">Milo는 최근 유머형 대화가 급증했습니다.</p>
-                  </div>
-                </div>
-              </section>
-            </>
-          )}
+          {activeTab === "network" && <NetworkTab />}
 
           {activeTab === "activity" && (
             <div className="text-center py-12">
