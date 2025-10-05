@@ -20,11 +20,15 @@ export function setupWebSocket(server: Server) {
     },
   });
 
+  console.log('[WS] WebSocket server initialized');
+
   // WebSocket 인증 미들웨어
   io.use((socket, next) => {
+    console.log('[WS] Authentication middleware triggered');
     const token = socket.handshake.auth.token;
     
     if (!token) {
+      console.log('[WS] No token provided');
       return next(new Error("인증 토큰이 필요합니다"));
     }
 
@@ -32,8 +36,10 @@ export function setupWebSocket(server: Server) {
       const decoded = jwt.verify(token, JWT_SECRET) as AuthenticatedSocket;
       socket.data.userId = decoded.userId;
       socket.data.username = decoded.username;
+      console.log(`[WS] Auth successful for user ${decoded.userId}`);
       next();
     } catch (error) {
+      console.log('[WS] Auth failed:', error);
       next(new Error("유효하지 않은 토큰입니다"));
     }
   });
@@ -41,15 +47,18 @@ export function setupWebSocket(server: Server) {
   io.on("connection", (socket) => {
     const userId = socket.data.userId;
     const username = socket.data.username;
+    console.log(`[WS] User ${userId} (${username}) connected`);
     log(`[WS] User ${userId} connected`);
 
     // 대화방 참여
     socket.on("join:conversation", async (conversationId: string) => {
+      console.log(`[WS] join:conversation event received from ${userId} for conversation ${conversationId}`);
       socket.join(`conversation:${conversationId}`);
       log(`[WS] User ${userId} joined conversation ${conversationId}`);
       
       // 입장 시스템 메시지 생성
       const content = `${username}님이 입장했습니다`;
+      console.log(`[WS] Creating join message: ${content}`);
       
       // 데이터베이스에 시스템 메시지 저장 (비동기, fire-and-forget)
       storage.createMessageInConversation({
@@ -59,6 +68,7 @@ export function setupWebSocket(server: Server) {
         content,
         messageType: 'join',
       }).then(savedMessage => {
+        console.log(`[WS] Join message saved, broadcasting to room conversation:${conversationId}`);
         // 저장된 메시지를 브로드캐스트
         const joinMessage = {
           id: savedMessage.id,
@@ -71,17 +81,21 @@ export function setupWebSocket(server: Server) {
         };
         
         io.to(`conversation:${conversationId}`).emit('message:system', joinMessage);
+        console.log('[WS] Join message broadcasted');
       }).catch(error => {
+        console.error(`[WS] Error saving join message:`, error);
         log(`[WS] Error saving join message: ${error}`);
       });
     });
 
     // 대화방 나가기
     socket.on("leave:conversation", async (conversationId: string) => {
+      console.log(`[WS] leave:conversation event received from ${userId} for conversation ${conversationId}`);
       log(`[WS] User ${userId} left conversation ${conversationId}`);
       
       // 퇴장 시스템 메시지 생성
       const content = `${username}님이 나갔습니다`;
+      console.log(`[WS] Creating leave message: ${content}`);
       
       // 데이터베이스에 시스템 메시지 저장 (비동기, fire-and-forget)
       storage.createMessageInConversation({
@@ -91,6 +105,7 @@ export function setupWebSocket(server: Server) {
         content,
         messageType: 'leave',
       }).then(savedMessage => {
+        console.log(`[WS] Leave message saved, broadcasting to room conversation:${conversationId}`);
         // 저장된 메시지를 브로드캐스트
         const leaveMessage = {
           id: savedMessage.id,
@@ -103,7 +118,9 @@ export function setupWebSocket(server: Server) {
         };
         
         io.to(`conversation:${conversationId}`).emit('message:system', leaveMessage);
+        console.log('[WS] Leave message broadcasted');
       }).catch(error => {
+        console.error(`[WS] Error saving leave message:`, error);
         log(`[WS] Error saving leave message: ${error}`);
       });
       
@@ -112,6 +129,7 @@ export function setupWebSocket(server: Server) {
 
     // 연결 해제
     socket.on("disconnect", () => {
+      console.log(`[WS] User ${userId} disconnected`);
       log(`[WS] User ${userId} disconnected`);
     });
   });
