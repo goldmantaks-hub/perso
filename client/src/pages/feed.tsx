@@ -262,32 +262,37 @@ function PersoSection({ post }: { post: any }) {
         </h3>
         
         {/* 최근 메시지 미리보기 */}
-        {post.recentMessages && post.recentMessages.length > 0 && (
-          <div className="space-y-2 mb-3">
-            {post.recentMessages
-              .filter((msg: any) => msg.messageType !== 'join' && msg.messageType !== 'leave' && msg.senderType !== 'system')
-              .map((msg: any) => {
-              if (!msg.content) return null;
-              const displayContent = msg.content.length > 80 
-                ? msg.content.substring(0, 80) + '...' 
-                : msg.content;
-              
-              return (
-                <div key={msg.id} className="flex gap-2 items-start" data-testid={`preview-message-${msg.id}`}>
-                  <Avatar className="w-6 h-6 flex-shrink-0">
-                    <AvatarImage src={msg.isAI ? msg.persona?.image : msg.user?.profileImage} />
-                    <AvatarFallback>{msg.isAI ? 'AI' : 'U'}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-muted-foreground truncate">
-                      <span className="font-medium">{msg.isAI ? msg.persona?.name : msg.user?.name}</span>: {displayContent}
-                    </p>
+        {(() => {
+          const filteredMessages = (post.recentMessages || [])
+            .filter((msg: any) => msg.messageType !== 'join' && msg.messageType !== 'leave' && msg.senderType !== 'system');
+          
+          if (filteredMessages.length === 0) return null;
+          
+          return (
+            <div className="space-y-2 mb-3">
+              {filteredMessages.map((msg: any) => {
+                if (!msg.content) return null;
+                const displayContent = msg.content.length > 80 
+                  ? msg.content.substring(0, 80) + '...' 
+                  : msg.content;
+                
+                return (
+                  <div key={msg.id} className="flex gap-2 items-start" data-testid={`preview-message-${msg.id}`}>
+                    <Avatar className="w-6 h-6 flex-shrink-0">
+                      <AvatarImage src={msg.isAI ? msg.persona?.image : msg.user?.profileImage} />
+                      <AvatarFallback>{msg.isAI ? 'AI' : 'U'}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground truncate">
+                        <span className="font-medium">{msg.isAI ? msg.persona?.name : msg.user?.name}</span>: {displayContent}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          );
+        })()}
       </div>
       <div className="p-4 pt-0">
         <Link href={`/perso/${post.id}`}>

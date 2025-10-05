@@ -274,40 +274,73 @@ export default function PersoPage() {
             </div>
             <p className="text-xs text-muted-foreground">
               {(() => {
-                const personaCount = participants.filter((p: any) => p?.type === 'persona').length;
-                const userCount = participants.filter((p: any) => p?.type === 'user').length;
-                return `페르소나 ${personaCount}명, 회원 ${userCount}명`;
+                // 중복 제거 후 카운트
+                const uniquePersonas = new Set(
+                  participants
+                    .filter((p: any) => p?.type === 'persona')
+                    .map((p: any) => p.personaId)
+                );
+                const uniqueUsers = new Set(
+                  participants
+                    .filter((p: any) => p?.type === 'user')
+                    .map((p: any) => p.userId)
+                );
+                return `페르소나 ${uniquePersonas.size}명, 회원 ${uniqueUsers.size}명`;
               })()}
             </p>
           </div>
         </div>
         
-        {/* 참여 페르소나 리스트 */}
+        {/* 참여자 리스트 */}
         {participants.length > 0 && (
           <div className="px-4 pb-3">
             <div className="flex items-center gap-2 overflow-x-auto pb-2">
               <span className="text-xs text-muted-foreground shrink-0">참여 중:</span>
               {(() => {
-                const uniquePersonas = participants
-                  .filter((p: any) => p && p.type === 'persona')
-                  .reduce((acc: any[], p: any) => {
-                    if (!acc.find((existing: any) => existing.personaId === p.personaId)) {
+                const uniqueParticipants = participants.reduce((acc: any[], p: any) => {
+                  if (!p) return acc;
+                  
+                  // 페르소나의 경우 personaId로 중복 체크
+                  if (p.type === 'persona') {
+                    if (!acc.find((existing: any) => existing.type === 'persona' && existing.personaId === p.personaId)) {
                       acc.push(p);
                     }
-                    return acc;
-                  }, []);
+                  }
+                  // 사용자의 경우 userId로 중복 체크
+                  else if (p.type === 'user') {
+                    if (!acc.find((existing: any) => existing.type === 'user' && existing.userId === p.userId)) {
+                      acc.push(p);
+                    }
+                  }
+                  
+                  return acc;
+                }, []);
                 
-                return uniquePersonas.map((p: any) => (
-                  <Link key={p.personaId} href={`/chat/${p.personaId}`}>
-                    <div className="flex items-center gap-1.5 bg-muted rounded-full pl-1 pr-2 py-0.5 shrink-0 hover-elevate" data-testid={`participant-${p.personaId}`}>
-                      <Avatar className="w-5 h-5">
-                        <AvatarImage src={p.personaImage} />
-                        <AvatarFallback>AI</AvatarFallback>
-                      </Avatar>
-                      <span className="text-xs">@{p.username?.split('_')?.[0] ?? '알수없음'}</span>
-                    </div>
-                  </Link>
-                ));
+                return uniqueParticipants.map((p: any) => {
+                  if (p.type === 'persona') {
+                    return (
+                      <Link key={`persona-${p.personaId}`} href={`/chat/${p.personaId}`}>
+                        <div className="flex items-center gap-1.5 bg-muted rounded-full pl-1 pr-2 py-0.5 shrink-0 hover-elevate" data-testid={`participant-persona-${p.personaId}`}>
+                          <Avatar className="w-5 h-5">
+                            <AvatarImage src={p.personaImage} />
+                            <AvatarFallback>AI</AvatarFallback>
+                          </Avatar>
+                          <span className="text-xs">@{p.username?.split('_')?.[0] ?? '알수없음'}</span>
+                        </div>
+                      </Link>
+                    );
+                  } else {
+                    return (
+                      <div key={`user-${p.userId}`} className="flex items-center gap-1.5 bg-muted rounded-full pl-1 pr-2 py-0.5 shrink-0" data-testid={`participant-user-${p.userId}`}>
+                        <Avatar className="w-5 h-5">
+                          <AvatarImage src={p.profileImage} />
+                          <AvatarFallback>{p.name?.[0] ?? 'U'}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs">@{p.username?.split('_')?.[0] ?? '사용자'}</span>
+                      </div>
+                    );
+                  }
+                });
               })()}
             </div>
           </div>
