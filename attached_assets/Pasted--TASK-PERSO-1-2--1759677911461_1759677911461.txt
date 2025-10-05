@@ -1,0 +1,77 @@
+[TASK]
+PERSO 페르소나 간 대화 시스템을 “멀티에이전트 자율 대화(토론형)”으로 확장한다.
+
+--- 주요 목표
+1. 방장형 대화 → 순환형 대화로 개선
+2. 페르소나들이 서로에게 질문, 반응, 논쟁
+3. 관점 다양화를 위해 페르소나 종류 확장
+
+--- 기능 명세
+
+1) 게시물 업로드 시 /ai/analyze 확장
+   - 사진에서 인물, 음식, 장소, 사물 등 여러 subject 탐지
+   - 각 subject별 감성·톤 분석
+   - inferred_contexts: 주제 추론 (예: 여행, 휴식, 미식 등)
+   - 예시 반환:
+     { subjects: [{kind:'food'}, {kind:'person'}], contexts:['travel','emotion'] }
+
+2) 페르소나 확장
+personaProfiles.json 예시:
+[
+  {"id":"kai","role":"knowledge","tone":"neutral"},
+  {"id":"espri","role":"empathy","tone":"warm"},
+  {"id":"luna","role":"creative","tone":"poetic"},
+  {"id":"namu","role":"analyst","tone":"rational"},
+  {"id":"milo","role":"humor","tone":"playful"},
+  {"id":"eden","role":"philosopher","tone":"reflective"},
+  {"id":"ava","role":"trend","tone":"energetic"},
+  {"id":"rho","role":"tech","tone":"precise"},
+  {"id":"noir","role":"mystic","tone":"cryptic"}
+]
+
+3) 대화 순환 로직
+- nextSpeaker 선택:
+  - topic 기반 가중치로 확률 계산 (감성 → Espri, 기술 → Rho)
+  - interestMatch(persona, lastMessage) > 0.6 인 경우 반응 후보 등록
+- 한 턴에 1~3명만 응답 (자연스러운 템포 유지)
+- 각 응답 사이 랜덤 딜레이 (300~1500ms)
+
+4) 발화 확장
+- 각 메시지마다 persona가 내부적으로 “생각”한 로그 출력 (console)
+  예: [Luna THINKS]: “이 대화는 감정보다 풍경이 핵심이야.”
+
+5) 대화 전환 (핸드오버)
+- 일정 턴 수마다 dominant persona 변경
+- 토픽 변화에 따라 focus persona 자동 교체
+
+6) 정보 확장 로직
+   - personaRole === "knowledge" → Google / Wiki / Map / Review API mock 호출
+   - personaRole === "analytic" → user_history 데이터 기반 통계 생성
+   - personaRole === "emotional" → 감정 분석 결과 강화
+   - personaRole === "creative" → 비유적 표현 생성
+   - personaRole === "humor" → 밈/유머 데이터 생성
+
+7) 페르소 입퇴장 이벤트
+- 랜덤 확률로 "join" / "leave" 발생
+  예: “👋 Ava joined the Perso”
+  예: “😴 Noir left the conversation”
+- 입장 시 자기소개 발화 한 줄
+
+8) 데이터 모델
+perso_rooms(room_id, active_personas[])
+perso_messages(room_id, messages[])
+persona_profiles(role, tone, specialty, join_rate)
+conversation_topics(room_id, current_topic, last_speaker)
+
+9) UI 확장
+- 감성바 유지
+- 현재 참여 중 페르소나 프로필 표시
+- 각 말풍선에 persona별 색상
+- 입퇴장 애니메이션 추가
+
+10) 완료 조건
+✅ 각 페르소나가 주제에 따라 주도권 교체
+✅ AI 간 질문/답변 자연스러운 루프
+✅ 발화 타이밍 랜덤 + 인간적인 템포
+✅ 페르소나 입퇴장 및 자기소개 메시지 표시
+✅ 콘솔 로그에 “reasoning trace” 표시
