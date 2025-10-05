@@ -1,52 +1,108 @@
-interface DialogueEntry {
+interface DialogueMessage {
   id: string;
-  conversationId: string;
-  personaId: string;
-  content: string;
-  emotion: string;
-  timestamp: Date;
+  postId: string;
+  sender: string;
+  senderType: 'user' | 'ai';
+  personaName?: string;
+  message: string;
+  sentiment?: {
+    positive: number;
+    neutral: number;
+    negative: number;
+  };
+  timestamp: number;
 }
 
-interface DialogueContext {
-  conversationId: string;
-  recentMessages: DialogueEntry[];
-  participants: string[];
-}
+const messageStore: Map<string, DialogueMessage[]> = new Map();
+const MAX_MESSAGES_PER_POST = 50;
 
-export class DialogueMemory {
-  private conversations: Map<string, DialogueEntry[]> = new Map();
+export function storeMessage(message: DialogueMessage): void {
+  const postId = message.postId;
   
-  async saveDialogue(entry: DialogueEntry): Promise<void> {
-    const history = this.conversations.get(entry.conversationId) || [];
-    history.push(entry);
+  let messages = messageStore.get(postId);
+  if (!messages) {
+    messages = [];
+    messageStore.set(postId, messages);
+  }
+
+  messages.push(message);
+
+  if (messages.length > MAX_MESSAGES_PER_POST) {
+    messages.shift();
+  }
+
+  console.log(`[DIALOGUE MEMORY] Stored message for post ${postId} (${messages.length}/${MAX_MESSAGES_PER_POST})`);
+}
+
+export function getMessages(postId: string, limit?: number): DialogueMessage[] {
+  const messages = messageStore.get(postId) || [];
+  
+  if (limit) {
+    return messages.slice(-limit);
+  }
+  
+  return messages;
+}
+
+export function getRecentMessages(postId: string, minutes: number = 30): DialogueMessage[] {
+  const messages = messageStore.get(postId) || [];
+  const cutoff = Date.now() - (minutes * 60 * 1000);
+  
+  return messages.filter(m => m.timestamp >= cutoff);
+}
+
+export function clearMessages(postId: string): void {
+  messageStore.delete(postId);
+  console.log(`[DIALOGUE MEMORY] Cleared messages for post ${postId}`);
+}
+
+export function cleanupOldMessages(maxAgeMinutes: number = 120): void {
+  const cutoff = Date.now() - (maxAgeMinutes * 60 * 1000);
+  let cleaned = 0;
+
+  for (const [postId, messages] of messageStore.entries()) {
+    const recentMessages = messages.filter(m => m.timestamp >= cutoff);
     
-    if (history.length > 100) {
-      history.shift();
+    if (recentMessages.length === 0) {
+      messageStore.delete(postId);
+      cleaned++;
+    } else if (recentMessages.length < messages.length) {
+      messageStore.set(postId, recentMessages);
     }
-    
-    this.conversations.set(entry.conversationId, history);
   }
+
+  if (cleaned > 0) {
+    console.log(`[DIALOGUE MEMORY] Cleaned up ${cleaned} old post conversations`);
+  }
+}
+
+export function getMessageStats(postId: string): {
+  total: number;
+  userMessages: number;
+  aiMessages: number;
+  averageSentiment: { positive: number; neutral: number; negative: number };
+} {
+  const messages = messageStore.get(postId) || [];
   
-  async getRecentDialogue(
-    conversationId: string,
-    limit: number = 10
-  ): Promise<DialogueEntry[]> {
-    const history = this.conversations.get(conversationId) || [];
-    return history.slice(-limit);
-  }
+  const userMessages = messages.filter(m => m.senderType === 'user').length;
+  const aiMessages = messages.filter(m => m.senderType === 'ai').length;
   
-  async getDialogueContext(conversationId: string): Promise<DialogueContext> {
-    const history = this.conversations.get(conversationId) || [];
-    const participants = Array.from(new Set(history.map(h => h.personaId)));
-    
-    return {
-      conversationId,
-      recentMessages: history.slice(-10),
-      participants
-    };
-  }
+  const sentiments = messages
+    .filter(m => m.sentiment)
+    .map(m => m.sentiment!);
   
-  async clearDialogue(conversationId: string): Promise<void> {
-    this.conversations.delete(conversationId);
-  }
+  const averageSentiment = sentiments.length > 0
+    ? {
+        positive: sentiments.reduce((sum, s) => sum + s.positive, 0) / sentiments.length,
+        neutral: sentiments.reduce((sum, s) => sum + s.neutral, 0) / sentiments.length,
+        negative: sentiments.reduce((sum, s) => sum + s.negative, 0) / sentiments.length,
+      }
+    : { positive: 0, neutral: 0, negative: 0 };
+
+  return {
+    total: messages.length,
+    userMessages,
+    aiMessages,
+    averageSentiment
+  };
 }

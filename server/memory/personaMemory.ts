@@ -1,63 +1,174 @@
-interface PersonaMemoryEntry {
-  personaId: string;
-  type: 'interaction' | 'learning' | 'growth' | 'relationship';
-  data: any;
-  timestamp: Date;
+interface EmotionPattern {
+  emotion: string;
+  count: number;
+  lastOccurrence: number;
 }
 
-interface PersonaRelationship {
-  personaId: string;
-  targetPersonaId: string;
-  affinity: number;
-  interactions: number;
-  lastInteraction: Date;
+interface GrowthEvent {
+  timestamp: number;
+  stat: string;
+  delta: number;
+  trigger: string;
 }
 
-export class PersonaMemory {
-  private memories: Map<string, PersonaMemoryEntry[]> = new Map();
-  private relationships: Map<string, PersonaRelationship[]> = new Map();
+interface PersonaMemoryData {
+  personaId: string;
+  personaName: string;
+  emotionPatterns: Map<string, EmotionPattern>;
+  growthHistory: GrowthEvent[];
+  interactionCount: number;
+  dominantEmotions: string[];
+  lastStyleUpdate: number;
+}
+
+const personaMemories: Map<string, PersonaMemoryData> = new Map();
+
+export function recordEmotion(personaId: string, personaName: string, emotion: string): void {
+  let memory = personaMemories.get(personaId);
   
-  async storeMemory(entry: PersonaMemoryEntry): Promise<void> {
-    const history = this.memories.get(entry.personaId) || [];
-    history.push(entry);
-    
-    if (history.length > 500) {
-      history.shift();
-    }
-    
-    this.memories.set(entry.personaId, history);
+  if (!memory) {
+    memory = {
+      personaId,
+      personaName,
+      emotionPatterns: new Map(),
+      growthHistory: [],
+      interactionCount: 0,
+      dominantEmotions: [],
+      lastStyleUpdate: Date.now()
+    };
+    personaMemories.set(personaId, memory);
   }
+
+  const pattern = memory.emotionPatterns.get(emotion);
+  if (pattern) {
+    pattern.count++;
+    pattern.lastOccurrence = Date.now();
+  } else {
+    memory.emotionPatterns.set(emotion, {
+      emotion,
+      count: 1,
+      lastOccurrence: Date.now()
+    });
+  }
+
+  memory.interactionCount++;
+
+  updateDominantEmotions(memory);
+
+  console.log(`[PERSONA MEMORY] ${personaName} emotion recorded: ${emotion} (total: ${memory.interactionCount})`);
+}
+
+export function recordGrowth(
+  personaId: string,
+  personaName: string,
+  stat: string,
+  delta: number,
+  trigger: string
+): void {
+  let memory = personaMemories.get(personaId);
   
-  async getMemories(
-    personaId: string,
-    type?: string,
-    limit: number = 50
-  ): Promise<PersonaMemoryEntry[]> {
-    let history = this.memories.get(personaId) || [];
-    
-    if (type) {
-      history = history.filter(h => h.type === type);
-    }
-    
-    return history.slice(-limit);
+  if (!memory) {
+    memory = {
+      personaId,
+      personaName,
+      emotionPatterns: new Map(),
+      growthHistory: [],
+      interactionCount: 0,
+      dominantEmotions: [],
+      lastStyleUpdate: Date.now()
+    };
+    personaMemories.set(personaId, memory);
   }
+
+  memory.growthHistory.push({
+    timestamp: Date.now(),
+    stat,
+    delta,
+    trigger
+  });
+
+  if (memory.growthHistory.length > 100) {
+    memory.growthHistory.shift();
+  }
+
+  console.log(`[PERSONA MEMORY] ${personaName} growth: ${stat} +${delta} (${trigger})`);
+}
+
+function updateDominantEmotions(memory: PersonaMemoryData): void {
+  const emotions = Array.from(memory.emotionPatterns.values())
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3)
+    .map(p => p.emotion);
+
+  memory.dominantEmotions = emotions;
+}
+
+export function getPersonaMemory(personaId: string): PersonaMemoryData | undefined {
+  return personaMemories.get(personaId);
+}
+
+export function getDominantEmotions(personaId: string): string[] {
+  const memory = personaMemories.get(personaId);
+  return memory?.dominantEmotions || [];
+}
+
+export function getGrowthPattern(personaId: string): {
+  mostGrownStat: string;
+  totalGrowth: number;
+  recentTriggers: string[];
+} {
+  const memory = personaMemories.get(personaId);
   
-  async updateRelationship(relationship: PersonaRelationship): Promise<void> {
-    const relations = this.relationships.get(relationship.personaId) || [];
-    const existing = relations.findIndex(
-      r => r.targetPersonaId === relationship.targetPersonaId
-    );
-    
-    if (existing >= 0) {
-      relations[existing] = relationship;
-    } else {
-      relations.push(relationship);
-    }
-    
-    this.relationships.set(relationship.personaId, relations);
+  if (!memory || memory.growthHistory.length === 0) {
+    return {
+      mostGrownStat: 'none',
+      totalGrowth: 0,
+      recentTriggers: []
+    };
   }
+
+  const statGrowth = new Map<string, number>();
+  for (const event of memory.growthHistory) {
+    const current = statGrowth.get(event.stat) || 0;
+    statGrowth.set(event.stat, current + event.delta);
+  }
+
+  const mostGrownStat = Array.from(statGrowth.entries())
+    .sort((a, b) => b[1] - a[1])[0]?.[0] || 'none';
+
+  const totalGrowth = Array.from(statGrowth.values())
+    .reduce((sum, val) => sum + val, 0);
+
+  const recentTriggers = memory.growthHistory
+    .slice(-10)
+    .map(e => e.trigger);
+
+  return {
+    mostGrownStat,
+    totalGrowth,
+    recentTriggers
+  };
+}
+
+export function shouldUpdateStyle(personaId: string): boolean {
+  const memory = personaMemories.get(personaId);
   
-  async getRelationships(personaId: string): Promise<PersonaRelationship[]> {
-    return this.relationships.get(personaId) || [];
+  if (!memory) return false;
+
+  const hoursSinceUpdate = (Date.now() - memory.lastStyleUpdate) / (1000 * 60 * 60);
+  const hasEnoughInteractions = memory.interactionCount >= 10;
+
+  return hoursSinceUpdate >= 1 && hasEnoughInteractions;
+}
+
+export function markStyleUpdated(personaId: string): void {
+  const memory = personaMemories.get(personaId);
+  if (memory) {
+    memory.lastStyleUpdate = Date.now();
+    console.log(`[PERSONA MEMORY] ${memory.personaName} style update marked at ${new Date().toISOString()}`);
   }
+}
+
+export function getAllPersonaMemories(): Map<string, PersonaMemoryData> {
+  return personaMemories;
 }

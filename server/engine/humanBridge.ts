@@ -1,4 +1,6 @@
 import { dialogueOrchestrator } from './dialogueOrchestrator.js';
+import { storeMessage, getMessages } from '../memory/dialogueMemory.js';
+import { recordEmotion, recordGrowth } from '../memory/personaMemory.js';
 
 interface DialogueMemory {
   postId: string;
@@ -49,6 +51,16 @@ export async function handleUserMessage(
     timestamp: Date.now()
   });
 
+  storeMessage({
+    id: `user-${Date.now()}`,
+    postId,
+    sender: username,
+    senderType: 'user',
+    message,
+    sentiment: analysis.sentiment,
+    timestamp: Date.now()
+  });
+
   console.log(`[HUMAN BRIDGE] User ${username} said: "${message}"`);
 
   const recentContext = memory.messages
@@ -76,6 +88,19 @@ export async function handleUserMessage(
       message: response.message,
       timestamp: Date.now()
     });
+
+    storeMessage({
+      id: `ai-${response.persona}-${Date.now()}`,
+      postId,
+      sender: response.persona,
+      senderType: 'ai',
+      personaName: response.persona,
+      message: response.message,
+      timestamp: Date.now()
+    });
+
+    const emotion = determineEmotionFromType(response.type);
+    recordEmotion(`persona-${response.persona}`, response.persona, emotion);
   }
 
   const cutoff = Date.now() - 30 * 60 * 1000;
@@ -97,4 +122,20 @@ export function getDialogueMemory(postId: string): DialogueMemory | undefined {
 
 export function clearDialogueMemory(postId: string): void {
   dialogueMemoryStore.delete(postId);
+}
+
+function determineEmotionFromType(type: string): string {
+  const emotionMap: Record<string, string> = {
+    'empath': 'empathetic',
+    'knowledge': 'analytical',
+    'humor': 'playful',
+    'creative': 'imaginative',
+    'analyst': 'logical',
+    'philosopher': 'contemplative',
+    'trend': 'enthusiastic',
+    'tech': 'analytical',
+    'mystery': 'thoughtful'
+  };
+
+  return emotionMap[type] || 'neutral';
 }

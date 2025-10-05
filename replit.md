@@ -13,6 +13,70 @@ The application is built as a full-stack TypeScript application with a React fro
 
 ## Recent Changes
 
+### October 5, 2025 - Memory & Evolution System
+
+**Dialogue Memory** (`server/memory/dialogueMemory.ts`)
+- Stores up to 50 recent messages per post
+- Tracks user and AI messages with timestamps
+- Records sentiment data for analysis
+- Automatic cleanup of old conversations (2 hours)
+- Message statistics: total, user/AI ratio, average sentiment
+
+**Persona Memory** (`server/memory/personaMemory.ts`)
+- **Emotion Pattern Tracking**: Records and counts emotions per persona
+- **Growth History**: Maintains last 100 growth events with triggers
+- **Dominant Emotions**: Top 3 emotions automatically calculated
+- **Style Update Timing**: Tracks when style was last updated
+- Functions: `recordEmotion()`, `recordGrowth()`, `getDominantEmotions()`, `getGrowthPattern()`
+
+**Memory Sync** (`server/memory/memorySync.ts`)
+- 1-hour periodic sync interval
+- Syncs persona memory to persona profile
+- Updates: dominant emotions, growth stats, interaction count
+- Force sync capability for immediate updates
+- Console format: `[MEMORY SYNC] Syncing {persona}: emotions, growth, interactions`
+
+**Style Evolution** (`server/engine/styleEvolution.ts`)
+- Emotion-to-tone mapping system
+- Automatic tone evolution based on interaction patterns
+- Evolution triggers:
+  - **Empathetic pattern** → "따뜻하고 공감적인" tone
+  - **Analytical pattern** → "논리적이고 분석적인" tone
+  - **Argumentative pattern** → "직설적이고 명확한" tone
+  - **Playful pattern** → "경쾌하고 재치있는" tone
+- Requires: 1 hour since last update + 10+ interactions
+- Style history maintained (last 50 updates)
+
+**Integration with Human Bridge**
+- Every AI response records emotion in persona memory
+- Message storing in dialogue memory (50 limit)
+- Emotion determined from persona type (empath→empathetic, humor→playful, etc.)
+- Growth events logged with triggers
+
+**Console Logging**
+- `[DIALOGUE MEMORY] Stored message for post {id} ({count}/50)`
+- `[PERSONA MEMORY] {name} emotion recorded: {emotion} (total: {count})`
+- `[PERSONA MEMORY] {name} growth: {stat} +{delta} ({trigger})`
+- `[MEMORY SYNC] Syncing {name}: emotions, growth, interactions`
+- `[STYLE EVOLUTION] {name} style evolved: from {old} to {new}, reason`
+
+**Test Results**
+- ✅ Dialogue memory: 15 messages stored across 5 interactions
+- ✅ Emotion tracking: Espri (empathetic×2), Namu (logical×2), Ava (enthusiastic×2)
+- ✅ Memory limits: Correctly maintains 50 message cap
+- ✅ Style evolution: Ready to trigger after 1 hour + 10 interactions
+- ✅ Integration: All AI responses automatically record emotions
+
+**Evolution Example**
+```
+Initial: Espri uses base "따뜻하고 공감적인" tone
+After 10+ empathetic interactions over 1+ hour:
+→ Style reinforced as "따뜻하고 공감적인" (empathetic pattern)
+
+If pattern shifts to analytical:
+→ Style evolves to "논리적이고 분석적인" tone
+```
+
 ### October 5, 2025 - Human-in-the-Loop Interactive Dialogue
 
 **Human Bridge Engine** (`server/engine/humanBridge.ts`)

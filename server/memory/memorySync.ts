@@ -1,67 +1,87 @@
-import { DialogueMemory } from './dialogueMemory.js';
-import { PersonaMemory } from './personaMemory.js';
+import { getPersonaMemory, getAllPersonaMemories } from './personaMemory.js';
+import { getGrowthPattern, getDominantEmotions } from './personaMemory.js';
 
-export class MemorySync {
-  private dialogueMemory: DialogueMemory;
-  private personaMemory: PersonaMemory;
-  
-  constructor() {
-    this.dialogueMemory = new DialogueMemory();
-    this.personaMemory = new PersonaMemory();
+let syncInterval: NodeJS.Timeout | null = null;
+
+interface PersonaProfile {
+  id: string;
+  name: string;
+  toneStyle?: string;
+  emotionalState?: string;
+}
+
+export function startMemorySync(syncCallback: (personaId: string, updates: any) => Promise<void>): void {
+  if (syncInterval) {
+    console.log('[MEMORY SYNC] Sync already running');
+    return;
   }
-  
-  async syncDialogueToPersona(
-    conversationId: string,
-    personaId: string
-  ): Promise<void> {
-    const context = await this.dialogueMemory.getDialogueContext(conversationId);
+
+  console.log('[MEMORY SYNC] Starting 1-hour sync interval');
+
+  syncInterval = setInterval(async () => {
+    console.log('[MEMORY SYNC] Running periodic sync...');
     
-    await this.personaMemory.storeMemory({
-      personaId,
-      type: 'interaction',
-      data: {
-        conversationId,
-        participants: context.participants,
-        messageCount: context.recentMessages.length
-      },
-      timestamp: new Date()
-    });
-  }
-  
-  async syncGrowthToMemory(
-    personaId: string,
-    deltas: any
-  ): Promise<void> {
-    await this.personaMemory.storeMemory({
-      personaId,
-      type: 'growth',
-      data: deltas,
-      timestamp: new Date()
-    });
-  }
-  
-  async syncRelationship(
-    personaId: string,
-    targetPersonaId: string,
-    affinity: number
-  ): Promise<void> {
-    const relations = await this.personaMemory.getRelationships(personaId);
-    const existing = relations.find(r => r.targetPersonaId === targetPersonaId);
+    const memories = getAllPersonaMemories();
     
-    await this.personaMemory.updateRelationship({
-      personaId,
-      targetPersonaId,
-      affinity: existing ? existing.affinity + affinity : affinity,
-      interactions: existing ? existing.interactions + 1 : 1,
-      lastInteraction: new Date()
-    });
+    for (const [personaId, memory] of memories.entries()) {
+      const growthPattern = getGrowthPattern(personaId);
+      const dominantEmotions = getDominantEmotions(personaId);
+
+      if (growthPattern.totalGrowth > 0 || dominantEmotions.length > 0) {
+        const updates = {
+          personaId,
+          personaName: memory.personaName,
+          dominantEmotions,
+          mostGrownStat: growthPattern.mostGrownStat,
+          totalGrowth: growthPattern.totalGrowth,
+          interactionCount: memory.interactionCount,
+          recentTriggers: growthPattern.recentTriggers
+        };
+
+        console.log(`[MEMORY SYNC] Syncing ${memory.personaName}:`, {
+          emotions: dominantEmotions.join(', '),
+          growth: `${growthPattern.mostGrownStat} (+${growthPattern.totalGrowth})`,
+          interactions: memory.interactionCount
+        });
+
+        await syncCallback(personaId, updates);
+      }
+    }
+
+    console.log('[MEMORY SYNC] Sync complete');
+  }, 60 * 60 * 1000);
+}
+
+export function stopMemorySync(): void {
+  if (syncInterval) {
+    clearInterval(syncInterval);
+    syncInterval = null;
+    console.log('[MEMORY SYNC] Stopped sync interval');
   }
+}
+
+export async function forceSyncPersona(personaId: string, syncCallback: (personaId: string, updates: any) => Promise<void>): Promise<void> {
+  const memory = getPersonaMemory(personaId);
   
-  getDialogueMemory(): DialogueMemory {
-    return this.dialogueMemory;
+  if (!memory) {
+    console.log(`[MEMORY SYNC] No memory found for persona ${personaId}`);
+    return;
   }
-  
-  getPersonaMemory(): PersonaMemory {
-    return this.personaMemory;
-  }
+
+  const growthPattern = getGrowthPattern(personaId);
+  const dominantEmotions = getDominantEmotions(personaId);
+
+  const updates = {
+    personaId,
+    personaName: memory.personaName,
+    dominantEmotions,
+    mostGrownStat: growthPattern.mostGrownStat,
+    totalGrowth: growthPattern.totalGrowth,
+    interactionCount: memory.interactionCount,
+    recentTriggers: growthPattern.recentTriggers
+  };
+
+  console.log(`[MEMORY SYNC] Force syncing ${memory.personaName}:`, updates);
+
+  await syncCallback(personaId, updates);
 }
