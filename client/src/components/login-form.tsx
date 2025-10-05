@@ -5,63 +5,71 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Mail, Lock, LogIn } from "lucide-react";
+import { User, Lock, LogIn } from "lucide-react";
 import { Link } from "wouter";
 
 const loginSchema = z.object({
-  email: z.string().email("올바른 이메일 주소를 입력해주세요"),
+  username: z.string().min(1, "사용자명을 입력해주세요"),
   password: z.string().min(1, "비밀번호를 입력해주세요"),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
 interface LoginFormProps {
-  onSubmit?: (data: LoginFormData) => void;
+  onSubmit?: (data: LoginFormData) => Promise<void>;
+  error?: string;
 }
 
-export default function LoginForm({ onSubmit }: LoginFormProps) {
+export default function LoginForm({ onSubmit, error }: LoginFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "",
+      username: "",
       password: "",
     }
   });
 
   const handleFormSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
-    console.log("로그인 시도:", data);
     
-    if (onSubmit) {
-      await onSubmit(data);
+    try {
+      if (onSubmit) {
+        await onSubmit(data);
+      }
+    } finally {
+      setIsLoading(false);
     }
-    
-    setTimeout(() => setIsLoading(false), 1000);
   };
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+      {error && (
+        <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20" data-testid="error-message">
+          <p className="text-sm text-destructive">{error}</p>
+        </div>
+      )}
+      
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="email" className="text-sm font-medium">
-            이메일
+          <Label htmlFor="username" className="text-sm font-medium">
+            사용자명
           </Label>
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input
-              id="email"
-              type="email"
-              placeholder="your@email.com"
+              id="username"
+              type="text"
+              placeholder="사용자명을 입력하세요"
               className="pl-10 h-12"
-              data-testid="input-email"
-              {...register("email")}
+              data-testid="input-username"
+              {...register("username")}
             />
           </div>
-          {errors.email && (
-            <p className="text-sm text-destructive" data-testid="error-email">
-              {errors.email.message}
+          {errors.username && (
+            <p className="text-sm text-destructive" data-testid="error-username">
+              {errors.username.message}
             </p>
           )}
         </div>
