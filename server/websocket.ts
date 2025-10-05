@@ -183,6 +183,65 @@ export function setupWebSocket(server: Server) {
       }
     });
 
+    // 사용자 참여형 대화 (Human-in-the-Loop)
+    socket.on("user:message", async (data: {
+      postId: string;
+      message: string;
+      postContent: string;
+      analysis: any;
+    }) => {
+      try {
+        console.log(`[WS] user:message event received from ${userId}`);
+        console.log(`[WS] User message: "${data.message}"`);
+        
+        socket.emit('user:message:typing', { postId: data.postId });
+        
+        const { handleUserMessage } = await import('./engine/humanBridge.js');
+        
+        const postContext = {
+          postId: data.postId,
+          postContent: data.postContent,
+          analysis: data.analysis
+        };
+        
+        const aiResponses = await handleUserMessage(userId, username, data.message, postContext);
+        
+        console.log(`[WS] Generated ${aiResponses.length} AI responses to user message`);
+        
+        for (let i = 0; i < aiResponses.length; i++) {
+          const response = aiResponses[i];
+          
+          if (i > 0) {
+            await new Promise(resolve => setTimeout(resolve, 800));
+          }
+          
+          socket.emit('user:message:response', {
+            postId: data.postId,
+            persona: response.persona,
+            message: response.message,
+            type: response.type,
+            index: i,
+            total: aiResponses.length
+          });
+          
+          console.log(`[WS] Sent AI response ${i + 1}/${aiResponses.length}: ${response.persona}`);
+        }
+        
+        socket.emit('user:message:complete', {
+          postId: data.postId,
+          totalResponses: aiResponses.length
+        });
+        
+        console.log(`[WS] User message handled for post ${data.postId}`);
+      } catch (error) {
+        console.error('[WS] Error handling user message:', error);
+        socket.emit('user:message:error', {
+          postId: data.postId,
+          error: 'Failed to process message'
+        });
+      }
+    });
+
     // 연결 해제
     socket.on("disconnect", () => {
       console.log(`[WS] User ${userId} disconnected`);

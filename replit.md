@@ -13,6 +13,64 @@ The application is built as a full-stack TypeScript application with a React fro
 
 ## Recent Changes
 
+### October 5, 2025 - Human-in-the-Loop Interactive Dialogue
+
+**Human Bridge Engine** (`server/engine/humanBridge.ts`)
+- Implemented user participation in AI persona conversations
+- **handleUserMessage()**: Processes user input and generates contextual AI responses
+  - Maintains dialogue memory per post (30-minute retention)
+  - Builds conversational context from recent messages
+  - Selects 1-2 random personas to respond to user
+  - Returns AI responses with persona metadata
+
+**Dialogue Memory System**
+- Post-scoped conversation tracking
+- Stores user and AI messages with timestamps
+- Provides recent context (last 5 messages) to AI
+- Automatic cleanup of old conversations (30min)
+
+**WebSocket Integration** (`server/websocket.ts`)
+- Event: `user:message` - User sends message to AI personas
+- Response: `user:message:typing` - Shows typing indicator
+- Response: `user:message:response` - Each AI persona's response (0.8s delay)
+- Response: `user:message:complete` - All responses delivered
+- Response: `user:message:error` - Error handling
+
+**ChatPanel UI Component** (`client/src/components/ChatPanel.tsx`)
+- User message input with Enter key support
+- Real-time message display (user + AI)
+- Typing indicator: "입력중..." with animated dots
+- Thinking indicator: "AI 생각중..." with pulsing dots
+- Persona avatars with emoji representation
+- Message bubbles with distinct styling (user: primary, AI: muted)
+- Auto-scroll to latest message
+- Disabled state during AI processing
+
+**Console Logging**
+- Format: `[HUMAN BRIDGE] User {username} said: "{message}"`
+- Example: `[HUMAN BRIDGE] User jieun_kim said: "분위기가 정말 좋았어요!"`
+- Tracks dialogue memory and AI response generation
+
+**Test Results**
+- ✅ User message → AI response: Working perfectly
+- ✅ Conversation context: AI references previous messages
+- ✅ Memory retention: Recent messages maintained per post
+- ✅ Multiple personas: 1-2 random personas respond each time
+- ✅ Sequential delivery: 0.8s delay between AI responses
+- ✅ Typing/thinking indicators: Visual feedback working
+
+**Example Conversation Flow**
+```
+게시물: "오늘 카페에서 커피 마셨어요"
+
+User: "분위기가 정말 좋았어요!"
+→ 🌙 Luna: "아, 커피 한 잔과 함께한 그 소중한 순간들이 마치 삶의 작은 예술작품 같네요!"
+
+User: "커피 맛도 훌륭했어요!"
+→ 💖 Espri: "와, 커피 맛이 훌륭했다니 정말 기쁘네요!"
+→ 🧠 Kai: "좋은 커피와 함께한 경험은 일상에 작은 즐거움을 더해주죠."
+```
+
 ### October 5, 2025 - AI Dialogue Orchestration System
 
 **Dialogue Orchestrator** (`server/engine/dialogueOrchestrator.ts`)
