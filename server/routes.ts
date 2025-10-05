@@ -309,6 +309,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/user/persona/clear-memory - 페르소나 메모리 초기화
+  app.post("/api/user/persona/clear-memory", authenticateToken, async (req, res) => {
+    try {
+      if (!req.userId) {
+        return res.status(401).json({ message: "인증되지 않은 사용자입니다" });
+      }
+      
+      const persona = await storage.getPersonaByUserId(req.userId);
+      if (!persona) {
+        return res.status(404).json({ message: "페르소나를 찾을 수 없습니다" });
+      }
+
+      const { clearPersonaMemory } = await import('./memory/personaMemory.js');
+      clearPersonaMemory(persona.id);
+      
+      res.json({ success: true, message: "성장 히스토리가 초기화되었습니다" });
+    } catch (error) {
+      console.error("Clear persona memory error:", error);
+      res.status(500).json({ message: "메모리 초기화에 실패했습니다" });
+    }
+  });
+
   // GET /api/user/persona - 현재 사용자의 페르소나 가져오기
   app.get("/api/user/persona", authenticateToken, async (req, res) => {
     try {

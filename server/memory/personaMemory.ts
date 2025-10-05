@@ -173,3 +173,13 @@ export function markStyleUpdated(personaId: string): void {
 export function getAllPersonaMemories(): Map<string, PersonaMemoryData> {
   return personaMemories;
 }
+
+export function clearAllPersonaMemories(): void {
+  personaMemories.clear();
+  console.log('[PERSONA MEMORY] All persona memories cleared');
+}
+
+export function clearPersonaMemory(personaId: string): void {
+  personaMemories.delete(personaId);
+  console.log(`[PERSONA MEMORY] Memory cleared for persona ${personaId}`);
+}
