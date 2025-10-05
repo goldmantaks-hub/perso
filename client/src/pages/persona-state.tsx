@@ -90,13 +90,13 @@ function EmotionTimeline() {
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   const emotionData = [
-    { day: 'Mon', value: 3, emotion: 'Neutral', icon: 'Meh' },
-    { day: 'Tue', value: 5, emotion: 'Happy', icon: 'Smile' },
-    { day: 'Wed', value: 4, emotion: 'Calm', icon: 'Smile' },
-    { day: 'Thu', value: 7, emotion: 'Joyful', icon: 'Smile' },
-    { day: 'Fri', value: 6, emotion: 'Curious', icon: 'Smile' },
-    { day: 'Sat', value: 8, emotion: 'Excited', icon: 'Smile' },
-    { day: 'Sun', value: 5, emotion: 'Happy', icon: 'Smile' },
+    { day: '월', value: 3, emotion: '보통', icon: 'Meh' },
+    { day: '화', value: 5, emotion: '행복', icon: 'Smile' },
+    { day: '수', value: 4, emotion: '차분함', icon: 'Smile' },
+    { day: '목', value: 7, emotion: '기쁨', icon: 'Smile' },
+    { day: '금', value: 6, emotion: '호기심', icon: 'Smile' },
+    { day: '토', value: 8, emotion: '흥분', icon: 'Smile' },
+    { day: '일', value: 5, emotion: '행복', icon: 'Smile' },
   ];
 
   useEffect(() => {
@@ -251,20 +251,20 @@ function InfluenceMap() {
 
   const influenceData: { nodes: InfluenceNode[]; links: InfluenceLink[] } = {
     nodes: [
-      { id: "Kai", group: 0, radius: 25, type: "Persona" },
-      { id: "Machine Learning", group: 1, radius: 18, type: "Topic", interactions: 12 },
-      { id: "AI Ethics", group: 1, radius: 15, type: "Topic", interactions: 8 },
-      { id: "Philosophy", group: 2, radius: 12, type: "Topic", interactions: 5 },
-      { id: "Positive Feedback", group: 3, radius: 20, type: "Trigger", sentiment: "Positive" },
-      { id: "Data Analysis", group: 1, radius: 16, type: "Skill", interactions: 15 },
+      { id: "Kai", group: 0, radius: 25, type: "페르소나" },
+      { id: "머신러닝", group: 1, radius: 18, type: "주제", interactions: 12 },
+      { id: "AI 윤리", group: 1, radius: 15, type: "주제", interactions: 8 },
+      { id: "철학", group: 2, radius: 12, type: "주제", interactions: 5 },
+      { id: "긍정적 피드백", group: 3, radius: 20, type: "트리거", sentiment: "긍정적" },
+      { id: "데이터 분석", group: 1, radius: 16, type: "스킬", interactions: 15 },
     ],
     links: [
-      { source: "Kai", target: "Machine Learning", value: 5 },
-      { source: "Kai", target: "AI Ethics", value: 4 },
-      { source: "AI Ethics", target: "Philosophy", value: 3 },
-      { source: "Kai", target: "Positive Feedback", value: 6 },
-      { source: "Kai", target: "Data Analysis", value: 7 },
-      { source: "Machine Learning", target: "Data Analysis", value: 4 },
+      { source: "Kai", target: "머신러닝", value: 5 },
+      { source: "Kai", target: "AI 윤리", value: 4 },
+      { source: "AI 윤리", target: "철학", value: 3 },
+      { source: "Kai", target: "긍정적 피드백", value: 6 },
+      { source: "Kai", target: "데이터 분석", value: 7 },
+      { source: "머신러닝", target: "데이터 분석", value: 4 },
     ],
   };
 
@@ -334,9 +334,9 @@ function InfluenceMap() {
 
       node.on("mouseover", (event: any, d: any) => {
         tooltip.transition().duration(200).style("opacity", "0.9");
-        let tooltipContent = `<strong>${d.id}</strong><br/>Type: ${d.type}`;
-        if (d.interactions) tooltipContent += `<br/>Interactions: ${d.interactions}`;
-        if (d.sentiment) tooltipContent += `<br/>Sentiment: ${d.sentiment}`;
+        let tooltipContent = `<strong>${d.id}</strong><br/>유형: ${d.type}`;
+        if (d.interactions) tooltipContent += `<br/>상호작용: ${d.interactions}`;
+        if (d.sentiment) tooltipContent += `<br/>감정: ${d.sentiment}`;
         tooltip.html(tooltipContent)
           .style("left", `${event.pageX + 15}px`)
           .style("top", `${event.pageY - 28}px`);
