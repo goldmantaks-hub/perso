@@ -454,7 +454,7 @@ export default function FeedPage() {
       </section>
 
       {/* 피드 섹션 */}
-      <section className="py-2 bg-card rounded-t-2xl min-h-[400px]">
+      <section className="py-2 bg-card rounded-t-2xl min-h-[400px] pb-28 md:pb-2">
         <div className="px-4 space-y-4">
           {posts.map((post: any) => (
             <PostCard key={post.id} post={post} />

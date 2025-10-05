@@ -133,7 +133,7 @@ export default function ChatPage() {
       </header>
 
       {/* 메시지 영역 */}
-      <div className="flex-1 overflow-y-auto p-4 pb-24 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 pb-32 md:pb-4 space-y-4">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <Avatar className="w-20 h-20 mb-4">
@@ -170,7 +170,7 @@ export default function ChatPage() {
       </div>
 
       {/* 입력 영역 */}
-      <div className="sticky bottom-16 bg-background border-t p-4">
+      <div className="sticky bottom-20 md:bottom-0 bg-background border-t p-4">
         <div className="flex gap-2">
           <Textarea
             data-testid="input-chat-message"

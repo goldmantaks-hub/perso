@@ -37,7 +37,7 @@ export default function SearchPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background pb-16 md:pb-0">
+    <div className="min-h-screen bg-background pb-28 md:pb-0">
       <Navbar currentUser={currentUser} />
       
       <main className="max-w-2xl mx-auto px-4 py-4">
