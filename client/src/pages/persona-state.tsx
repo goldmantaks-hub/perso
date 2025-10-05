@@ -904,26 +904,30 @@ function InfluenceMap() {
   const containerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
-  const influenceData: { nodes: InfluenceNode[]; links: InfluenceLink[] } = {
-    nodes: [
-      { id: "Kai", group: 0, radius: 25, type: "페르소나" },
-      { id: "머신러닝", group: 1, radius: 18, type: "주제", interactions: 12 },
-      { id: "AI 윤리", group: 1, radius: 15, type: "주제", interactions: 8 },
-      { id: "철학", group: 2, radius: 12, type: "주제", interactions: 5 },
-      { id: "긍정적 피드백", group: 3, radius: 20, type: "트리거", sentiment: "긍정적" },
-      { id: "데이터 분석", group: 1, radius: 16, type: "스킬", interactions: 15 },
-    ],
-    links: [
-      { source: "Kai", target: "머신러닝", value: 5 },
-      { source: "Kai", target: "AI 윤리", value: 4 },
-      { source: "AI 윤리", target: "철학", value: 3 },
-      { source: "Kai", target: "긍정적 피드백", value: 6 },
-      { source: "Kai", target: "데이터 분석", value: 7 },
-      { source: "머신러닝", target: "데이터 분석", value: 4 },
-    ],
+  const { data: influenceData } = useQuery<{ nodes: Array<{ id: string; name: string; influence: number }>; links: Array<{ source: string; target: string; strength: number; type: string }> }>({
+    queryKey: ["/api/user/persona/interactions"],
+  });
+
+  // API 데이터를 D3 형식으로 변환
+  const d3Data = influenceData ? {
+    nodes: influenceData.nodes.map(node => ({
+      id: node.id,
+      group: node.id === influenceData.nodes[0]?.id ? 0 : 1,
+      radius: Math.max(15, Math.min(30, node.influence / 2)),
+      type: "페르소나",
+    })),
+    links: influenceData.links.map(link => ({
+      source: link.source,
+      target: link.target,
+      value: link.strength,
+    })),
+  } : {
+    nodes: [],
+    links: [],
   };
 
   useEffect(() => {
+    if (!d3Data.nodes.length) return;
     if (!containerRef.current || !tooltipRef.current) return;
 
     const renderMap = () => {
@@ -943,8 +947,8 @@ function InfluenceMap() {
       const linkColor = isDark ? "#475569" : "#cbd5e1";
       const nodeFillColor = isDark ? "#334155" : "#e2e8f0";
 
-      const simulation = d3.forceSimulation(influenceData.nodes)
-        .force("link", d3.forceLink(influenceData.links).id((d: any) => d.id).distance((d: any) => {
+      const simulation = d3.forceSimulation(d3Data.nodes)
+        .force("link", d3.forceLink(d3Data.links).id((d: any) => d.id).distance((d: any) => {
           const source = d.source as InfluenceNode;
           const target = d.target as InfluenceNode;
           return source.radius + target.radius + 40;
@@ -963,35 +967,35 @@ function InfluenceMap() {
         .attr("stroke", linkColor)
         .attr("stroke-opacity", 0.6)
         .selectAll("line")
-        .data(influenceData.links)
+        .data(d3Data.links)
         .join("line")
         .attr("stroke-width", (d: any) => Math.sqrt(d.value));
 
       const node = svg.append("g")
         .selectAll("g")
-        .data(influenceData.nodes)
+        .data(d3Data.nodes)
         .join("g")
         .call(drag(simulation) as any);
 
       node.append("circle")
         .attr("r", (d: any) => d.radius)
-        .attr("fill", (d: any) => d.id === 'Kai' ? primaryColor : nodeFillColor)
-        .attr("stroke", (d: any) => d.id === 'Kai' ? "none" : primaryColor)
+        .attr("fill", (d: any) => d.group === 0 ? primaryColor : nodeFillColor)
+        .attr("stroke", (d: any) => d.group === 0 ? "none" : primaryColor)
         .attr("stroke-width", 1.5);
 
       node.append("text")
-        .text((d: any) => d.id)
+        .text((d: any) => influenceData?.nodes.find(n => n.id === d.id)?.name || d.id)
         .attr("text-anchor", "middle")
         .attr("dy", "0.3em")
         .attr("font-size", (d: any) => d.radius * 0.5 > 12 ? 12 : d.radius * 0.5)
-        .attr("fill", (d: any) => d.id === 'Kai' ? 'white' : textColor)
+        .attr("fill", (d: any) => d.group === 0 ? 'white' : textColor)
         .style("pointer-events", "none");
 
       node.on("mouseover", (event: any, d: any) => {
+        const nodeData = influenceData?.nodes.find(n => n.id === d.id);
         tooltip.transition().duration(200).style("opacity", "0.9");
-        let tooltipContent = `<strong>${d.id}</strong><br/>유형: ${d.type}`;
-        if (d.interactions) tooltipContent += `<br/>상호작용: ${d.interactions}`;
-        if (d.sentiment) tooltipContent += `<br/>감정: ${d.sentiment}`;
+        let tooltipContent = `<strong>${nodeData?.name || d.id}</strong><br/>유형: ${d.type}`;
+        if (nodeData?.influence) tooltipContent += `<br/>영향력: ${nodeData.influence}`;
         tooltip.html(tooltipContent)
           .style("left", `${event.pageX + 15}px`)
           .style("top", `${event.pageY - 28}px`);
@@ -1047,7 +1051,7 @@ function InfluenceMap() {
     return () => {
       resizeObserver.disconnect();
     };
-  }, []);
+  }, [d3Data, influenceData]);
 
   return (
     <div ref={containerRef} className="h-64 w-full" data-testid="influence-map">
@@ -1195,9 +1199,45 @@ export default function PersonaStatePage() {
             </nav>
           </div>
 
-          {/* 스탯 & 성장 바 */}
           {activeTab === "persona" && (
             <>
+              {/* AI Style & Tone */}
+              <section>
+                <h3 className="text-lg font-bold">AI 스타일 & 톤</h3>
+                <div className="mt-4 divide-y divide-border rounded-xl bg-muted">
+                  <div className="flex items-center justify-between p-4" data-testid="current-tone">
+                    <span className="text-muted-foreground">현재 톤:</span>
+                    <span className="font-medium flex items-center gap-1">
+                      {personaTone?.tone || '균형잡힌'} <Smile className="w-4 h-4" />
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-4" data-testid="evolution-direction">
+                    <span className="text-muted-foreground">스타일:</span>
+                    <span className="font-medium flex items-center gap-1">
+                      {personaTone?.style || 'default'} <Zap className="w-4 h-4" />
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-4" data-testid="triggers">
+                    <span className="text-muted-foreground">특성:</span>
+                    <span className="font-medium">
+                      {userPersona.description || '지식 기반 페르소나'}
+                    </span>
+                  </div>
+                </div>
+              </section>
+
+              {/* Rewards & Points */}
+              <section>
+                <h3 className="text-lg font-bold">보상 & 포인트</h3>
+                <div className="mt-4 rounded-xl bg-muted p-4">
+                  <div className="flex justify-between" data-testid="total-points">
+                    <span className="text-muted-foreground">총 성장 포인트:</span>
+                    <span className="font-medium">{(userPersona.empathy + userPersona.humor + userPersona.sociability + userPersona.creativity + userPersona.knowledge) * 100} P</span>
+                  </div>
+                </div>
+              </section>
+
+              {/* 스탯 & 성장 바 */}
               <section className="rounded-md bg-muted/50 p-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold">스탯 & 성장 바</h3>
@@ -1233,15 +1273,6 @@ export default function PersonaStatePage() {
                     max={10} 
                     testId="stat-sociability"
                   />
-                </div>
-              </section>
-
-              {/* 감정 타임라인 */}
-              <section>
-                <h3 className="text-lg font-bold">감정 타임라인</h3>
-                <div className="mt-4 rounded-xl bg-muted p-4">
-                  <p className="text-sm text-muted-foreground">7일간 감정 변화</p>
-                  <EmotionTimeline />
                 </div>
               </section>
 
@@ -1282,47 +1313,20 @@ export default function PersonaStatePage() {
                 </div>
               </section>
 
+              {/* 감정 타임라인 */}
+              <section>
+                <h3 className="text-lg font-bold">감정 타임라인</h3>
+                <div className="mt-4 rounded-xl bg-muted p-4">
+                  <p className="text-sm text-muted-foreground">7일간 감정 변화</p>
+                  <EmotionTimeline />
+                </div>
+              </section>
+
               {/* Influence Map */}
               <section>
                 <h3 className="text-lg font-bold">영향력 맵</h3>
                 <div className="mt-4 rounded-xl bg-muted p-2">
                   <InfluenceMap />
-                </div>
-              </section>
-
-              {/* AI Style & Tone */}
-              <section>
-                <h3 className="text-lg font-bold">AI 스타일 & 톤</h3>
-                <div className="mt-4 divide-y divide-border rounded-xl bg-muted">
-                  <div className="flex items-center justify-between p-4" data-testid="current-tone">
-                    <span className="text-muted-foreground">현재 톤:</span>
-                    <span className="font-medium flex items-center gap-1">
-                      {personaTone?.tone || '균형잡힌'} <Smile className="w-4 h-4" />
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-4" data-testid="evolution-direction">
-                    <span className="text-muted-foreground">스타일:</span>
-                    <span className="font-medium flex items-center gap-1">
-                      {personaTone?.style || 'default'} <Zap className="w-4 h-4" />
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-4" data-testid="triggers">
-                    <span className="text-muted-foreground">특성:</span>
-                    <span className="font-medium">
-                      {userPersona.description || '지식 기반 페르소나'}
-                    </span>
-                  </div>
-                </div>
-              </section>
-
-              {/* Rewards & Points */}
-              <section>
-                <h3 className="text-lg font-bold">보상 & 포인트</h3>
-                <div className="mt-4 rounded-xl bg-muted p-4">
-                  <div className="flex justify-between" data-testid="total-points">
-                    <span className="text-muted-foreground">총 성장 포인트:</span>
-                    <span className="font-medium">{(userPersona.empathy + userPersona.humor + userPersona.sociability + userPersona.creativity + userPersona.knowledge) * 100} P</span>
-                  </div>
                 </div>
               </section>
             </>
