@@ -1,8 +1,16 @@
-import { ArrowLeft, Settings, UserCircle, TrendingUp, Users, User, History, Brain, Smile, Palette, Sparkles, Zap, Award, Meh, Frown, Network, BarChart3, List, MessageCircle, Heart, Lightbulb } from "lucide-react";
+import { ArrowLeft, Settings, UserCircle, TrendingUp, Users, User, History, Brain, Smile, Palette, Sparkles, Zap, Award, Meh, Frown, Network, BarChart3, List, MessageCircle, Heart, Lightbulb, ChevronDown, CloudSun, Minus, Search, Flame, Coffee, AlertTriangle, Clock, Laugh, BookOpen, FlaskConical, Moon, Compass, TrendingUp as TrendingUpIcon, Cpu, Eye, Star, LucideIcon } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
 import * as d3 from "d3";
@@ -36,6 +44,7 @@ interface NetworkPersona {
   size: number;
   lineWidth: number;
   type: string;
+  personaCategory: string;
   insight: string;
 }
 
@@ -100,9 +109,70 @@ function GrowthLogItem({ IconComponent, title, description, isLast }: { IconComp
   );
 }
 
+interface FilterItem {
+  key: string;
+  label: string;
+  icon: LucideIcon;
+}
+
+interface FilterGroup {
+  groupLabel: string;
+  items: FilterItem[];
+}
+
+const emotionFilters: FilterGroup[] = [
+  {
+    groupLabel: "기본 감정",
+    items: [
+      { key: "joy", label: "즐거움", icon: Smile },
+      { key: "serene", label: "평온", icon: CloudSun },
+      { key: "neutral", label: "중립", icon: Minus },
+      { key: "surprise", label: "놀람", icon: Sparkles },
+      { key: "curious", label: "호기심", icon: Search },
+      { key: "sadness", label: "슬픔", icon: Frown },
+      { key: "anger", label: "분노", icon: Flame },
+    ],
+  },
+  {
+    groupLabel: "확장 감정·톤",
+    items: [
+      { key: "excited", label: "설렘", icon: Zap },
+      { key: "moved", label: "감동", icon: Heart },
+      { key: "tired", label: "피로", icon: Coffee },
+      { key: "tense", label: "긴장", icon: AlertTriangle },
+      { key: "nostalgic", label: "향수", icon: Clock },
+      { key: "humorous", label: "유머러스", icon: Laugh },
+      { key: "informative", label: "정보형", icon: BookOpen },
+      { key: "empathetic", label: "공감형", icon: Users },
+      { key: "analytical", label: "분석형", icon: FlaskConical },
+      { key: "sarcastic", label: "풍자/빈정", icon: MessageCircle },
+    ],
+  },
+];
+
+const personaTypeFilters = {
+  quick: [
+    { key: "all", label: "전체", icon: Sparkles },
+    { key: "mine", label: "내 페르소만", icon: User },
+    { key: "favorites", label: "즐겨찾기", icon: Star },
+  ],
+  items: [
+    { key: "knowledge", label: "지식형 (Kai)", icon: Brain },
+    { key: "empath", label: "감성형 (Espri)", icon: Heart },
+    { key: "creative", label: "창의형 (Luna)", icon: Moon },
+    { key: "analyst", label: "분석형 (Namu)", icon: BarChart3 },
+    { key: "humor", label: "유머형 (Milo)", icon: Laugh },
+    { key: "philosopher", label: "철학형 (Eden)", icon: Compass },
+    { key: "trend", label: "트렌드형 (Ava)", icon: TrendingUpIcon },
+    { key: "tech", label: "테크형 (Rho)", icon: Cpu },
+    { key: "mystery", label: "미스터리형 (Noir)", icon: Eye },
+  ],
+};
+
 function NetworkTab() {
   const [selectedPersona, setSelectedPersona] = useState<NetworkPersona | null>(null);
-  const [emotionFilter, setEmotionFilter] = useState<FilterType>('all');
+  const [emotionFilter, setEmotionFilter] = useState<string | null>(null);
+  const [personaTypeFilter, setPersonaTypeFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<ViewMode>('network');
 
   const networkPersonas: NetworkPersona[] = [
@@ -116,6 +186,7 @@ function NetworkTab() {
       size: 20,
       lineWidth: 6,
       type: 'joy',
+      personaCategory: 'humor',
       insight: 'Milo와 대화를 늘리면 유머 스탯이 상승할 수 있습니다.'
     },
     {
@@ -128,6 +199,7 @@ function NetworkTab() {
       size: 12,
       lineWidth: 2,
       type: 'sad',
+      personaCategory: 'empath',
       insight: 'Alex와 대화하면 공감 능력을 키울 수 있습니다.'
     },
     {
@@ -140,6 +212,7 @@ function NetworkTab() {
       size: 16,
       lineWidth: 4,
       type: 'neutral',
+      personaCategory: 'analyst',
       insight: 'Nara와의 대화가 안정적인 성장을 이끌고 있습니다.'
     },
     {
@@ -152,6 +225,7 @@ function NetworkTab() {
       size: 10,
       lineWidth: 1.5,
       type: 'neutral',
+      personaCategory: 'knowledge',
       insight: 'Leo와 새로운 주제로 대화를 시작해보세요.'
     },
     {
@@ -164,13 +238,52 @@ function NetworkTab() {
       size: 14,
       lineWidth: 3,
       type: 'joy',
+      personaCategory: 'creative',
       insight: 'Luna와의 강한 유대감이 창의성 발달에 도움이 됩니다.'
     }
   ];
 
-  const filteredPersonas = emotionFilter === 'all' 
-    ? networkPersonas 
-    : networkPersonas.filter(p => p.type === emotionFilter);
+  const filteredPersonas = networkPersonas.filter((persona) => {
+    const emotionMatch = !emotionFilter || persona.type === emotionFilter;
+    const typeMatch = personaTypeFilter === "all" || persona.personaCategory === personaTypeFilter;
+    return emotionMatch && typeMatch;
+  });
+
+  const getSelectedEmotionLabel = () => {
+    if (!emotionFilter) return null;
+    for (const group of emotionFilters) {
+      const item = group.items.find(i => i.key === emotionFilter);
+      if (item) return item.label;
+    }
+    return null;
+  };
+
+  const getSelectedPersonaTypeLabel = () => {
+    if (personaTypeFilter === "all") return null;
+    const quickItem = personaTypeFilters.quick.find(i => i.key === personaTypeFilter);
+    if (quickItem) return quickItem.label;
+    const typeItem = personaTypeFilters.items.find(i => i.key === personaTypeFilter);
+    if (typeItem) return typeItem.label;
+    return null;
+  };
+
+  const getSelectedEmotionIcon = () => {
+    if (!emotionFilter) return null;
+    for (const group of emotionFilters) {
+      const item = group.items.find(i => i.key === emotionFilter);
+      if (item) return item.icon;
+    }
+    return null;
+  };
+
+  const getSelectedPersonaTypeIcon = () => {
+    if (personaTypeFilter === "all") return null;
+    const quickItem = personaTypeFilters.quick.find(i => i.key === personaTypeFilter);
+    if (quickItem) return quickItem.icon;
+    const typeItem = personaTypeFilters.items.find(i => i.key === personaTypeFilter);
+    if (typeItem) return typeItem.icon;
+    return null;
+  };
 
   const getEmotionIcon = (emotion: string) => {
     switch(emotion) {
@@ -179,6 +292,9 @@ function NetworkTab() {
       default: return <Meh className="w-4 h-4" />;
     }
   };
+
+  const SelectedEmotionIcon = getSelectedEmotionIcon();
+  const SelectedPersonaIcon = getSelectedPersonaTypeIcon();
 
   return (
     <>
@@ -270,7 +386,7 @@ function NetworkTab() {
                   { x: 279.4, y: 280.9 },
                   { x: 295.4, y: 189.6 }
                 ];
-                const isFiltered = emotionFilter !== 'all' && persona.type !== emotionFilter;
+                const isFiltered = !filteredPersonas.find(p => p.id === persona.id);
                 return (
                   <line
                     key={persona.id}
@@ -304,7 +420,7 @@ function NetworkTab() {
                 { top: '290px', left: '300px' },
                 { top: '180px', left: '320px' }
               ];
-              const isFiltered = emotionFilter !== 'all' && persona.type !== emotionFilter;
+              const isFiltered = !filteredPersonas.find(p => p.id === persona.id);
               const sizeMap: Record<number, string> = {
                 10: 'w-10 h-10',
                 12: 'w-12 h-12',
@@ -432,47 +548,118 @@ function NetworkTab() {
         </section>
       )}
 
-      {/* Filter Buttons */}
-      <section className="flex flex-wrap gap-2">
-        <button
-          onClick={() => setEmotionFilter('all')}
-          className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-            emotionFilter === 'all' ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary hover:bg-primary/20'
-          }`}
-          data-testid="filter-all"
-        >
-          <span>전체</span>
-        </button>
-        <button
-          onClick={() => setEmotionFilter('joy')}
-          className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-            emotionFilter === 'joy' ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary hover:bg-primary/20'
-          }`}
-          data-testid="filter-joy"
-        >
-          <Smile className="w-3 h-3" />
-          <span>기쁨</span>
-        </button>
-        <button
-          onClick={() => setEmotionFilter('sad')}
-          className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-            emotionFilter === 'sad' ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary hover:bg-primary/20'
-          }`}
-          data-testid="filter-sad"
-        >
-          <Frown className="w-3 h-3" />
-          <span>슬픔</span>
-        </button>
-        <button
-          onClick={() => setEmotionFilter('neutral')}
-          className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-            emotionFilter === 'neutral' ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary hover:bg-primary/20'
-          }`}
-          data-testid="filter-neutral"
-        >
-          <Meh className="w-3 h-3" />
-          <span>평온</span>
-        </button>
+      {/* Filter Dropdowns */}
+      <section className="flex flex-wrap items-center gap-3">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="outline" 
+              className="gap-2"
+              data-testid="dropdown-emotion"
+            >
+              {emotionFilter && SelectedEmotionIcon && (
+                <SelectedEmotionIcon className="h-4 w-4" />
+              )}
+              {emotionFilter ? getSelectedEmotionLabel() : "감정별 보기"}
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56" data-testid="dropdown-emotion-content">
+            <DropdownMenuItem 
+              onClick={() => setEmotionFilter(null)}
+              data-testid="emotion-all"
+            >
+              전체
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {emotionFilters.map((group, groupIdx) => (
+              <div key={groupIdx}>
+                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                  {group.groupLabel}
+                </DropdownMenuLabel>
+                {group.items.map((item) => {
+                  const IconComponent = item.icon;
+                  return (
+                    <DropdownMenuItem
+                      key={item.key}
+                      onClick={() => setEmotionFilter(item.key)}
+                      className="gap-2"
+                      data-testid={`emotion-${item.key}`}
+                    >
+                      <IconComponent className="h-4 w-4" />
+                      <span>{item.label}</span>
+                    </DropdownMenuItem>
+                  );
+                })}
+                {groupIdx < emotionFilters.length - 1 && <DropdownMenuSeparator />}
+              </div>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="outline" 
+              className="gap-2"
+              data-testid="dropdown-persona-type"
+            >
+              {personaTypeFilter !== "all" && SelectedPersonaIcon && (
+                <SelectedPersonaIcon className="h-4 w-4" />
+              )}
+              {getSelectedPersonaTypeLabel() || "페르소나 타입별 보기"}
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56" data-testid="dropdown-persona-type-content">
+            {personaTypeFilters.quick.map((item) => {
+              const IconComponent = item.icon;
+              return (
+                <DropdownMenuItem
+                  key={item.key}
+                  onClick={() => setPersonaTypeFilter(item.key)}
+                  className="gap-2"
+                  data-testid={`persona-type-${item.key}`}
+                >
+                  <IconComponent className="h-4 w-4" />
+                  <span>{item.label}</span>
+                </DropdownMenuItem>
+              );
+            })}
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="text-xs text-muted-foreground">
+              타입별
+            </DropdownMenuLabel>
+            {personaTypeFilters.items.map((item) => {
+              const IconComponent = item.icon;
+              return (
+                <DropdownMenuItem
+                  key={item.key}
+                  onClick={() => setPersonaTypeFilter(item.key)}
+                  className="gap-2"
+                  data-testid={`persona-type-${item.key}`}
+                >
+                  <IconComponent className="h-4 w-4" />
+                  <span>{item.label}</span>
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {(emotionFilter || personaTypeFilter !== "all") && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setEmotionFilter(null);
+              setPersonaTypeFilter("all");
+            }}
+            data-testid="button-clear-filters"
+          >
+            필터 초기화
+          </Button>
+        )}
       </section>
 
       {/* Actionable Insight Box */}
