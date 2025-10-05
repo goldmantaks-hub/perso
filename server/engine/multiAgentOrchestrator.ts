@@ -1,4 +1,9 @@
 import { PersonaState, TopicWeight } from './persoRoom.js';
+import OpenAI from 'openai';
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 export const TOPIC_WEIGHTS: Record<string, Record<string, number>> = {
   'emotion': { Espri: 0.9, Luna: 0.6, Milo: 0.4, Eden: 0.5 },
@@ -135,4 +140,58 @@ function weightedRandomSelection(scores: Map<string, number>, temperature: numbe
   }
   
   return normalizedScores[normalizedScores.length - 1].id;
+}
+
+export interface PersonaProfile {
+  id: string;
+  name: string;
+  role: string;
+  type: string;
+  tone: string;
+  style: string;
+}
+
+export async function generateThinking(
+  persona: PersonaProfile,
+  currentTopics: TopicWeight[],
+  lastMessage: string,
+  conversationContext: string
+): Promise<string> {
+  const topicList = currentTopics.map(t => t.topic).join(', ');
+  
+  const prompt = `You are ${persona.name}, a ${persona.type} persona with the following characteristics:
+- Role: ${persona.role}
+- Tone: ${persona.tone}
+- Style: ${persona.style}
+
+Current conversation topics: ${topicList}
+Last message: "${lastMessage}"
+
+Generate a brief internal thought (1 sentence) about what you're thinking before responding. This should reflect your personality and perspective on the conversation.
+
+Think about:
+- How this topic relates to your expertise
+- What you want to contribute
+- Your reaction to the last message
+
+Output only the internal thought, nothing else.`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: prompt },
+        { role: "user", content: "What are you thinking?" }
+      ],
+      temperature: 0.7,
+      max_tokens: 50,
+    });
+
+    const thinking = completion.choices[0]?.message?.content?.trim() || "...";
+    console.log(`[${persona.name} THINKS]: ${thinking}`);
+    return thinking;
+  } catch (error) {
+    console.error(`[THINKING] Error generating thought for ${persona.name}:`, error);
+    return "...";
+  }
 }
