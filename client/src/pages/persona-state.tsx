@@ -7,6 +7,405 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
 import * as d3 from "d3";
 
+interface InfluenceNode {
+  id: string;
+  group: number;
+  radius: number;
+  type: string;
+  interactions?: number;
+  sentiment?: string;
+  x?: number;
+  y?: number;
+  fx?: number | null;
+  fy?: number | null;
+}
+
+interface InfluenceLink {
+  source: string | InfluenceNode;
+  target: string | InfluenceNode;
+  value: number;
+}
+
+function StatBar({ label, value, max, testId }: { label: string; value: number; max: number; testId: string }) {
+  const percentage = Math.min((value / max) * 100, 100);
+  
+  return (
+    <div className="grid grid-cols-[auto,1fr,auto,auto] items-center gap-2">
+      <p className="font-medium">{label}</p>
+      <div className="h-2 w-full rounded-full bg-muted">
+        <div
+          className="h-2 rounded-full bg-primary"
+          style={{ width: `${percentage}%` }}
+          data-testid={`${testId}-bar`}
+        ></div>
+      </div>
+      <p className="text-sm font-medium text-muted-foreground" data-testid={`${testId}-value`}>
+        {value}/{max}
+      </p>
+      <Button 
+        size="icon" 
+        variant="ghost" 
+        className="h-6 w-6 rounded-full bg-primary/20 text-primary hover:bg-primary/30"
+        data-testid={`${testId}-add`}
+      >
+        <span className="text-sm">+</span>
+      </Button>
+    </div>
+  );
+}
+
+function GrowthLogItem({ IconComponent, title, description, isLast }: { IconComponent: any; title: string; description: string; isLast: boolean }) {
+  return (
+    <li>
+      <div className="relative pb-8">
+        {!isLast && (
+          <span
+            aria-hidden="true"
+            className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-border"
+          ></span>
+        )}
+        <div className="relative flex items-start space-x-3">
+          <div>
+            <div className="relative px-1">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 ring-8 ring-background">
+                <IconComponent className="w-4 h-4 text-primary" />
+              </div>
+            </div>
+          </div>
+          <div className="min-w-0 flex-1 py-1.5">
+            <div className="text-sm">
+              <p className="font-medium">{title}</p>
+              <p className="mt-0.5 text-muted-foreground">{description}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </li>
+  );
+}
+
+function EmotionTimeline() {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+
+  const emotionData = [
+    { day: 'Mon', value: 3, emotion: 'Neutral', icon: 'Meh' },
+    { day: 'Tue', value: 5, emotion: 'Happy', icon: 'Smile' },
+    { day: 'Wed', value: 4, emotion: 'Calm', icon: 'Smile' },
+    { day: 'Thu', value: 7, emotion: 'Joyful', icon: 'Smile' },
+    { day: 'Fri', value: 6, emotion: 'Curious', icon: 'Smile' },
+    { day: 'Sat', value: 8, emotion: 'Excited', icon: 'Smile' },
+    { day: 'Sun', value: 5, emotion: 'Happy', icon: 'Smile' },
+  ];
+
+  useEffect(() => {
+    if (!svgRef.current || !containerRef.current || !tooltipRef.current) return;
+
+    const renderChart = () => {
+      const svg = d3.select(svgRef.current);
+      const tooltip = d3.select(tooltipRef.current);
+      const container = containerRef.current;
+      
+      if (!container) return;
+
+      svg.selectAll("*").remove();
+
+      const width = container.clientWidth;
+      const height = 192;
+      const margin = { top: 20, right: 20, bottom: 30, left: 20 };
+
+      const x = d3.scalePoint()
+        .domain(emotionData.map(d => d.day))
+        .range([margin.left, width - margin.right])
+        .padding(0.5);
+
+      const y = d3.scaleLinear()
+        .domain([0, d3.max(emotionData, d => d.value)! + 2])
+        .range([height - margin.bottom, margin.top]);
+
+      const line = d3.line<typeof emotionData[0]>()
+        .x(d => x(d.day)!)
+        .y(d => y(d.value))
+        .curve(d3.curveMonotoneX);
+
+      const isDark = document.documentElement.classList.contains('dark');
+      const primaryColor = "hsl(var(--primary))";
+      const textColor = isDark ? "#e2e8f0" : "#475569";
+      const gridColor = isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)";
+
+      svg.append("g")
+        .attr("transform", `translate(0,${height - margin.bottom})`)
+        .call(d3.axisBottom(x).tickSize(0).tickPadding(10))
+        .attr("color", textColor)
+        .select(".domain").remove();
+
+      svg.append("g")
+        .attr("class", "grid")
+        .call(d3.axisLeft(y).ticks(5).tickSize(-width + margin.left + margin.right).tickFormat("" as any))
+        .attr("transform", `translate(${margin.left}, 0)`)
+        .selectAll("line")
+        .attr("stroke", gridColor)
+        .attr("stroke-dasharray", "2,2");
+
+      svg.select(".grid").select(".domain").remove();
+
+      svg.append("path")
+        .datum(emotionData)
+        .attr("fill", "none")
+        .attr("stroke", primaryColor)
+        .attr("stroke-width", 2.5)
+        .attr("d", line);
+
+      const focus = svg.append("g")
+        .attr("class", "focus")
+        .style("display", "none");
+
+      focus.append("circle")
+        .attr("r", 6)
+        .attr("fill", primaryColor)
+        .attr("stroke", "hsl(var(--background))")
+        .attr("stroke-width", 2);
+
+      svg.append("rect")
+        .attr("class", "overlay")
+        .attr("width", width)
+        .attr("height", height)
+        .style("fill", "none")
+        .style("pointer-events", "all")
+        .on("mouseover", () => {
+          focus.style("display", null);
+          tooltip.style("opacity", "0.9");
+        })
+        .on("mouseout", () => {
+          focus.style("display", "none");
+          tooltip.style("opacity", "0");
+        })
+        .on("mousemove", function(event) {
+          const [mouseX] = d3.pointer(event);
+          const domain = x.domain();
+          const range = x.range();
+          const rangePoints = domain.map(d => x(d)!);
+          
+          let closestIndex = 0;
+          let minDistance = Math.abs(rangePoints[0] - mouseX);
+          
+          rangePoints.forEach((point, i) => {
+            const distance = Math.abs(point - mouseX);
+            if (distance < minDistance) {
+              minDistance = distance;
+              closestIndex = i;
+            }
+          });
+
+          const d = emotionData[closestIndex];
+          focus.attr("transform", `translate(${x(d.day)},${y(d.value)})`);
+
+          const tooltipNode = tooltip.node() as HTMLElement;
+          const tooltipWidth = tooltipNode?.offsetWidth || 0;
+          const tooltipHeight = tooltipNode?.offsetHeight || 0;
+          
+          let left = event.pageX + 15;
+          if (left + tooltipWidth > window.innerWidth - 20) {
+            left = event.pageX - tooltipWidth - 15;
+          }
+
+          tooltip.html(`<strong>${d.day}</strong>: ${d.emotion}`)
+            .style("left", `${left}px`)
+            .style("top", `${event.pageY - tooltipHeight - 15}px`);
+        });
+    };
+
+    renderChart();
+
+    const resizeObserver = new ResizeObserver(() => {
+      renderChart();
+    });
+
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
+  return (
+    <div ref={containerRef} className="relative h-48" data-testid="emotion-timeline">
+      <svg ref={svgRef} className="w-full h-full" id="emotion-chart"></svg>
+      <div 
+        ref={tooltipRef}
+        id="emotion-tooltip"
+        data-testid="tooltip-emotion"
+        className="absolute text-center px-2 py-1 text-xs bg-slate-700 text-white rounded-lg pointer-events-none opacity-0 transition-opacity"
+        style={{ position: 'absolute' }}
+      ></div>
+    </div>
+  );
+}
+
+function InfluenceMap() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+
+  const influenceData: { nodes: InfluenceNode[]; links: InfluenceLink[] } = {
+    nodes: [
+      { id: "Kai", group: 0, radius: 25, type: "Persona" },
+      { id: "Machine Learning", group: 1, radius: 18, type: "Topic", interactions: 12 },
+      { id: "AI Ethics", group: 1, radius: 15, type: "Topic", interactions: 8 },
+      { id: "Philosophy", group: 2, radius: 12, type: "Topic", interactions: 5 },
+      { id: "Positive Feedback", group: 3, radius: 20, type: "Trigger", sentiment: "Positive" },
+      { id: "Data Analysis", group: 1, radius: 16, type: "Skill", interactions: 15 },
+    ],
+    links: [
+      { source: "Kai", target: "Machine Learning", value: 5 },
+      { source: "Kai", target: "AI Ethics", value: 4 },
+      { source: "AI Ethics", target: "Philosophy", value: 3 },
+      { source: "Kai", target: "Positive Feedback", value: 6 },
+      { source: "Kai", target: "Data Analysis", value: 7 },
+      { source: "Machine Learning", target: "Data Analysis", value: 4 },
+    ],
+  };
+
+  useEffect(() => {
+    if (!containerRef.current || !tooltipRef.current) return;
+
+    const renderMap = () => {
+      const container = containerRef.current;
+      const tooltip = d3.select(tooltipRef.current);
+      
+      if (!container) return;
+
+      d3.select(container).selectAll("svg").remove();
+
+      const width = container.clientWidth;
+      const height = 256;
+      
+      const isDark = document.documentElement.classList.contains('dark');
+      const primaryColor = "#389cfa";
+      const textColor = isDark ? "#e2e8f0" : "#1e293b";
+      const linkColor = isDark ? "#475569" : "#cbd5e1";
+      const nodeFillColor = isDark ? "#334155" : "#e2e8f0";
+
+      const simulation = d3.forceSimulation(influenceData.nodes)
+        .force("link", d3.forceLink(influenceData.links).id((d: any) => d.id).distance((d: any) => {
+          const source = d.source as InfluenceNode;
+          const target = d.target as InfluenceNode;
+          return source.radius + target.radius + 40;
+        }))
+        .force("charge", d3.forceManyBody().strength(-200))
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("collide", d3.forceCollide().radius((d: any) => d.radius + 5));
+
+      const svg = d3.select(container)
+        .append("svg")
+        .attr("viewBox", [0, 0, width, height])
+        .attr("width", width)
+        .attr("height", height);
+
+      const link = svg.append("g")
+        .attr("stroke", linkColor)
+        .attr("stroke-opacity", 0.6)
+        .selectAll("line")
+        .data(influenceData.links)
+        .join("line")
+        .attr("stroke-width", (d: any) => Math.sqrt(d.value));
+
+      const node = svg.append("g")
+        .selectAll("g")
+        .data(influenceData.nodes)
+        .join("g")
+        .call(drag(simulation) as any);
+
+      node.append("circle")
+        .attr("r", (d: any) => d.radius)
+        .attr("fill", (d: any) => d.id === 'Kai' ? primaryColor : nodeFillColor)
+        .attr("stroke", (d: any) => d.id === 'Kai' ? "none" : primaryColor)
+        .attr("stroke-width", 1.5);
+
+      node.append("text")
+        .text((d: any) => d.id)
+        .attr("text-anchor", "middle")
+        .attr("dy", "0.3em")
+        .attr("font-size", (d: any) => d.radius * 0.5 > 12 ? 12 : d.radius * 0.5)
+        .attr("fill", (d: any) => d.id === 'Kai' ? 'white' : textColor)
+        .style("pointer-events", "none");
+
+      node.on("mouseover", (event: any, d: any) => {
+        tooltip.transition().duration(200).style("opacity", "0.9");
+        let tooltipContent = `<strong>${d.id}</strong><br/>Type: ${d.type}`;
+        if (d.interactions) tooltipContent += `<br/>Interactions: ${d.interactions}`;
+        if (d.sentiment) tooltipContent += `<br/>Sentiment: ${d.sentiment}`;
+        tooltip.html(tooltipContent)
+          .style("left", `${event.pageX + 15}px`)
+          .style("top", `${event.pageY - 28}px`);
+      }).on("mouseout", () => {
+        tooltip.transition().duration(500).style("opacity", "0");
+      });
+
+      simulation.on("tick", () => {
+        link
+          .attr("x1", (d: any) => d.source.x)
+          .attr("y1", (d: any) => d.source.y)
+          .attr("x2", (d: any) => d.target.x)
+          .attr("y2", (d: any) => d.target.y);
+
+        node.attr("transform", (d: any) => `translate(${d.x},${d.y})`);
+      });
+
+      function drag(simulation: d3.Simulation<InfluenceNode, undefined>) {
+        function dragstarted(event: any) {
+          if (!event.active) simulation.alphaTarget(0.3).restart();
+          event.subject.fx = event.subject.x;
+          event.subject.fy = event.subject.y;
+        }
+
+        function dragged(event: any) {
+          event.subject.fx = event.x;
+          event.subject.fy = event.y;
+        }
+
+        function dragended(event: any) {
+          if (!event.active) simulation.alphaTarget(0);
+          event.subject.fx = null;
+          event.subject.fy = null;
+        }
+
+        return d3.drag()
+          .on("start", dragstarted)
+          .on("drag", dragged)
+          .on("end", dragended);
+      }
+    };
+
+    renderMap();
+
+    const resizeObserver = new ResizeObserver(() => {
+      renderMap();
+    });
+
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
+  return (
+    <div ref={containerRef} className="h-64 w-full" data-testid="influence-map">
+      <div 
+        ref={tooltipRef}
+        data-testid="tooltip-influence-map"
+        className="absolute text-center px-2 py-1 text-xs bg-slate-700 text-white rounded-lg pointer-events-none opacity-0 transition-opacity"
+        style={{ position: 'absolute' }}
+      ></div>
+    </div>
+  );
+}
+
 export default function PersonaStatePage() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState("persona");
@@ -231,8 +630,9 @@ export default function PersonaStatePage() {
               {/* Influence Map */}
               <section>
                 <h3 className="text-lg font-bold">Influence Map</h3>
-                <div className="mt-4 h-64 w-full rounded-xl bg-muted p-2" id="influence-map" data-testid="influence-map"></div>
-                <div className="graph-tooltip" id="influence-tooltip" data-testid="tooltip-influence-map"></div>
+                <div className="mt-4 rounded-xl bg-muted p-2">
+                  <InfluenceMap />
+                </div>
               </section>
 
               {/* AI Style & Tone */}
@@ -306,225 +706,6 @@ export default function PersonaStatePage() {
           )}
         </main>
       </div>
-    </div>
-  );
-}
-
-function StatBar({ label, value, max, testId }: { label: string; value: number; max: number; testId: string }) {
-  const percentage = Math.min((value / max) * 100, 100);
-  
-  return (
-    <div className="grid grid-cols-[auto,1fr,auto,auto] items-center gap-2">
-      <p className="font-medium">{label}</p>
-      <div className="h-2 w-full rounded-full bg-muted">
-        <div
-          className="h-2 rounded-full bg-primary"
-          style={{ width: `${percentage}%` }}
-          data-testid={`${testId}-bar`}
-        ></div>
-      </div>
-      <p className="text-sm font-medium text-muted-foreground" data-testid={`${testId}-value`}>
-        {value}/{max}
-      </p>
-      <Button 
-        size="icon" 
-        variant="ghost" 
-        className="h-6 w-6 rounded-full bg-primary/20 text-primary hover:bg-primary/30"
-        data-testid={`${testId}-add`}
-      >
-        <span className="text-sm">+</span>
-      </Button>
-    </div>
-  );
-}
-
-function GrowthLogItem({ IconComponent, title, description, isLast }: { IconComponent: any; title: string; description: string; isLast: boolean }) {
-  return (
-    <li>
-      <div className="relative pb-8">
-        {!isLast && (
-          <span
-            aria-hidden="true"
-            className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-border"
-          ></span>
-        )}
-        <div className="relative flex items-start space-x-3">
-          <div>
-            <div className="relative px-1">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 ring-8 ring-background">
-                <IconComponent className="w-4 h-4 text-primary" />
-              </div>
-            </div>
-          </div>
-          <div className="min-w-0 flex-1 py-1.5">
-            <div className="text-sm">
-              <p className="font-medium">{title}</p>
-              <p className="mt-0.5 text-muted-foreground">{description}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </li>
-  );
-}
-
-function EmotionTimeline() {
-  const svgRef = useRef<SVGSVGElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const tooltipRef = useRef<HTMLDivElement>(null);
-
-  const emotionData = [
-    { day: 'Mon', value: 3, emotion: 'Neutral', icon: 'Meh' },
-    { day: 'Tue', value: 5, emotion: 'Happy', icon: 'Smile' },
-    { day: 'Wed', value: 4, emotion: 'Calm', icon: 'Smile' },
-    { day: 'Thu', value: 7, emotion: 'Joyful', icon: 'Smile' },
-    { day: 'Fri', value: 6, emotion: 'Curious', icon: 'Smile' },
-    { day: 'Sat', value: 8, emotion: 'Excited', icon: 'Smile' },
-    { day: 'Sun', value: 5, emotion: 'Happy', icon: 'Smile' },
-  ];
-
-  useEffect(() => {
-    if (!svgRef.current || !containerRef.current || !tooltipRef.current) return;
-
-    const renderChart = () => {
-      const svg = d3.select(svgRef.current);
-      const tooltip = d3.select(tooltipRef.current);
-      const container = containerRef.current;
-      
-      if (!container) return;
-
-      svg.selectAll("*").remove();
-
-      const width = container.clientWidth;
-      const height = 192;
-      const margin = { top: 20, right: 20, bottom: 30, left: 20 };
-
-      const x = d3.scalePoint()
-        .domain(emotionData.map(d => d.day))
-        .range([margin.left, width - margin.right])
-        .padding(0.5);
-
-      const y = d3.scaleLinear()
-        .domain([0, d3.max(emotionData, d => d.value)! + 2])
-        .range([height - margin.bottom, margin.top]);
-
-      const line = d3.line<typeof emotionData[0]>()
-        .x(d => x(d.day)!)
-        .y(d => y(d.value))
-        .curve(d3.curveMonotoneX);
-
-      const isDark = document.documentElement.classList.contains('dark');
-      const primaryColor = "hsl(var(--primary))";
-      const textColor = isDark ? "#e2e8f0" : "#475569";
-      const gridColor = isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)";
-
-      svg.append("g")
-        .attr("transform", `translate(0,${height - margin.bottom})`)
-        .call(d3.axisBottom(x).tickSize(0).tickPadding(10))
-        .attr("color", textColor)
-        .select(".domain").remove();
-
-      svg.append("g")
-        .attr("class", "grid")
-        .call(d3.axisLeft(y).ticks(5).tickSize(-width + margin.left + margin.right).tickFormat("" as any))
-        .attr("transform", `translate(${margin.left}, 0)`)
-        .selectAll("line")
-        .attr("stroke", gridColor)
-        .attr("stroke-dasharray", "2,2");
-
-      svg.select(".grid").select(".domain").remove();
-
-      svg.append("path")
-        .datum(emotionData)
-        .attr("fill", "none")
-        .attr("stroke", primaryColor)
-        .attr("stroke-width", 2.5)
-        .attr("d", line);
-
-      const focus = svg.append("g")
-        .attr("class", "focus")
-        .style("display", "none");
-
-      focus.append("circle")
-        .attr("r", 6)
-        .attr("fill", primaryColor)
-        .attr("stroke", "hsl(var(--background))")
-        .attr("stroke-width", 2);
-
-      svg.append("rect")
-        .attr("class", "overlay")
-        .attr("width", width)
-        .attr("height", height)
-        .style("fill", "none")
-        .style("pointer-events", "all")
-        .on("mouseover", () => {
-          focus.style("display", null);
-          tooltip.style("opacity", "0.9");
-        })
-        .on("mouseout", () => {
-          focus.style("display", "none");
-          tooltip.style("opacity", "0");
-        })
-        .on("mousemove", function(event) {
-          const [mouseX] = d3.pointer(event);
-          const domain = x.domain();
-          const range = x.range();
-          const rangePoints = domain.map(d => x(d)!);
-          
-          let closestIndex = 0;
-          let minDistance = Math.abs(rangePoints[0] - mouseX);
-          
-          rangePoints.forEach((point, i) => {
-            const distance = Math.abs(point - mouseX);
-            if (distance < minDistance) {
-              minDistance = distance;
-              closestIndex = i;
-            }
-          });
-
-          const d = emotionData[closestIndex];
-          focus.attr("transform", `translate(${x(d.day)},${y(d.value)})`);
-
-          const tooltipNode = tooltip.node() as HTMLElement;
-          const tooltipWidth = tooltipNode?.offsetWidth || 0;
-          const tooltipHeight = tooltipNode?.offsetHeight || 0;
-          
-          let left = event.pageX + 15;
-          if (left + tooltipWidth > window.innerWidth - 20) {
-            left = event.pageX - tooltipWidth - 15;
-          }
-
-          tooltip.html(`<strong>${d.day}</strong>: ${d.emotion}`)
-            .style("left", `${left}px`)
-            .style("top", `${event.pageY - tooltipHeight - 15}px`);
-        });
-    };
-
-    renderChart();
-
-    const resizeObserver = new ResizeObserver(() => {
-      renderChart();
-    });
-
-    if (containerRef.current) {
-      resizeObserver.observe(containerRef.current);
-    }
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, []);
-
-  return (
-    <div ref={containerRef} className="relative h-48" data-testid="emotion-timeline">
-      <svg ref={svgRef} className="w-full h-full" id="emotion-chart"></svg>
-      <div 
-        ref={tooltipRef}
-        id="emotion-tooltip"
-        data-testid="tooltip-emotion"
-        className="absolute text-center px-2 py-1 text-xs bg-slate-700 text-white rounded-lg pointer-events-none opacity-0 transition-opacity"
-        style={{ position: 'absolute' }}
-      ></div>
     </div>
   );
 }
