@@ -17,10 +17,11 @@ export default function PersoPage() {
 
   const [message, setMessage] = useState("");
 
-  // 메시지 및 게시물 정보 가져오기
+  // 메시지 및 게시물 정보 가져오기 (5초마다 폴링하여 점진적 메시지 표시)
   const { data, isLoading } = useQuery<any>({
     queryKey: ["/api/perso", postId, "messages"],
     enabled: !!postId,
+    refetchInterval: 5000, // 5초마다 새 메시지 확인
   });
 
   // 사용자 페르소나 가져오기 (AI 응답에 사용)

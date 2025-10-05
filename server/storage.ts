@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, desc, and, isNull } from "drizzle-orm";
+import { eq, desc, and, isNull, or, lte, sql } from "drizzle-orm";
 import {
   type User,
   type InsertUser,
@@ -235,7 +235,14 @@ export class DbStorage implements IStorage {
     const allMessages = await db
       .select()
       .from(messages)
-      .where(and(eq(messages.conversationId, conversationId), isNull(messages.deletedAt)))
+      .where(and(
+        eq(messages.conversationId, conversationId),
+        isNull(messages.deletedAt),
+        or(
+          isNull(messages.visibleAt),
+          lte(messages.visibleAt, sql`NOW()`)
+        )
+      ))
       .orderBy(messages.createdAt);
     
     if (!userId) {

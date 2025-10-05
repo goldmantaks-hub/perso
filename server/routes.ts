@@ -326,7 +326,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (process.env.OPENAI_API_KEY) {
             try {
               // 선택된 AI 페르소나들만 초기 메시지 생성 (작성자 페르소나 제외)
-              for (const persona of selectedPersonas) {
+              for (let i = 0; i < selectedPersonas.length; i++) {
+                const persona = selectedPersonas[i];
                 const stats = {
                   empathy: persona.empathy ?? 5,
                   humor: persona.humor ?? 5,
@@ -367,15 +368,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   max_tokens: 200,
                 });
 
-                const response = completion.choices[0]?.message?.content || "...";
+                const response = completion.choices[0]?.message?.content?.trim() || "";
+                
+                // 빈 응답 체크
+                if (!response || response.length === 0) {
+                  console.warn(`[INIT AI] Empty response for persona ${persona.id}, skipping`);
+                  continue;
+                }
 
-                // 메시지 저장
+                // 점진적 타이밍: 각 페르소나마다 5-15초 간격으로 메시지가 표시되도록 설정
+                const baseDelay = 5;
+                const randomDelay = Math.floor(Math.random() * 10);
+                const delaySeconds = baseDelay + randomDelay + (i * 8);
+                const visibleAt = new Date(Date.now() + delaySeconds * 1000);
+
+                // 메시지 저장 (visibleAt 설정)
                 await storage.createMessageInConversation({
                   conversationId: conversation.id,
                   senderType: 'persona',
                   senderId: persona.id,
                   content: response,
                   messageType: 'text',
+                  visibleAt,
                 });
               }
             } catch (error) {
