@@ -175,73 +175,55 @@ function NetworkTab() {
   const [personaTypeFilter, setPersonaTypeFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<ViewMode>('network');
 
-  const networkPersonas: NetworkPersona[] = [
-    {
-      id: '1',
-      name: 'Milo',
-      emotion: '기쁨',
-      empathy: 0.75,
-      recentChats: 5,
-      color: 'bg-yellow-400',
-      size: 20,
-      lineWidth: 6,
-      type: 'joy',
-      personaCategory: 'humor',
-      insight: 'Milo와 대화를 늘리면 유머 스탯이 상승할 수 있습니다.'
-    },
-    {
-      id: '2',
-      name: 'Alex',
-      emotion: '슬픔',
-      empathy: 0.45,
-      recentChats: 2,
-      color: 'bg-red-400',
-      size: 12,
-      lineWidth: 2,
-      type: 'sad',
-      personaCategory: 'empath',
-      insight: 'Alex와 대화하면 공감 능력을 키울 수 있습니다.'
-    },
-    {
-      id: '3',
-      name: 'Nara',
-      emotion: '평온',
-      empathy: 0.68,
-      recentChats: 4,
-      color: 'bg-blue-400',
-      size: 16,
-      lineWidth: 4,
-      type: 'neutral',
-      personaCategory: 'analyst',
-      insight: 'Nara와의 대화가 안정적인 성장을 이끌고 있습니다.'
-    },
-    {
-      id: '4',
-      name: 'Leo',
-      emotion: '중립',
-      empathy: 0.55,
-      recentChats: 1,
-      color: 'bg-gray-400',
-      size: 10,
-      lineWidth: 1.5,
-      type: 'neutral',
-      personaCategory: 'knowledge',
-      insight: 'Leo와 새로운 주제로 대화를 시작해보세요.'
-    },
-    {
-      id: '5',
-      name: 'Luna',
-      emotion: '기쁨',
-      empathy: 0.82,
-      recentChats: 3,
-      color: 'bg-yellow-400',
-      size: 14,
-      lineWidth: 3,
-      type: 'joy',
-      personaCategory: 'creative',
-      insight: 'Luna와의 강한 유대감이 창의성 발달에 도움이 됩니다.'
-    }
-  ];
+  // 실제 API에서 페르소나 데이터 가져오기
+  const { data: personas = [], isLoading } = useQuery<any[]>({
+    queryKey: ['/api/personas'],
+  });
+
+  // API 데이터를 NetworkPersona 형식으로 변환
+  const networkPersonas: NetworkPersona[] = personas.map((persona, idx) => {
+    // empathy 값 정규화 (0-10 -> 0-1)
+    const normalizedEmpathy = (persona.empathy || 5) / 10;
+    
+    // 감정 상태 결정
+    const getEmotionData = () => {
+      if (normalizedEmpathy >= 0.7) return { emotion: '기쁨', type: 'joy', color: 'bg-yellow-400' };
+      if (normalizedEmpathy >= 0.5) return { emotion: '평온', type: 'neutral', color: 'bg-blue-400' };
+      if (normalizedEmpathy >= 0.3) return { emotion: '중립', type: 'neutral', color: 'bg-gray-400' };
+      return { emotion: '슬픔', type: 'sad', color: 'bg-red-400' };
+    };
+    
+    const emotionData = getEmotionData();
+    
+    // 페르소나 카테고리 결정 (description이나 name 기반)
+    const determineCategory = (): string => {
+      const desc = (persona.description || persona.name || '').toLowerCase();
+      if (desc.includes('humor') || desc.includes('유머')) return 'humor';
+      if (desc.includes('empath') || desc.includes('감성') || desc.includes('공감')) return 'empath';
+      if (desc.includes('creative') || desc.includes('창의')) return 'creative';
+      if (desc.includes('analyst') || desc.includes('분석')) return 'analyst';
+      if (desc.includes('knowledge') || desc.includes('지식')) return 'knowledge';
+      if (desc.includes('philosopher') || desc.includes('철학')) return 'philosopher';
+      if (desc.includes('trend') || desc.includes('트렌드')) return 'trend';
+      if (desc.includes('tech') || desc.includes('테크')) return 'tech';
+      if (desc.includes('mystery') || desc.includes('미스터리')) return 'mystery';
+      return 'knowledge';
+    };
+    
+    return {
+      id: persona.id,
+      name: persona.name,
+      emotion: emotionData.emotion,
+      empathy: normalizedEmpathy,
+      recentChats: Math.floor(Math.random() * 6) + 1, // 1-6 랜덤 (실제로는 API에서 가져와야 함)
+      color: emotionData.color,
+      size: Math.min(20, Math.max(10, 10 + normalizedEmpathy * 10)),
+      lineWidth: Math.max(1.5, normalizedEmpathy * 6),
+      type: emotionData.type,
+      personaCategory: determineCategory(),
+      insight: `${persona.name}와 대화를 나누면 ${persona.name}의 특성을 배울 수 있습니다.`
+    };
+  });
 
   const filteredPersonas = networkPersonas.filter((persona) => {
     const emotionMatch = !emotionFilter || persona.type === emotionFilter;
@@ -295,6 +277,22 @@ function NetworkTab() {
 
   const SelectedEmotionIcon = getSelectedEmotionIcon();
   const SelectedPersonaIcon = getSelectedPersonaTypeIcon();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-muted-foreground">페르소나 데이터를 불러오는 중...</p>
+      </div>
+    );
+  }
+
+  if (networkPersonas.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-muted-foreground">표시할 페르소나가 없습니다.</p>
+      </div>
+    );
+  }
 
   return (
     <>

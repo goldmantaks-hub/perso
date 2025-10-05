@@ -200,6 +200,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/personas - 모든 페르소나 가져오기
+  app.get("/api/personas", async (req, res) => {
+    try {
+      const allPersonas = await storage.getAllPersonas();
+      
+      // 각 페르소나의 사용자 정보 포함
+      const personasWithUsers = await Promise.all(
+        allPersonas.map(async (persona) => {
+          const user = await storage.getUser(persona.userId);
+          return {
+            ...persona,
+            user: user ? {
+              id: user.id,
+              username: user.username
+            } : null
+          };
+        })
+      );
+      
+      res.json(personasWithUsers);
+    } catch (error) {
+      console.error("Get all personas error:", error);
+      res.status(500).json({ message: "페르소나 목록을 가져오는데 실패했습니다" });
+    }
+  });
+
   // GET /api/user/persona - 현재 사용자의 페르소나 가져오기
   app.get("/api/user/persona", authenticateToken, async (req, res) => {
     try {
