@@ -81,6 +81,7 @@ export const conversationParticipants = pgTable("conversation_participants", {
   role: varchar("role", { length: 20 }).notNull().default('member'),
   joinedAt: timestamp("joined_at").notNull().defaultNow(),
   lastReadMessageId: varchar("last_read_message_id"),
+  isActive: boolean("is_active").notNull().default(true),
 }, (table) => {
   return {
     uniqueParticipant: sql`UNIQUE (${table.conversationId}, ${table.participantType}, ${table.participantId})`,
@@ -92,10 +93,11 @@ export const messages = pgTable("messages", {
   conversationId: varchar("conversation_id").notNull().references(() => conversations.id, { onDelete: 'cascade' }),
   senderType: varchar("sender_type", { length: 20 }).notNull(),
   senderId: varchar("sender_id").notNull(),
-  content: text("content"),
+  content: text("content").notNull(),
   messageType: varchar("message_type", { length: 20 }).notNull().default('text'),
   replyToId: varchar("reply_to_id"),
   meta: jsonb("meta"),
+  visibleAt: timestamp("visible_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   editedAt: timestamp("edited_at"),
   deletedAt: timestamp("deleted_at"),
@@ -125,6 +127,40 @@ export const personaMemories = pgTable("persona_memories", {
   summary: text("summary"),
   context: text("context"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const conversationPersonaStates = pgTable("conversation_persona_states", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  conversationId: varchar("conversation_id").notNull().references(() => conversations.id, { onDelete: 'cascade' }),
+  personaId: varchar("persona_id").notNull().references(() => personas.id, { onDelete: 'cascade' }),
+  presenceState: varchar("presence_state", { length: 20 }).notNull().default('active'),
+  mood: jsonb("mood"),
+  lastEventAt: timestamp("last_event_at"),
+  lastMessageAt: timestamp("last_message_at"),
+  nextActionAt: timestamp("next_action_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    uniqueConversationPersona: sql`UNIQUE (${table.conversationId}, ${table.personaId})`,
+    conversationIdx: sql`CREATE INDEX IF NOT EXISTS conversation_persona_states_conversation_id_idx ON ${table} (${table.conversationId})`,
+  };
+});
+
+export const conversationEvents = pgTable("conversation_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  conversationId: varchar("conversation_id").notNull().references(() => conversations.id, { onDelete: 'cascade' }),
+  eventType: varchar("event_type", { length: 20 }).notNull(),
+  actorType: varchar("actor_type", { length: 20 }).notNull(),
+  actorId: varchar("actor_id").notNull(),
+  payload: jsonb("payload"),
+  effectiveAt: timestamp("effective_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    conversationIdx: sql`CREATE INDEX IF NOT EXISTS conversation_events_conversation_id_idx ON ${table} (${table.conversationId})`,
+    effectiveAtIdx: sql`CREATE INDEX IF NOT EXISTS conversation_events_effective_at_idx ON ${table} (${table.effectiveAt})`,
+  };
 });
 
 // Insert schemas
@@ -170,6 +206,8 @@ export const insertConversationParticipantSchema = createInsertSchema(conversati
 export const insertMessageSchema = createInsertSchema(messages).omit({
   id: true,
   createdAt: true,
+}).extend({
+  content: z.string().min(1, "메시지 내용은 비어있을 수 없습니다"),
 });
 
 export const insertPostConversationSchema = createInsertSchema(postConversations).omit({
@@ -184,6 +222,17 @@ export const insertPersonaMemorySchema = createInsertSchema(personaMemories).omi
 export const insertMessageDeletedByUserSchema = createInsertSchema(messageDeletedByUsers).omit({
   id: true,
   deletedAt: true,
+});
+
+export const insertConversationPersonaStateSchema = createInsertSchema(conversationPersonaStates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertConversationEventSchema = createInsertSchema(conversationEvents).omit({
+  id: true,
+  createdAt: true,
 });
 
 // Types
@@ -222,3 +271,9 @@ export type PersonaMemory = typeof personaMemories.$inferSelect;
 
 export type InsertMessageDeletedByUser = z.infer<typeof insertMessageDeletedByUserSchema>;
 export type MessageDeletedByUser = typeof messageDeletedByUsers.$inferSelect;
+
+export type InsertConversationPersonaState = z.infer<typeof insertConversationPersonaStateSchema>;
+export type ConversationPersonaState = typeof conversationPersonaStates.$inferSelect;
+
+export type InsertConversationEvent = z.infer<typeof insertConversationEventSchema>;
+export type ConversationEvent = typeof conversationEvents.$inferSelect;
