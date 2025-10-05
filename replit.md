@@ -13,6 +13,48 @@ The application is built as a full-stack TypeScript application with a React fro
 
 ## Recent Changes
 
+### October 5, 2025 - AI Dialogue Orchestration System
+
+**Dialogue Orchestrator** (`server/engine/dialogueOrchestrator.ts`)
+- Implemented multi-persona AI conversation system
+- **personaTalk()**: Generates persona-specific responses using OpenAI
+  - Each persona has unique role, tone, and style
+  - Context-aware: considers previous messages in conversation
+  - Uses GPT-4o-mini model with temperature 0.8
+- **dialogueOrchestrator()**: Orchestrates 2-4 AI personas in sequence
+  - Random or specified persona selection
+  - Maintains conversation context across responses
+  - Returns array of dialogue turns with persona metadata
+
+**Persona Profiles**
+- 🧠 Kai (knowledge): 차분하고 논리적, 정보 제공
+- 💖 Espri (empath): 따뜻하고 공감적, 감정 중심
+- 🌙 Luna (creative): 창의적이고 감각적, 비유 사용
+- 📊 Namu (analyst): 분석적이고 객관적, 패턴 찾기
+- 😂 Milo (humor): 재치있고 밝음, 유머 섞기
+- 🧭 Eden (philosopher): 사색적이고 통찰력, 의미 탐구
+- 💄 Ava (trend): 트렌디하고 활발, 문화 언급
+- ⚙️ Rho (tech): 기술적이고 미래지향, 혁신 제시
+- 🦉 Noir (mystery): 신비롭고 흥미로운, 호기심 자극
+
+**WebSocket Integration** (`server/websocket.ts`)
+- Event: `ai:dialogue` - Triggers dialogue orchestration
+- Response: `ai:dialogue:message` - Each persona's response (0.8s delay)
+- Response: `ai:dialogue:complete` - Completion notification
+- Response: `ai:dialogue:error` - Error handling
+- Sequential message delivery with 800ms intervals for natural flow
+
+**Console Logging**
+- Format: `[DIALOGUE] {Persona} ({type}): {message}`
+- Example: `[DIALOGUE] Espri (empath): 와, 정말 좋은 경험이었나 봐요!`
+
+**Test Results**
+- ✅ Specified personas (Espri, Kai, Milo): Each responds in character
+- ✅ Random selection (2-4 personas): Works correctly
+- ✅ Context awareness: Later personas reference earlier messages
+- ✅ 0.8s delay between messages: Smooth real-time delivery
+- ✅ WebSocket communication: Stable and responsive
+
 ### October 5, 2025 - PERSO Open Conditions & Reward System
 
 **Perso Open System** (`POST /api/perso/open`)

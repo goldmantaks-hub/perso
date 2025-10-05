@@ -127,6 +127,62 @@ export function setupWebSocket(server: Server) {
       socket.leave(`conversation:${conversationId}`);
     });
 
+    // AI 대화 오케스트레이션
+    socket.on("ai:dialogue", async (data: {
+      postId: string;
+      postContent: string;
+      analysis: any;
+      personas?: string[];
+    }) => {
+      try {
+        console.log(`[WS] ai:dialogue event received from ${userId}`);
+        console.log(`[WS] Post: "${data.postContent}"`);
+        
+        const { dialogueOrchestrator } = await import('./engine/dialogueOrchestrator.js');
+        
+        const post = {
+          id: data.postId,
+          content: data.postContent
+        };
+        
+        const dialogues = await dialogueOrchestrator(post, data.analysis, data.personas);
+        
+        console.log(`[WS] Generated ${dialogues.length} dialogue responses`);
+        
+        for (let i = 0; i < dialogues.length; i++) {
+          const dialogue = dialogues[i];
+          
+          if (i > 0) {
+            await new Promise(resolve => setTimeout(resolve, 800));
+          }
+          
+          socket.emit('ai:dialogue:message', {
+            postId: data.postId,
+            persona: dialogue.persona,
+            message: dialogue.message,
+            type: dialogue.type,
+            index: i,
+            total: dialogues.length
+          });
+          
+          console.log(`[WS] Sent dialogue ${i + 1}/${dialogues.length}: ${dialogue.persona}`);
+        }
+        
+        socket.emit('ai:dialogue:complete', {
+          postId: data.postId,
+          totalMessages: dialogues.length
+        });
+        
+        console.log(`[WS] Dialogue orchestration complete for post ${data.postId}`);
+      } catch (error) {
+        console.error('[WS] Error in dialogue orchestration:', error);
+        socket.emit('ai:dialogue:error', {
+          postId: data.postId,
+          error: 'Failed to generate dialogue'
+        });
+      }
+    });
+
     // 연결 해제
     socket.on("disconnect", () => {
       console.log(`[WS] User ${userId} disconnected`);
