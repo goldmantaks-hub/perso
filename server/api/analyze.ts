@@ -69,7 +69,7 @@ function inferContexts(content: string, subjects: Subject[], tones: string[]): s
   if (subjects.some(s => s.kind === 'food')) contexts.push('cuisine');
   if (subjects.some(s => s.kind === 'place')) contexts.push('travel');
   
-  return [...new Set(contexts)];
+  return Array.from(new Set(contexts));
 }
 
 export async function analyzeSentiment(req: Request, res: Response) {

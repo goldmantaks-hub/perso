@@ -289,18 +289,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "페르소나를 찾을 수 없습니다" });
       }
 
-      // 7일간 감정 변화 데이터 생성 (실제로는 DB에서 가져와야 함)
+      // DB에서 최근 7일간 감정 로그 가져오기
+      const emotionLogs = await storage.getEmotionLogsByPersona(persona.id, 7);
+      
+      // 날짜별로 그룹화하여 평균 계산
       const days = ['월', '화', '수', '목', '금', '토', '일'];
-      const emotionTimeline = days.map((day, idx) => {
-        const value = Math.floor(Math.random() * 5) + 3; // 3-8 사이
-        const emotions = ['보통', '행복', '차분함', '기쁨', '호기심', '흥분'];
-        return {
-          day,
-          value,
-          emotion: emotions[Math.min(value - 3, emotions.length - 1)],
-          icon: 'Smile'
-        };
-      });
+      const today = new Date();
+      const emotionTimeline = [];
+      
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const dayOfWeek = days[date.getDay() === 0 ? 6 : date.getDay() - 1];
+        
+        // 해당 날짜의 로그 필터링
+        const dayLogs = emotionLogs.filter(log => {
+          const logDate = new Date(log.recordedAt);
+          return logDate.toDateString() === date.toDateString();
+        });
+        
+        if (dayLogs.length > 0) {
+          // 평균 감정 점수 계산
+          const avgValue = Math.round(
+            dayLogs.reduce((sum, log) => sum + log.value, 0) / dayLogs.length
+          );
+          
+          // 가장 빈번한 감정 찾기
+          const emotionCounts: { [key: string]: number } = {};
+          dayLogs.forEach(log => {
+            emotionCounts[log.emotion] = (emotionCounts[log.emotion] || 0) + 1;
+          });
+          const mostFrequentEmotion = Object.entries(emotionCounts)
+            .sort((a, b) => b[1] - a[1])[0][0];
+          
+          emotionTimeline.push({
+            day: dayOfWeek,
+            value: avgValue,
+            emotion: mostFrequentEmotion,
+            icon: 'Smile'
+          });
+        } else {
+          // 데이터가 없으면 기본값
+          emotionTimeline.push({
+            day: dayOfWeek,
+            value: 5,
+            emotion: '보통',
+            icon: 'Smile'
+          });
+        }
+      }
       
       res.json(emotionTimeline);
     } catch (error) {

@@ -1,3 +1,5 @@
+import { storage } from '../storage.js';
+
 interface EmotionPattern {
   emotion: string;
   count: number;
@@ -23,7 +25,19 @@ interface PersonaMemoryData {
 
 const personaMemories: Map<string, PersonaMemoryData> = new Map();
 
-export function recordEmotion(personaId: string, personaName: string, emotion: string): void {
+const emotionToValueMap: { [key: string]: number } = {
+  '매우 슬픔': 1,
+  '슬픔': 2,
+  '보통': 5,
+  '행복': 7,
+  '매우 행복': 9,
+  '기쁨': 8,
+  '흥분': 9,
+  '차분함': 6,
+  '호기심': 7,
+};
+
+export async function recordEmotion(personaId: string, personaName: string, emotion: string, trigger?: string): Promise<void> {
   let memory = personaMemories.get(personaId);
   
   if (!memory) {
@@ -54,6 +68,19 @@ export function recordEmotion(personaId: string, personaName: string, emotion: s
   memory.interactionCount++;
 
   updateDominantEmotions(memory);
+
+  // DB에 감정 로그 저장
+  const value = emotionToValueMap[emotion] || 5;
+  try {
+    await storage.createEmotionLog({
+      personaId,
+      emotion,
+      value,
+      trigger: trigger || 'interaction',
+    });
+  } catch (error) {
+    console.error(`[EMOTION LOG ERROR] Failed to save emotion log for ${personaName}:`, error);
+  }
 
   console.log(`[PERSONA MEMORY] ${personaName} emotion recorded: ${emotion} (total: ${memory.interactionCount})`);
 }

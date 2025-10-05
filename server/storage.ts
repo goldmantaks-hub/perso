@@ -22,6 +22,8 @@ import {
   type PersonaMemory,
   type InsertPersonaMemory,
   type InsertMessageDeletedByUser,
+  type PersonaEmotionLog,
+  type InsertPersonaEmotionLog,
   users,
   personas,
   posts,
@@ -34,6 +36,7 @@ import {
   postConversations,
   personaMemories,
   messageDeletedByUsers,
+  personaEmotionLogs,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -52,6 +55,10 @@ export interface IStorage {
   // PersonaMemory methods
   getMemoriesByPersona(personaId: string, limit?: number): Promise<PersonaMemory[]>;
   createMemory(memory: InsertPersonaMemory): Promise<PersonaMemory>;
+  
+  // PersonaEmotionLog methods
+  createEmotionLog(log: InsertPersonaEmotionLog): Promise<PersonaEmotionLog>;
+  getEmotionLogsByPersona(personaId: string, days?: number): Promise<PersonaEmotionLog[]>;
   
   // Post methods
   getPosts(): Promise<Post[]>;
@@ -143,6 +150,27 @@ export class DbStorage implements IStorage {
   async createMemory(insertMemory: InsertPersonaMemory): Promise<PersonaMemory> {
     const [memory] = await db.insert(personaMemories).values(insertMemory).returning();
     return memory;
+  }
+
+  // PersonaEmotionLog methods
+  async createEmotionLog(insertLog: InsertPersonaEmotionLog): Promise<PersonaEmotionLog> {
+    const [log] = await db.insert(personaEmotionLogs).values(insertLog).returning();
+    return log;
+  }
+
+  async getEmotionLogsByPersona(personaId: string, days: number = 7): Promise<PersonaEmotionLog[]> {
+    const daysAgo = new Date();
+    daysAgo.setDate(daysAgo.getDate() - days);
+    
+    return await db.select()
+      .from(personaEmotionLogs)
+      .where(
+        and(
+          eq(personaEmotionLogs.personaId, personaId),
+          sql`${personaEmotionLogs.recordedAt} >= ${daysAgo.toISOString()}`
+        )
+      )
+      .orderBy(personaEmotionLogs.recordedAt);
   }
 
   // Post methods

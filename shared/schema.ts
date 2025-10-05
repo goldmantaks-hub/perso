@@ -163,6 +163,20 @@ export const conversationEvents = pgTable("conversation_events", {
   };
 });
 
+export const personaEmotionLogs = pgTable("persona_emotion_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  personaId: varchar("persona_id").notNull().references(() => personas.id, { onDelete: 'cascade' }),
+  emotion: text("emotion").notNull(),
+  value: integer("value").notNull(),
+  trigger: text("trigger"),
+  recordedAt: timestamp("recorded_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    personaIdx: sql`CREATE INDEX IF NOT EXISTS persona_emotion_logs_persona_id_idx ON ${table} (${table.personaId})`,
+    recordedAtIdx: sql`CREATE INDEX IF NOT EXISTS persona_emotion_logs_recorded_at_idx ON ${table} (${table.recordedAt})`,
+  };
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -235,6 +249,11 @@ export const insertConversationEventSchema = createInsertSchema(conversationEven
   createdAt: true,
 });
 
+export const insertPersonaEmotionLogSchema = createInsertSchema(personaEmotionLogs).omit({
+  id: true,
+  recordedAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -277,3 +296,6 @@ export type ConversationPersonaState = typeof conversationPersonaStates.$inferSe
 
 export type InsertConversationEvent = z.infer<typeof insertConversationEventSchema>;
 export type ConversationEvent = typeof conversationEvents.$inferSelect;
+
+export type InsertPersonaEmotionLog = z.infer<typeof insertPersonaEmotionLogSchema>;
+export type PersonaEmotionLog = typeof personaEmotionLogs.$inferSelect;
