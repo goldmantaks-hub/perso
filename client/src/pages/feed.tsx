@@ -265,6 +265,7 @@ function PersoSection({ post }: { post: any }) {
         {post.recentMessages && post.recentMessages.length > 0 && (
           <div className="space-y-2 mb-3">
             {post.recentMessages.map((msg: any) => {
+              if (!msg.content) return null;
               const displayContent = msg.content.length > 80 
                 ? msg.content.substring(0, 80) + '...' 
                 : msg.content;
