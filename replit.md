@@ -13,6 +13,67 @@ The application is built as a full-stack TypeScript application with a React fro
 
 ## Recent Changes
 
+### October 5, 2025 - Visualization System (Emotion Timeline + Influence Map)
+
+**Influence Calculation** (`client/src/lib/influence.ts`)
+- Formula: `influence = (messageCount*0.4) + (replyRate*0.3) + (connection*0.2) + (emotionImpact*0.1)`
+- 48시간 미교류 시 10% 감쇠 (Decay)
+- 강연결(≥0.8) 시 bias 공유
+- Functions: `calculateInfluence()`, `applyDecay()`, `updatePersonaInfluence()`, `normalizeInfluenceScores()`
+
+**Graph Data Utilities** (`client/src/lib/graphData.ts`)
+- Node structure: `{ id, label, moodColor, size: influence }`
+- Link structure: `{ source, target, color: emotionColor, strength }`
+- Mood & emotion color mapping
+- Node position calculation (circular layout with influence-based radius)
+- Glow intensity & link opacity based on influence/strength
+- Emotion timeline aggregation (5분 간격)
+
+**Visualization Page** (`client/src/pages/visualization.tsx`)
+- **Chart.js Emotion Timeline**:
+  - 최근 20개 감정 데이터 시각화
+  - 긍정/중립/부정 3개 라인 차트
+  - Fill area with transparency
+  - Real-time update on conversation:end event
+- **D3 Influence Map**:
+  - SVG 기반 노드 시각화
+  - 노드 크기 = 영향력 반영
+  - 노드 Glow 효과 (filter with Gaussian blur)
+  - 호버 시 노드 확대 애니메이션
+  - Circular layout with influence-based positioning
+- **WebSocket Integration**:
+  - `conversation:end` 이벤트로 자동 갱신
+  - `user:message:complete` 이벤트로 데이터 새로고침
+  - Emotion data 자동 수집 및 히스토리 유지 (최근 100개)
+
+**WebSocket Event** (`server/websocket.ts`)
+- `conversation:end` 이벤트 추가
+- AI 대화 완료 시 감정 데이터 포함하여 발송:
+  ```typescript
+  {
+    postId: string,
+    emotionData: Array<{
+      timestamp: number,
+      emotion: string,
+      intensity: number,
+      personaName: string
+    }>,
+    timestamp: number
+  }
+  ```
+- 감정 타입 매핑: empath→empathetic, humor→playful, knowledge→analytical
+
+**Test Results**
+- ✅ conversation:end 이벤트 정상 수신
+- ✅ 감정 데이터 2개 전달 (Rho: neutral, Noir: neutral)
+- ✅ Chart.js 타임라인 렌더링
+- ✅ D3 영향력 맵 노드 시각화
+- ✅ 실시간 자동 갱신 작동
+- ✅ WebSocket 연동 완료
+
+**Routes**
+- `/visualization` - 시각화 페이지 (탭: 감정 타임라인, 영향력 맵)
+
 ### October 5, 2025 - Memory & Evolution System
 
 **Dialogue Memory** (`server/memory/dialogueMemory.ts`)

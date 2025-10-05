@@ -174,6 +174,24 @@ export function setupWebSocket(server: Server) {
         });
         
         console.log(`[WS] Dialogue orchestration complete for post ${data.postId}`);
+
+        const emotionData = dialogues.map(dialogue => ({
+          timestamp: Date.now(),
+          emotion: dialogue.type === 'empath' ? 'empathetic' :
+                   dialogue.type === 'humor' ? 'playful' :
+                   dialogue.type === 'knowledge' ? 'analytical' :
+                   dialogue.type === 'creative' ? 'imaginative' : 'neutral',
+          intensity: 0.8,
+          personaName: dialogue.persona
+        }));
+
+        socket.emit('conversation:end', {
+          postId: data.postId,
+          emotionData,
+          timestamp: Date.now()
+        });
+        
+        console.log(`[WS] Conversation ended for post ${data.postId}`);
       } catch (error) {
         console.error('[WS] Error in dialogue orchestration:', error);
         socket.emit('ai:dialogue:error', {
@@ -233,6 +251,24 @@ export function setupWebSocket(server: Server) {
         });
         
         console.log(`[WS] User message handled for post ${data.postId}`);
+
+        const emotionData = aiResponses.map(response => ({
+          timestamp: Date.now(),
+          emotion: response.type === 'empath' ? 'empathetic' :
+                   response.type === 'humor' ? 'playful' :
+                   response.type === 'knowledge' ? 'analytical' :
+                   response.type === 'creative' ? 'imaginative' : 'neutral',
+          intensity: 0.8,
+          personaName: response.persona
+        }));
+
+        socket.emit('conversation:end', {
+          postId: data.postId,
+          emotionData,
+          timestamp: Date.now()
+        });
+        
+        console.log(`[WS] Conversation ended for post ${data.postId}`);
       } catch (error) {
         console.error('[WS] Error handling user message:', error);
         socket.emit('user:message:error', {

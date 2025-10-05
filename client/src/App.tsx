@@ -15,6 +15,7 @@ import ChatPage from "@/pages/chat";
 import PersonaChatPage from "@/pages/persona-chat";
 import PersonaStatePage from "@/pages/persona-state";
 import PersonaNetworkPage from "@/pages/persona-network";
+import VisualizationPage from "@/pages/visualization";
 import { useEffect, useState } from "react";
 import { isAuthenticated, setToken, setUser } from "./lib/auth";
 
@@ -33,6 +34,7 @@ function Router() {
       <Route path="/perso/:postId" component={PersoPage} />
       <Route path="/persona-state" component={PersonaStatePage} />
       <Route path="/persona-network" component={PersonaNetworkPage} />
+      <Route path="/visualization" component={VisualizationPage} />
       <Route component={NotFound} />
     </Switch>
   );
