@@ -2,8 +2,9 @@ import { Server as SocketServer } from "socket.io";
 import type { Server } from "http";
 import jwt from "jsonwebtoken";
 import { log } from "./vite";
+import { config } from "./config";
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
+const JWT_SECRET = config.jwtSecret;
 
 interface AuthenticatedSocket {
   userId: string;
