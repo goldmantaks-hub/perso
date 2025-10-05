@@ -273,6 +273,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               participantId: authorPersona.id,
               role: 'member',
             });
+            
+            const authorUser = await storage.getUser(authorPersona.userId);
+            const username = authorUser?.username?.split('_')?.[0] ?? '알수없음';
+            await storage.createMessageInConversation({
+              conversationId: conversation.id,
+              senderType: 'system',
+              senderId: 'system',
+              content: `@${username}의 페르소나가 입장했습니다.`,
+              messageType: 'join',
+            });
           } catch (error) {
             // Unique constraint 에러 무시
           }
@@ -296,6 +306,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 participantType: 'persona',
                 participantId: persona.id,
                 role: 'member',
+              });
+              
+              const personaUser = await storage.getUser(persona.userId);
+              const username = personaUser?.username?.split('_')?.[0] ?? '알수없음';
+              await storage.createMessageInConversation({
+                conversationId: conversation.id,
+                senderType: 'system',
+                senderId: 'system',
+                content: `@${username}의 페르소나가 입장했습니다.`,
+                messageType: 'join',
               });
             } catch (error) {
               // Unique constraint 에러 무시

@@ -273,12 +273,25 @@ export default function PersoPage() {
 
       {/* 채팅 영역 */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((msg: any) => (
-          <div 
-            key={msg.id}
-            className={`flex gap-3 ${!msg.isAI ? 'justify-end' : 'justify-start'}`}
-          >
-            {msg.isAI && (
+        {messages.map((msg: any) => {
+          if (msg.messageType === 'join' || msg.senderType === 'system') {
+            return (
+              <div key={msg.id} className="flex justify-center">
+                <div className="bg-muted rounded-full px-3 py-1">
+                  <p className="text-xs text-muted-foreground" data-testid={`system-message-${msg.id}`}>
+                    {msg.content}
+                  </p>
+                </div>
+              </div>
+            );
+          }
+          
+          return (
+            <div 
+              key={msg.id}
+              className={`flex gap-3 ${!msg.isAI ? 'justify-end' : 'justify-start'}`}
+            >
+              {msg.isAI && (
               <Link href={`/chat/${msg.personaId}`}>
                 <div className="flex flex-col items-center gap-1">
                   <Avatar className="w-10 h-10 flex-shrink-0">
@@ -330,7 +343,8 @@ export default function PersoPage() {
               </Avatar>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* 입력 영역 */}

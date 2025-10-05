@@ -92,7 +92,7 @@ export const messages = pgTable("messages", {
   conversationId: varchar("conversation_id").notNull().references(() => conversations.id, { onDelete: 'cascade' }),
   senderType: varchar("sender_type", { length: 20 }).notNull(),
   senderId: varchar("sender_id").notNull(),
-  content: text("content").notNull(),
+  content: text("content"),
   messageType: varchar("message_type", { length: 20 }).notNull().default('text'),
   replyToId: varchar("reply_to_id"),
   meta: jsonb("meta"),
