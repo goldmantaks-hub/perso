@@ -1,4 +1,4 @@
-import { Settings, Plus, Moon, Sun, Heart, MessageCircle, Share2 } from "lucide-react";
+import { Settings, Plus, Moon, Sun, Heart, MessageCircle, Share2, Smile, Meh, Frown } from "lucide-react";
 import { Link } from "wouter";
 import BottomNav from "@/components/bottom-nav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -191,7 +191,13 @@ function PostCard({ post }: { post: any }) {
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs text-muted-foreground">감성 분석</span>
                 <span className="text-xs font-medium">
-                  {post.sentiment >= 0.8 ? '😊' : post.sentiment >= 0.6 ? '🙂' : '😐'}
+                  {post.sentiment >= 0.8 ? (
+                    <Smile className="w-4 h-4 inline text-primary" />
+                  ) : post.sentiment >= 0.6 ? (
+                    <Meh className="w-4 h-4 inline text-muted-foreground" />
+                  ) : (
+                    <Frown className="w-4 h-4 inline text-muted-foreground" />
+                  )}
                 </span>
               </div>
               <div className="w-full bg-muted rounded-full h-1.5">
@@ -340,6 +346,11 @@ export default function FeedPage() {
     queryKey: ["/api/posts"],
   });
 
+  // 사용자의 페르소나 가져오기
+  const { data: userPersona } = useQuery<any>({
+    queryKey: ["/api/user/persona"],
+  });
+
   const stories = [
     {
       username: "jieun_kim",
@@ -416,20 +427,22 @@ export default function FeedPage() {
       <section className="px-4 py-3">
         <div className="flex justify-between items-center mb-2">
           <div className="flex items-center gap-2">
-            <Avatar className="w-8 h-8">
-              <AvatarImage src={currentUser.avatar} />
-              <AvatarFallback>AI</AvatarFallback>
-            </Avatar>
+            <Link href="/persona-state" data-testid="link-persona-state">
+              <Avatar className="w-8 h-8 cursor-pointer hover-elevate active-elevate-2" data-testid="avatar-persona-empathy">
+                <AvatarImage src={userPersona?.image || currentUser.avatar} />
+                <AvatarFallback>AI</AvatarFallback>
+              </Avatar>
+            </Link>
             <h2 className="text-sm font-medium text-muted-foreground">
               페르소나와의 공감 상태
             </h2>
           </div>
         </div>
         <div className="w-full bg-muted rounded-full h-2 mb-1.5">
-          <div className="bg-primary h-2 rounded-full" style={{ width: '60%' }}></div>
+          <div className="bg-primary h-2 rounded-full" style={{ width: `${userPersona ? (userPersona.empathy / 10 * 100) : 60}%` }}></div>
         </div>
         <p className="text-xs text-muted-foreground">
-          감성 80 · 유머 60 · 사교성 75
+          {userPersona ? `감성 ${userPersona.empathy * 10} · 유머 ${userPersona.humor * 10} · 사교성 ${userPersona.sociability * 10}` : '감성 80 · 유머 60 · 사교성 75'}
         </p>
       </section>
 

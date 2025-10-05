@@ -1,0 +1,313 @@
+import { ArrowLeft, Settings, UserCircle, TrendingUp, Users, User, History, Brain, Smile, Palette } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+
+export default function PersonaStatePage() {
+  const [, setLocation] = useLocation();
+  const [activeTab, setActiveTab] = useState("persona");
+
+  const { data: userPersona, isLoading } = useQuery<any>({
+    queryKey: ["/api/user/persona"],
+  });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">로딩 중...</p>
+      </div>
+    );
+  }
+
+  if (!userPersona) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">페르소나를 찾을 수 없습니다</p>
+      </div>
+    );
+  }
+
+  const level = Math.floor((userPersona.empathy + userPersona.humor + userPersona.sociability + userPersona.creativity + userPersona.knowledge) / 5);
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto w-full max-w-md">
+        {/* 헤더 */}
+        <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm">
+          <div className="flex items-center justify-between p-4">
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setLocation("/feed")}
+              data-testid="button-back"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <h1 className="text-lg font-bold">Persona: {userPersona.name}</h1>
+            <Button size="icon" variant="ghost" data-testid="button-settings">
+              <Settings className="w-5 h-5" />
+            </Button>
+          </div>
+        </header>
+
+        <main className="space-y-8 p-4">
+          {/* 프로필 섹션 */}
+          <section className="text-center">
+            <div className="mx-auto h-32 w-32 rounded-full overflow-hidden bg-muted">
+              <Avatar className="h-full w-full" data-testid="avatar-persona">
+                <AvatarImage src={userPersona.image} className="object-cover" />
+                <AvatarFallback>{userPersona.name[0]}</AvatarFallback>
+              </Avatar>
+            </div>
+            <h2 className="mt-4 text-2xl font-bold" data-testid="text-persona-name">
+              {userPersona.name}
+            </h2>
+            <p className="text-muted-foreground" data-testid="text-persona-info">
+              Knowledge-based Persona · Level {level}
+            </p>
+            <p className="mt-2 text-foreground" data-testid="text-persona-description">
+              {userPersona.description || "A knowledge-loving persona who adores data."}
+            </p>
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              <Badge variant="secondary" data-testid="badge-trait-calm">Calm</Badge>
+              <Badge variant="secondary" data-testid="badge-trait-passionate">Passionate</Badge>
+              <Badge variant="secondary" data-testid="badge-trait-active">Active</Badge>
+            </div>
+          </section>
+
+          {/* 탭 네비게이션 */}
+          <div className="overflow-x-auto border-b border-border">
+            <nav className="-mb-px flex space-x-2">
+              <button
+                onClick={() => setActiveTab("persona")}
+                className={`flex items-center gap-1 whitespace-nowrap px-3 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === "persona"
+                    ? "border-primary text-primary font-bold"
+                    : "border-transparent text-muted-foreground"
+                }`}
+                data-testid="tab-persona"
+              >
+                <UserCircle className="w-4 h-4" />
+                <span>Persona</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("growth")}
+                className={`flex items-center gap-1 whitespace-nowrap px-3 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === "growth"
+                    ? "border-primary text-primary font-bold"
+                    : "border-transparent text-muted-foreground"
+                }`}
+                data-testid="tab-growth"
+              >
+                <TrendingUp className="w-4 h-4" />
+                <span>Growth</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("network")}
+                className={`flex items-center gap-1 whitespace-nowrap px-3 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === "network"
+                    ? "border-primary text-primary font-bold"
+                    : "border-transparent text-muted-foreground"
+                }`}
+                data-testid="tab-network"
+              >
+                <Users className="w-4 h-4" />
+                <span>Network</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("myperso")}
+                className={`flex items-center gap-1 whitespace-nowrap px-3 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === "myperso"
+                    ? "border-primary text-primary font-bold"
+                    : "border-transparent text-muted-foreground"
+                }`}
+                data-testid="tab-myperso"
+              >
+                <User className="w-4 h-4" />
+                <span>My Perso</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("activity")}
+                className={`flex items-center gap-1 whitespace-nowrap px-3 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === "activity"
+                    ? "border-primary text-primary font-bold"
+                    : "border-transparent text-muted-foreground"
+                }`}
+                data-testid="tab-activity"
+              >
+                <History className="w-4 h-4" />
+                <span>Activity</span>
+              </button>
+            </nav>
+          </div>
+
+          {/* 스탯 & 성장 바 */}
+          {activeTab === "persona" && (
+            <>
+              <section className="rounded-md bg-muted/50 p-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold">Stats & Growth Bar</h3>
+                </div>
+                <div className="mt-4 space-y-4">
+                  <StatBar 
+                    label="Empathy" 
+                    value={userPersona.empathy} 
+                    max={10} 
+                    testId="stat-empathy"
+                  />
+                  <StatBar 
+                    label="Creativity" 
+                    value={userPersona.creativity} 
+                    max={10} 
+                    testId="stat-creativity"
+                  />
+                  <StatBar 
+                    label="Humor" 
+                    value={userPersona.humor} 
+                    max={10} 
+                    testId="stat-humor"
+                  />
+                  <StatBar 
+                    label="Knowledge" 
+                    value={userPersona.knowledge} 
+                    max={10} 
+                    testId="stat-knowledge"
+                  />
+                  <StatBar 
+                    label="Sociability" 
+                    value={userPersona.sociability} 
+                    max={10} 
+                    testId="stat-sociability"
+                  />
+                </div>
+              </section>
+
+              {/* 감정 타임라인 */}
+              <section>
+                <h3 className="text-lg font-bold">Emotion Timeline</h3>
+                <div className="mt-4 rounded-md bg-muted/50 p-4">
+                  <p className="text-sm text-muted-foreground">7-Day Emotion Changes</p>
+                  <div className="relative h-48 flex items-center justify-center mt-4">
+                    <p className="text-muted-foreground text-sm">차트는 추후 구현 예정</p>
+                  </div>
+                </div>
+              </section>
+
+              {/* 성장 히스토리 & 로그 */}
+              <section>
+                <h3 className="text-lg font-bold">Growth History & Log</h3>
+                <div className="mt-4 flow-root">
+                  <ul className="-mb-8">
+                    <GrowthLogItem
+                      IconComponent={Brain}
+                      title="New Topic Discovery"
+                      description="Learned about 'Machine Learning'. Knowledge +1"
+                      isLast={false}
+                    />
+                    <GrowthLogItem
+                      IconComponent={Smile}
+                      title="Emotional Shift"
+                      description="Felt 'Joy' after a positive conversation. Empathy +1"
+                      isLast={false}
+                    />
+                    <GrowthLogItem
+                      IconComponent={Palette}
+                      title="Creative Breakthrough"
+                      description="Developed a new idea. Creativity +1"
+                      isLast={true}
+                    />
+                  </ul>
+                </div>
+              </section>
+            </>
+          )}
+
+          {activeTab === "growth" && (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Growth 탭 내용은 추후 구현 예정</p>
+            </div>
+          )}
+
+          {activeTab === "network" && (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Network 탭 내용은 추후 구현 예정</p>
+            </div>
+          )}
+
+          {activeTab === "myperso" && (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">My Perso 탭 내용은 추후 구현 예정</p>
+            </div>
+          )}
+
+          {activeTab === "activity" && (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Activity 탭 내용은 추후 구현 예정</p>
+            </div>
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function StatBar({ label, value, max, testId }: { label: string; value: number; max: number; testId: string }) {
+  const percentage = (value / max) * 100;
+  
+  return (
+    <div className="grid grid-cols-[auto,1fr,auto,auto] items-center gap-2">
+      <p className="font-medium">{label}</p>
+      <div className="h-2 w-full rounded-full bg-muted">
+        <div
+          className="h-2 rounded-full bg-primary"
+          style={{ width: `${percentage}%` }}
+          data-testid={`${testId}-bar`}
+        ></div>
+      </div>
+      <p className="text-sm font-medium text-muted-foreground" data-testid={`${testId}-value`}>
+        {value}/{max}
+      </p>
+      <Button 
+        size="icon" 
+        variant="ghost" 
+        className="h-6 w-6 rounded-full bg-primary/20 text-primary hover:bg-primary/30"
+        data-testid={`${testId}-add`}
+      >
+        <span className="text-sm">+</span>
+      </Button>
+    </div>
+  );
+}
+
+function GrowthLogItem({ IconComponent, title, description, isLast }: { IconComponent: any; title: string; description: string; isLast: boolean }) {
+  return (
+    <li>
+      <div className="relative pb-8">
+        {!isLast && (
+          <span
+            aria-hidden="true"
+            className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-border"
+          ></span>
+        )}
+        <div className="relative flex items-start space-x-3">
+          <div>
+            <div className="relative px-1">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 ring-8 ring-background">
+                <IconComponent className="w-4 h-4 text-primary" />
+              </div>
+            </div>
+          </div>
+          <div className="min-w-0 flex-1 py-1.5">
+            <div className="text-sm">
+              <p className="font-medium">{title}</p>
+              <p className="mt-0.5 text-muted-foreground">{description}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </li>
+  );
+}

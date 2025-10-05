@@ -13,6 +13,7 @@ import ActivityPage from "@/pages/activity";
 import PersoPage from "@/pages/perso";
 import ChatPage from "@/pages/chat";
 import PersonaChatPage from "@/pages/persona-chat";
+import PersonaStatePage from "@/pages/persona-state";
 import { useEffect, useState } from "react";
 import { isAuthenticated, setToken, setUser } from "./lib/auth";
 
@@ -29,6 +30,7 @@ function Router() {
       <Route path="/chat" component={ChatPage} />
       <Route path="/chat/:personaId" component={PersonaChatPage} />
       <Route path="/perso/:postId" component={PersoPage} />
+      <Route path="/persona-state" component={PersonaStatePage} />
       <Route component={NotFound} />
     </Switch>
   );
