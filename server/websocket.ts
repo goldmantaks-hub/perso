@@ -127,7 +127,7 @@ export function setupWebSocket(server: Server) {
       socket.leave(`conversation:${conversationId}`);
     });
 
-    // AI 대화 오케스트레이션
+    // AI 대화 오케스트레이션 (Multi-Agent)
     socket.on("ai:dialogue", async (data: {
       postId: string;
       postContent: string;
@@ -138,19 +138,29 @@ export function setupWebSocket(server: Server) {
         console.log(`[WS] ai:dialogue event received from ${userId}`);
         console.log(`[WS] Post: "${data.postContent}"`);
         
-        const { dialogueOrchestrator } = await import('./engine/dialogueOrchestrator.js');
+        const { multiAgentDialogueOrchestrator } = await import('./engine/multiAgentDialogueOrchestrator.js');
         
         const post = {
           id: data.postId,
-          content: data.postContent
+          content: data.postContent,
+          userId
         };
         
-        const dialogues = await dialogueOrchestrator(post, data.analysis, data.personas);
+        const result = await multiAgentDialogueOrchestrator(post, data.analysis, data.personas);
         
-        console.log(`[WS] Generated ${dialogues.length} dialogue responses`);
+        console.log(`[WS] Generated ${result.messages.length} dialogue responses, ${result.joinLeaveEvents.length} events`);
         
-        for (let i = 0; i < dialogues.length; i++) {
-          const dialogue = dialogues[i];
+        for (const event of result.joinLeaveEvents) {
+          socket.emit('persona:event', {
+            postId: data.postId,
+            personaId: event.personaId,
+            eventType: event.eventType,
+            autoIntroduction: event.autoIntroduction
+          });
+        }
+        
+        for (let i = 0; i < result.messages.length; i++) {
+          const msg = result.messages[i];
           
           if (i > 0) {
             await new Promise(resolve => setTimeout(resolve, 800));
@@ -158,31 +168,34 @@ export function setupWebSocket(server: Server) {
           
           socket.emit('ai:dialogue:message', {
             postId: data.postId,
-            persona: dialogue.persona,
-            message: dialogue.message,
-            type: dialogue.type,
+            persona: msg.persona,
+            message: msg.message,
+            thinking: msg.thinking,
+            type: msg.type,
+            expandedInfo: msg.expandedInfo,
             index: i,
-            total: dialogues.length
+            total: result.messages.length
           });
           
-          console.log(`[WS] Sent dialogue ${i + 1}/${dialogues.length}: ${dialogue.persona}`);
+          console.log(`[WS] Sent dialogue ${i + 1}/${result.messages.length}: ${msg.persona}`);
         }
         
         socket.emit('ai:dialogue:complete', {
           postId: data.postId,
-          totalMessages: dialogues.length
+          totalMessages: result.messages.length,
+          roomId: result.roomId
         });
         
-        console.log(`[WS] Dialogue orchestration complete for post ${data.postId}`);
+        console.log(`[WS] Multi-agent dialogue complete for post ${data.postId}`);
 
-        const emotionData = dialogues.map(dialogue => ({
+        const emotionData = result.messages.map(msg => ({
           timestamp: Date.now(),
-          emotion: dialogue.type === 'empath' ? 'empathetic' :
-                   dialogue.type === 'humor' ? 'playful' :
-                   dialogue.type === 'knowledge' ? 'analytical' :
-                   dialogue.type === 'creative' ? 'imaginative' : 'neutral',
+          emotion: msg.type === 'empath' ? 'empathetic' :
+                   msg.type === 'humor' ? 'playful' :
+                   msg.type === 'knowledge' ? 'analytical' :
+                   msg.type === 'creative' ? 'imaginative' : 'neutral',
           intensity: 0.8,
-          personaName: dialogue.persona
+          personaName: msg.persona
         }));
 
         socket.emit('conversation:end', {
@@ -193,7 +206,7 @@ export function setupWebSocket(server: Server) {
         
         console.log(`[WS] Conversation ended for post ${data.postId}`);
       } catch (error) {
-        console.error('[WS] Error in dialogue orchestration:', error);
+        console.error('[WS] Error in multi-agent dialogue orchestration:', error);
         socket.emit('ai:dialogue:error', {
           postId: data.postId,
           error: 'Failed to generate dialogue'
