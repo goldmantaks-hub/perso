@@ -129,8 +129,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ? await storage.getMessagesByConversation(conversation.id)
             : [];
           
+          // 시스템 메시지(join/leave)를 제외한 실제 채팅 메시지만 필터링
+          const chatMessages = messages.filter(msg => 
+            msg.messageType !== 'join' && 
+            msg.messageType !== 'leave' && 
+            msg.senderType !== 'system'
+          );
+          
           // 최근 메시지 3개 가져오기 (최신순으로 정렬 후 3개 선택)
-          const sortedMessages = [...messages].sort((a, b) => 
+          const sortedMessages = [...chatMessages].sort((a, b) => 
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
           const recentMessages = await Promise.all(
@@ -159,7 +166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   } : null,
                 };
               } else {
-                // 시스템 메시지 또는 알 수 없는 타입
+                // 기타 메시지 타입
                 return {
                   ...msg,
                   isAI: false,
@@ -185,7 +192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             likesCount,
             commentsCount: comments.length,
             isLiked,
-            hasPerso: messages.length > 0,
+            hasPerso: chatMessages.length > 0,
             recentMessages: recentMessages,
           };
         })
