@@ -525,6 +525,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tags: post.tags,
           sentiment: post.sentiment,
         } : null,
+        conversation: {
+          id: conversation.id,
+        },
       });
     } catch (error) {
       res.status(500).json({ message: "메시지를 가져오는데 실패했습니다" });
