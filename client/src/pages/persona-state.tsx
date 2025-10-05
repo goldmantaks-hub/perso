@@ -1314,20 +1314,10 @@ export default function PersonaStatePage() {
               {/* Rewards & Points */}
               <section>
                 <h3 className="text-lg font-bold">보상 & 포인트</h3>
-                <div className="mt-4 divide-y divide-border rounded-xl bg-muted">
-                  <div className="flex justify-between p-4" data-testid="total-points">
+                <div className="mt-4 rounded-xl bg-muted p-4">
+                  <div className="flex justify-between" data-testid="total-points">
                     <span className="text-muted-foreground">총 성장 포인트:</span>
                     <span className="font-medium">{(userPersona.empathy + userPersona.humor + userPersona.sociability + userPersona.creativity + userPersona.knowledge) * 100} P</span>
-                  </div>
-                  <div className="p-4">
-                    <p className="mb-2 font-medium">스탯 요약:</p>
-                    <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground" data-testid="reward-history">
-                      <li>공감: {userPersona.empathy} / 10</li>
-                      <li>창의성: {userPersona.creativity} / 10</li>
-                      <li>유머: {userPersona.humor} / 10</li>
-                      <li>지식: {userPersona.knowledge} / 10</li>
-                      <li>사교성: {userPersona.sociability} / 10</li>
-                    </ul>
                   </div>
                 </div>
               </section>

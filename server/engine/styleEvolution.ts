@@ -1,4 +1,5 @@
 import { getDominantEmotions, shouldUpdateStyle, markStyleUpdated } from '../memory/personaMemory.js';
+import { storage } from '../storage.js';
 
 interface StyleUpdate {
   personaId: string;
@@ -34,7 +35,7 @@ const emotionToToneMap: Record<string, string> = {
   'excited': '활기차고 열정적인'
 };
 
-export function evolvePersonaStyle(personaId: string, personaName: string): StyleUpdate | null {
+export async function evolvePersonaStyle(personaId: string, personaName: string): Promise<StyleUpdate | null> {
   if (!shouldUpdateStyle(personaId)) {
     return null;
   }
@@ -70,6 +71,13 @@ export function evolvePersonaStyle(personaId: string, personaName: string): Styl
   }
 
   markStyleUpdated(personaId);
+
+  // DB에 톤 저장
+  try {
+    await storage.updatePersonaToneStyle(personaId, newTone);
+  } catch (error) {
+    console.error(`[STYLE EVOLUTION ERROR] Failed to save tone for ${personaName}:`, error);
+  }
 
   console.log(`[MEMORY SYNC] Persona tone evolved → "${update.newTone}" (${personaName})`);
   console.log(`[STYLE EVOLUTION] ${personaName} style evolved:`, {

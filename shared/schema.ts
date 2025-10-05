@@ -23,6 +23,8 @@ export const personas = pgTable("personas", {
   creativity: integer("creativity").notNull().default(5),
   knowledge: integer("knowledge").notNull().default(5),
   currentMood: jsonb("current_mood"),
+  tone: text("tone"),
+  style: text("style"),
 });
 
 export const posts = pgTable("posts", {
@@ -177,6 +179,36 @@ export const personaEmotionLogs = pgTable("persona_emotion_logs", {
   };
 });
 
+export const personaGrowthLogs = pgTable("persona_growth_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  personaId: varchar("persona_id").notNull().references(() => personas.id, { onDelete: 'cascade' }),
+  stat: text("stat").notNull(),
+  delta: integer("delta").notNull(),
+  trigger: text("trigger").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    personaIdx: sql`CREATE INDEX IF NOT EXISTS persona_growth_logs_persona_id_idx ON ${table} (${table.personaId})`,
+    createdAtIdx: sql`CREATE INDEX IF NOT EXISTS persona_growth_logs_created_at_idx ON ${table} (${table.createdAt})`,
+  };
+});
+
+export const personaInteractions = pgTable("persona_interactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fromPersonaId: varchar("from_persona_id").notNull().references(() => personas.id, { onDelete: 'cascade' }),
+  toPersonaId: varchar("to_persona_id").notNull().references(() => personas.id, { onDelete: 'cascade' }),
+  interactionType: text("interaction_type").notNull(),
+  strength: real("strength").notNull().default(0),
+  lastInteractionAt: timestamp("last_interaction_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    fromPersonaIdx: sql`CREATE INDEX IF NOT EXISTS persona_interactions_from_persona_id_idx ON ${table} (${table.fromPersonaId})`,
+    toPersonaIdx: sql`CREATE INDEX IF NOT EXISTS persona_interactions_to_persona_id_idx ON ${table} (${table.toPersonaId})`,
+    uniqueInteraction: sql`UNIQUE (${table.fromPersonaId}, ${table.toPersonaId})`,
+  };
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -254,6 +286,16 @@ export const insertPersonaEmotionLogSchema = createInsertSchema(personaEmotionLo
   recordedAt: true,
 });
 
+export const insertPersonaGrowthLogSchema = createInsertSchema(personaGrowthLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPersonaInteractionSchema = createInsertSchema(personaInteractions).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -299,3 +341,9 @@ export type ConversationEvent = typeof conversationEvents.$inferSelect;
 
 export type InsertPersonaEmotionLog = z.infer<typeof insertPersonaEmotionLogSchema>;
 export type PersonaEmotionLog = typeof personaEmotionLogs.$inferSelect;
+
+export type InsertPersonaGrowthLog = z.infer<typeof insertPersonaGrowthLogSchema>;
+export type PersonaGrowthLog = typeof personaGrowthLogs.$inferSelect;
+
+export type InsertPersonaInteraction = z.infer<typeof insertPersonaInteractionSchema>;
+export type PersonaInteraction = typeof personaInteractions.$inferSelect;

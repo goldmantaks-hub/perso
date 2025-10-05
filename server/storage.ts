@@ -24,6 +24,10 @@ import {
   type InsertMessageDeletedByUser,
   type PersonaEmotionLog,
   type InsertPersonaEmotionLog,
+  type PersonaGrowthLog,
+  type InsertPersonaGrowthLog,
+  type PersonaInteraction,
+  type InsertPersonaInteraction,
   users,
   personas,
   posts,
@@ -37,6 +41,8 @@ import {
   personaMemories,
   messageDeletedByUsers,
   personaEmotionLogs,
+  personaGrowthLogs,
+  personaInteractions,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -59,6 +65,17 @@ export interface IStorage {
   // PersonaEmotionLog methods
   createEmotionLog(log: InsertPersonaEmotionLog): Promise<PersonaEmotionLog>;
   getEmotionLogsByPersona(personaId: string, days?: number): Promise<PersonaEmotionLog[]>;
+  
+  // PersonaGrowthLog methods
+  createGrowthLog(log: InsertPersonaGrowthLog): Promise<PersonaGrowthLog>;
+  getGrowthLogsByPersona(personaId: string, limit?: number): Promise<PersonaGrowthLog[]>;
+  
+  // PersonaInteraction methods
+  createOrUpdateInteraction(interaction: InsertPersonaInteraction): Promise<PersonaInteraction>;
+  getPersonaInteractions(personaId: string): Promise<PersonaInteraction[]>;
+  
+  // Persona tone/style update
+  updatePersonaToneStyle(personaId: string, tone?: string, style?: string): Promise<void>;
   
   // Post methods
   getPosts(): Promise<Post[]>;
@@ -171,6 +188,71 @@ export class DbStorage implements IStorage {
         )
       )
       .orderBy(personaEmotionLogs.recordedAt);
+  }
+
+  // PersonaGrowthLog methods
+  async createGrowthLog(insertLog: InsertPersonaGrowthLog): Promise<PersonaGrowthLog> {
+    const [log] = await db.insert(personaGrowthLogs).values(insertLog).returning();
+    return log;
+  }
+
+  async getGrowthLogsByPersona(personaId: string, limit: number = 20): Promise<PersonaGrowthLog[]> {
+    return await db.select()
+      .from(personaGrowthLogs)
+      .where(eq(personaGrowthLogs.personaId, personaId))
+      .orderBy(desc(personaGrowthLogs.createdAt))
+      .limit(limit);
+  }
+
+  // PersonaInteraction methods
+  async createOrUpdateInteraction(insertInteraction: InsertPersonaInteraction): Promise<PersonaInteraction> {
+    const existing = await db.select()
+      .from(personaInteractions)
+      .where(
+        and(
+          eq(personaInteractions.fromPersonaId, insertInteraction.fromPersonaId),
+          eq(personaInteractions.toPersonaId, insertInteraction.toPersonaId)
+        )
+      );
+    
+    if (existing.length > 0) {
+      const [updated] = await db.update(personaInteractions)
+        .set({
+          interactionType: insertInteraction.interactionType,
+          strength: insertInteraction.strength,
+          lastInteractionAt: new Date(),
+        })
+        .where(eq(personaInteractions.id, existing[0].id))
+        .returning();
+      return updated;
+    } else {
+      const [interaction] = await db.insert(personaInteractions).values(insertInteraction).returning();
+      return interaction;
+    }
+  }
+
+  async getPersonaInteractions(personaId: string): Promise<PersonaInteraction[]> {
+    return await db.select()
+      .from(personaInteractions)
+      .where(
+        or(
+          eq(personaInteractions.fromPersonaId, personaId),
+          eq(personaInteractions.toPersonaId, personaId)
+        )
+      );
+  }
+
+  // Persona tone/style update
+  async updatePersonaToneStyle(personaId: string, tone?: string, style?: string): Promise<void> {
+    const updates: any = {};
+    if (tone !== undefined) updates.tone = tone;
+    if (style !== undefined) updates.style = style;
+    
+    if (Object.keys(updates).length > 0) {
+      await db.update(personas)
+        .set(updates)
+        .where(eq(personas.id, personaId));
+    }
   }
 
   // Post methods

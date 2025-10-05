@@ -85,13 +85,13 @@ export async function recordEmotion(personaId: string, personaName: string, emot
   console.log(`[PERSONA MEMORY] ${personaName} emotion recorded: ${emotion} (total: ${memory.interactionCount})`);
 }
 
-export function recordGrowth(
+export async function recordGrowth(
   personaId: string,
   personaName: string,
   stat: string,
   delta: number,
   trigger: string
-): void {
+): Promise<void> {
   let memory = personaMemories.get(personaId);
   
   if (!memory) {
@@ -116,6 +116,18 @@ export function recordGrowth(
 
   if (memory.growthHistory.length > 100) {
     memory.growthHistory.shift();
+  }
+
+  // DB에 성장 로그 저장
+  try {
+    await storage.createGrowthLog({
+      personaId,
+      stat,
+      delta,
+      trigger,
+    });
+  } catch (error) {
+    console.error(`[GROWTH LOG ERROR] Failed to save growth log for ${personaName}:`, error);
   }
 
   console.log(`[DELTA] ${personaName}: ${stat} +${delta} (${trigger})`);
