@@ -3,6 +3,7 @@ import type { Server } from "http";
 import jwt from "jsonwebtoken";
 import { log } from "./vite";
 import { config } from "./config";
+import { storage } from "./storage";
 
 const JWT_SECRET = config.jwtSecret;
 
@@ -43,38 +44,68 @@ export function setupWebSocket(server: Server) {
     log(`[WS] User ${userId} connected`);
 
     // 대화방 참여
-    socket.on("join:conversation", (conversationId: string) => {
+    socket.on("join:conversation", async (conversationId: string) => {
       socket.join(`conversation:${conversationId}`);
       log(`[WS] User ${userId} joined conversation ${conversationId}`);
       
-      // 입장 시스템 메시지 브로드캐스트
-      const joinMessage = {
-        id: `system-join-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+      // 입장 시스템 메시지 생성
+      const content = `${username}님이 입장했습니다`;
+      
+      // 데이터베이스에 시스템 메시지 저장 (비동기, fire-and-forget)
+      storage.createMessageInConversation({
         conversationId,
         senderType: 'system',
+        senderId: 'system',
+        content,
         messageType: 'join',
-        content: `${username}님이 입장했습니다`,
-        createdAt: new Date().toISOString(),
-      };
-      
-      io.to(`conversation:${conversationId}`).emit('message:system', joinMessage);
+      }).then(savedMessage => {
+        // 저장된 메시지를 브로드캐스트
+        const joinMessage = {
+          id: savedMessage.id,
+          conversationId: savedMessage.conversationId,
+          senderType: savedMessage.senderType,
+          senderId: savedMessage.senderId,
+          messageType: savedMessage.messageType,
+          content: savedMessage.content,
+          createdAt: savedMessage.createdAt.toISOString(),
+        };
+        
+        io.to(`conversation:${conversationId}`).emit('message:system', joinMessage);
+      }).catch(error => {
+        log(`[WS] Error saving join message: ${error}`);
+      });
     });
 
     // 대화방 나가기
-    socket.on("leave:conversation", (conversationId: string) => {
+    socket.on("leave:conversation", async (conversationId: string) => {
       log(`[WS] User ${userId} left conversation ${conversationId}`);
       
-      // 퇴장 시스템 메시지 브로드캐스트
-      const leaveMessage = {
-        id: `system-leave-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+      // 퇴장 시스템 메시지 생성
+      const content = `${username}님이 나갔습니다`;
+      
+      // 데이터베이스에 시스템 메시지 저장 (비동기, fire-and-forget)
+      storage.createMessageInConversation({
         conversationId,
         senderType: 'system',
+        senderId: 'system',
+        content,
         messageType: 'leave',
-        content: `${username}님이 나갔습니다`,
-        createdAt: new Date().toISOString(),
-      };
-      
-      io.to(`conversation:${conversationId}`).emit('message:system', leaveMessage);
+      }).then(savedMessage => {
+        // 저장된 메시지를 브로드캐스트
+        const leaveMessage = {
+          id: savedMessage.id,
+          conversationId: savedMessage.conversationId,
+          senderType: savedMessage.senderType,
+          senderId: savedMessage.senderId,
+          messageType: savedMessage.messageType,
+          content: savedMessage.content,
+          createdAt: savedMessage.createdAt.toISOString(),
+        };
+        
+        io.to(`conversation:${conversationId}`).emit('message:system', leaveMessage);
+      }).catch(error => {
+        log(`[WS] Error saving leave message: ${error}`);
+      });
       
       socket.leave(`conversation:${conversationId}`);
     });
