@@ -57,8 +57,11 @@ function selectNextSpeaker(
   dominantPersona: string | null,
   turnsSinceDominantChange: number
 ): string {
-  // Edge case: single active persona
+  // Edge case: no active personas or empty room
   const eligiblePersonas = activePersonas.filter(p => p.status === 'active');
+  if (eligiblePersonas.length === 0) {
+    return lastSpeaker; // Fallback to last speaker if no one else available
+  }
   if (eligiblePersonas.length === 1) {
     return eligiblePersonas[0].id;
   }
@@ -115,7 +118,7 @@ function selectNextSpeaker(
   );
   
   // Probabilistic selection with temperature
-  return weightedRandomSelection(normalizedScores, temperature: 0.7);
+  return weightedRandomSelection(normalizedScores, 0.7);
 }
 ```
 
