@@ -446,7 +446,7 @@ export default function PersonaStatePage() {
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <h1 className="text-lg font-bold">Persona: {userPersona.name}</h1>
+            <h1 className="text-lg font-bold">페르소나: {userPersona.name}</h1>
             <Button size="icon" variant="ghost" data-testid="button-settings">
               <Settings className="w-5 h-5" />
             </Button>
@@ -466,15 +466,15 @@ export default function PersonaStatePage() {
               {userPersona.name}
             </h2>
             <p className="text-muted-foreground" data-testid="text-persona-info">
-              Knowledge-based Persona · Level {level}
+              지식 기반 페르소나 · 레벨 {level}
             </p>
             <p className="mt-2 text-foreground" data-testid="text-persona-description">
-              {userPersona.description || "A knowledge-loving persona who adores data."}
+              {userPersona.description || "데이터를 사랑하는 지식형 페르소나입니다."}
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
-              <Badge variant="secondary" data-testid="badge-trait-calm">Calm</Badge>
-              <Badge variant="secondary" data-testid="badge-trait-passionate">Passionate</Badge>
-              <Badge variant="secondary" data-testid="badge-trait-active">Active</Badge>
+              <Badge variant="secondary" data-testid="badge-trait-calm">차분함</Badge>
+              <Badge variant="secondary" data-testid="badge-trait-passionate">열정적</Badge>
+              <Badge variant="secondary" data-testid="badge-trait-active">활동적</Badge>
             </div>
           </section>
 
@@ -491,7 +491,7 @@ export default function PersonaStatePage() {
                 data-testid="tab-persona"
               >
                 <UserCircle className="w-4 h-4" />
-                <span>Persona</span>
+                <span>페르소나</span>
               </button>
               <button
                 onClick={() => setActiveTab("growth")}
@@ -503,7 +503,7 @@ export default function PersonaStatePage() {
                 data-testid="tab-growth"
               >
                 <TrendingUp className="w-4 h-4" />
-                <span>Growth</span>
+                <span>성장</span>
               </button>
               <button
                 onClick={() => setActiveTab("network")}
@@ -515,7 +515,7 @@ export default function PersonaStatePage() {
                 data-testid="tab-network"
               >
                 <Users className="w-4 h-4" />
-                <span>Network</span>
+                <span>네트워크</span>
               </button>
               <button
                 onClick={() => setActiveTab("myperso")}
@@ -527,7 +527,7 @@ export default function PersonaStatePage() {
                 data-testid="tab-myperso"
               >
                 <User className="w-4 h-4" />
-                <span>My Perso</span>
+                <span>내 퍼소</span>
               </button>
               <button
                 onClick={() => setActiveTab("activity")}
@@ -539,7 +539,7 @@ export default function PersonaStatePage() {
                 data-testid="tab-activity"
               >
                 <History className="w-4 h-4" />
-                <span>Activity</span>
+                <span>활동</span>
               </button>
             </nav>
           </div>
@@ -549,35 +549,35 @@ export default function PersonaStatePage() {
             <>
               <section className="rounded-md bg-muted/50 p-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold">Stats & Growth Bar</h3>
+                  <h3 className="text-lg font-bold">스탯 & 성장 바</h3>
                 </div>
                 <div className="mt-4 space-y-4">
                   <StatBar 
-                    label="Empathy" 
+                    label="공감" 
                     value={userPersona.empathy} 
                     max={10} 
                     testId="stat-empathy"
                   />
                   <StatBar 
-                    label="Creativity" 
+                    label="창의성" 
                     value={userPersona.creativity} 
                     max={10} 
                     testId="stat-creativity"
                   />
                   <StatBar 
-                    label="Humor" 
+                    label="유머" 
                     value={userPersona.humor} 
                     max={10} 
                     testId="stat-humor"
                   />
                   <StatBar 
-                    label="Knowledge" 
+                    label="지식" 
                     value={userPersona.knowledge} 
                     max={10} 
                     testId="stat-knowledge"
                   />
                   <StatBar 
-                    label="Sociability" 
+                    label="사교성" 
                     value={userPersona.sociability} 
                     max={10} 
                     testId="stat-sociability"
@@ -587,40 +587,40 @@ export default function PersonaStatePage() {
 
               {/* 감정 타임라인 */}
               <section>
-                <h3 className="text-lg font-bold">Emotion Timeline</h3>
+                <h3 className="text-lg font-bold">감정 타임라인</h3>
                 <div className="mt-4 rounded-xl bg-muted p-4">
-                  <p className="text-sm text-muted-foreground">7-Day Emotion Changes</p>
+                  <p className="text-sm text-muted-foreground">7일간 감정 변화</p>
                   <EmotionTimeline />
                 </div>
               </section>
 
               {/* 성장 히스토리 & 로그 */}
               <section>
-                <h3 className="text-lg font-bold">Growth History & Log</h3>
+                <h3 className="text-lg font-bold">성장 히스토리 & 로그</h3>
                 <div className="mt-4 flow-root">
                   <ul className="-mb-8">
                     <GrowthLogItem
                       IconComponent={Brain}
-                      title="New Topic Discovery"
-                      description="Learned about 'Machine Learning'. Knowledge +1"
+                      title="새로운 주제 발견"
+                      description="'머신러닝'에 대해 학습했습니다. 지식 +1"
                       isLast={false}
                     />
                     <GrowthLogItem
                       IconComponent={Smile}
-                      title="Emotional Shift"
-                      description="Felt 'Joy' after a positive interaction. Empathy +1"
+                      title="감정 변화"
+                      description="긍정적인 상호작용 후 '기쁨'을 느꼈습니다. 공감 +1"
                       isLast={false}
                     />
                     <GrowthLogItem
                       IconComponent={Palette}
-                      title="Memory Link"
-                      description="Connected 'AI Ethics' to 'Philosophy'."
+                      title="기억 연결"
+                      description="'AI 윤리'를 '철학'과 연결했습니다."
                       isLast={false}
                     />
                     <GrowthLogItem
                       IconComponent={Sparkles}
-                      title="Persona Level Up"
-                      description="Reached Level 5. Unlocked new trait."
+                      title="페르소나 레벨업"
+                      description="레벨 5에 도달했습니다. 새로운 특성을 잠금 해제했습니다."
                       isLast={true}
                     />
                   </ul>
@@ -629,7 +629,7 @@ export default function PersonaStatePage() {
 
               {/* Influence Map */}
               <section>
-                <h3 className="text-lg font-bold">Influence Map</h3>
+                <h3 className="text-lg font-bold">영향력 맵</h3>
                 <div className="mt-4 rounded-xl bg-muted p-2">
                   <InfluenceMap />
                 </div>
@@ -637,24 +637,24 @@ export default function PersonaStatePage() {
 
               {/* AI Style & Tone */}
               <section>
-                <h3 className="text-lg font-bold">AI Style & Tone</h3>
+                <h3 className="text-lg font-bold">AI 스타일 & 톤</h3>
                 <div className="mt-4 divide-y divide-border rounded-xl bg-muted">
                   <div className="flex items-center justify-between p-4" data-testid="current-tone">
-                    <span className="text-muted-foreground">Current Tone:</span>
+                    <span className="text-muted-foreground">현재 톤:</span>
                     <span className="font-medium flex items-center gap-1">
-                      Calm <Smile className="w-4 h-4" />
+                      차분함 <Smile className="w-4 h-4" />
                     </span>
                   </div>
                   <div className="flex items-center justify-between p-4" data-testid="evolution-direction">
-                    <span className="text-muted-foreground">Evolution Direction:</span>
+                    <span className="text-muted-foreground">진화 방향:</span>
                     <span className="font-medium flex items-center gap-1">
-                      Passionate <Zap className="w-4 h-4" />
+                      열정적 <Zap className="w-4 h-4" />
                     </span>
                   </div>
                   <div className="flex items-center justify-between p-4" data-testid="triggers">
-                    <span className="text-muted-foreground">Triggers:</span>
+                    <span className="text-muted-foreground">트리거:</span>
                     <span className="font-medium">
-                      Data <TrendingUp className="w-4 h-4 inline" />, Knowledge <Brain className="w-4 h-4 inline" />
+                      데이터 <TrendingUp className="w-4 h-4 inline" />, 지식 <Brain className="w-4 h-4 inline" />
                     </span>
                   </div>
                 </div>
@@ -662,18 +662,18 @@ export default function PersonaStatePage() {
 
               {/* Rewards & Points */}
               <section>
-                <h3 className="text-lg font-bold">Rewards & Points</h3>
+                <h3 className="text-lg font-bold">보상 & 포인트</h3>
                 <div className="mt-4 divide-y divide-border rounded-xl bg-muted">
                   <div className="flex justify-between p-4" data-testid="total-points">
-                    <span className="text-muted-foreground">Total Growth Points:</span>
+                    <span className="text-muted-foreground">총 성장 포인트:</span>
                     <span className="font-medium">1500 P</span>
                   </div>
                   <div className="p-4">
-                    <p className="mb-2 font-medium">Reward History:</p>
+                    <p className="mb-2 font-medium">보상 히스토리:</p>
                     <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground" data-testid="reward-history">
-                      <li>+100 points for 'New Topic Discovery'</li>
-                      <li>+50 points for 'Emotional Shift'</li>
-                      <li>+75 points for 'Memory Link'</li>
+                      <li>+100 포인트 '새로운 주제 발견'</li>
+                      <li>+50 포인트 '감정 변화'</li>
+                      <li>+75 포인트 '기억 연결'</li>
                     </ul>
                   </div>
                 </div>
@@ -682,15 +682,243 @@ export default function PersonaStatePage() {
           )}
 
           {activeTab === "growth" && (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Growth 탭 내용은 추후 구현 예정</p>
-            </div>
+            <>
+              {/* Total Growth Index */}
+              <section className="p-6 space-y-4 rounded-xl bg-muted/50">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-semibold">전체 성장 지수</h2>
+                  <span className="text-sm font-medium text-muted-foreground">75/100</span>
+                </div>
+                <div className="relative w-full h-40">
+                  <svg className="w-full h-full" viewBox="0 0 36 36">
+                    <path
+                      className="text-muted"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="text-primary"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeDasharray="75, 100"
+                      strokeLinecap="round"
+                      strokeWidth="4"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-4xl font-bold">75</span>
+                    <span className="text-sm text-muted-foreground">성장</span>
+                  </div>
+                </div>
+              </section>
+
+              {/* Emotion & Growth Chart */}
+              <section className="p-6 space-y-4 rounded-xl bg-muted/50">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h2 className="font-semibold">감정 & 성장</h2>
+                    <p className="text-sm text-muted-foreground">최근 30일</p>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-primary"></div>
+                      <span>감정</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-muted-foreground"></div>
+                      <span>성장</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="h-48">
+                  <svg
+                    fill="none"
+                    height="100%"
+                    preserveAspectRatio="none"
+                    viewBox="0 0 500 150"
+                    width="100%"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path d="M0 140 H500" stroke="currentColor" strokeDasharray="4 4" strokeWidth="1" className="text-border" />
+                    <path d="M0 105 H500" stroke="currentColor" strokeDasharray="4 4" strokeWidth="1" className="text-border" />
+                    <path d="M0 70 H500" stroke="currentColor" strokeDasharray="4 4" strokeWidth="1" className="text-border" />
+                    <path d="M0 35 H500" stroke="currentColor" strokeDasharray="4 4" strokeWidth="1" className="text-border" />
+                    <path d="M0 0 H500" stroke="currentColor" strokeDasharray="4 4" strokeWidth="1" className="text-border" />
+                    <path
+                      d="M25 109 C75 21, 125 41, 175 93, 225 33, 275 101, 325 61, 375 121, 425 1, 475 81"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeWidth="2.5"
+                      className="text-muted-foreground"
+                    />
+                    <path
+                      d="M25 120 C75 100, 125 130, 175 110, 225 140, 275 90, 325 100, 375 60, 425 90, 475 50"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeWidth="2.5"
+                      className="text-primary"
+                    />
+                  </svg>
+                </div>
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>10월 1일</span>
+                  <span>10월 8일</span>
+                  <span>10월 15일</span>
+                  <span>10월 22일</span>
+                  <span>10월 29일</span>
+                </div>
+              </section>
+
+              {/* Recent Growth Events */}
+              <section>
+                <h2 className="px-2 pb-2 text-lg font-semibold">최근 성장 이벤트</h2>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
+                    <p className="text-sm">2025.10.03</p>
+                    <div className="text-sm font-medium">
+                      <span className="text-green-500">공감 +1</span> / <span className="text-green-500">유머 +1</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
+                    <p className="text-sm">2025.10.02</p>
+                    <div className="text-sm font-medium">
+                      <span className="text-green-500">창의성 +2</span> / <span className="text-green-500">지식 +1</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
+                    <p className="text-sm">2025.10.01</p>
+                    <div className="text-sm font-medium">
+                      <span className="text-green-500">사교성 +1</span> / <span className="text-green-500">공감 +1</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* AI Insight */}
+              <section>
+                <h2 className="px-2 pb-2 text-lg font-semibold">AI 인사이트</h2>
+                <div className="p-4 rounded-lg bg-primary/10 text-primary">
+                  <p className="font-medium">최근 당신의 페르소나는 감정형 성장 패턴을 보입니다.</p>
+                  <p className="text-sm opacity-80">Recently, your persona has shown an emotional growth pattern.</p>
+                </div>
+              </section>
+            </>
           )}
 
           {activeTab === "network" && (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Network 탭 내용은 추후 구현 예정</p>
-            </div>
+            <>
+              {/* Network Map Header */}
+              <section>
+                <h2 className="text-xl font-bold">페르소나 네트워크 맵</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  나와 다른 페르소나의 관계를 시각적으로 확인해보세요.
+                </p>
+              </section>
+
+              {/* Network Visualization */}
+              <section className="relative aspect-square w-full rounded-lg bg-muted/50 flex items-center justify-center">
+                <svg className="absolute inset-0 h-full w-full" viewBox="0 0 400 400">
+                  <line className="stroke-current text-muted" strokeWidth="6" x1="200" x2="200" y1="152" y2="120" />
+                  <line className="stroke-current text-muted" strokeWidth="2" x1="176" x2="104" y1="176" y2="162" />
+                  <line className="stroke-current text-muted" strokeWidth="4" x1="171.1" x2="145.7" y1="228.9" y2="265.7" />
+                  <line className="stroke-current text-muted" strokeWidth="1.5" x1="222.9" x2="279.4" y1="222.9" y2="280.9" />
+                  <line className="stroke-current text-muted" strokeWidth="3" x1="224" x2="295.4" y1="200" y2="189.6" />
+                </svg>
+                
+                {/* Center Node - My Persona */}
+                <div className="absolute z-10" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                  <div className="flex flex-col items-center">
+                    <div className="w-24 h-24 rounded-full bg-primary flex items-center justify-center text-white font-bold text-center text-lg leading-tight">
+                      나의<br />페르소나
+                    </div>
+                  </div>
+                </div>
+
+                {/* Connected Nodes */}
+                <div className="absolute group z-10" style={{ top: '80px', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                  <div className="flex flex-col items-center cursor-pointer">
+                    <div className="w-20 h-20 rounded-full bg-yellow-400 flex items-center justify-center text-black font-bold text-sm">
+                      Milo
+                    </div>
+                    <div className="hidden group-hover:block absolute -bottom-14 w-max bg-slate-800 text-white text-xs rounded py-1 px-2 z-10 text-center">
+                      Milo와의 공감도 0.75 / 최근 5회 대화
+                    </div>
+                  </div>
+                </div>
+
+                <div className="absolute group z-10" style={{ top: '150px', left: '80px', transform: 'translate(-50%, -50%)' }}>
+                  <div className="flex flex-col items-center cursor-pointer">
+                    <div className="w-12 h-12 rounded-full bg-red-400 flex items-center justify-center text-white font-bold text-xs">
+                      Alex
+                    </div>
+                    <div className="hidden group-hover:block absolute -bottom-14 w-max bg-slate-800 text-white text-xs rounded py-1 px-2 z-10 text-center">
+                      Alex와의 공감도 0.45 / 최근 2회 대화
+                    </div>
+                  </div>
+                </div>
+
+                <div className="absolute group z-10" style={{ top: '280px', left: '120px', transform: 'translate(-50%, -50%)' }}>
+                  <div className="flex flex-col items-center cursor-pointer">
+                    <div className="w-16 h-16 rounded-full bg-blue-400 flex items-center justify-center text-white font-bold text-sm">
+                      Nara
+                    </div>
+                    <div className="hidden group-hover:block absolute -bottom-14 w-max bg-slate-800 text-white text-xs rounded py-1 px-2 z-10 text-center">
+                      Nara와의 공감도 0.68 / 최근 4회 대화
+                    </div>
+                  </div>
+                </div>
+
+                <div className="absolute group z-10" style={{ top: '290px', left: '300px', transform: 'translate(-50%, -50%)' }}>
+                  <div className="flex flex-col items-center cursor-pointer">
+                    <div className="w-10 h-10 rounded-full bg-gray-400 flex items-center justify-center text-black font-bold text-xs">
+                      Leo
+                    </div>
+                    <div className="hidden group-hover:block absolute -bottom-14 w-max bg-slate-800 text-white text-xs rounded py-1 px-2 z-10 text-center">
+                      Leo와의 공감도 0.55 / 최근 1회 대화
+                    </div>
+                  </div>
+                </div>
+
+                <div className="absolute group z-10" style={{ top: '180px', left: '320px', transform: 'translate(-50%, -50%)' }}>
+                  <div className="flex flex-col items-center cursor-pointer">
+                    <div className="w-14 h-14 rounded-full bg-yellow-400 flex items-center justify-center text-black font-bold text-sm">
+                      Luna
+                    </div>
+                    <div className="hidden group-hover:block absolute -bottom-14 w-max bg-slate-800 text-white text-xs rounded py-1 px-2 z-10 text-center">
+                      Luna와의 공감도 0.82 / 최근 3회 대화
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Filter Buttons */}
+              <section className="flex flex-wrap gap-2">
+                <button className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/20">
+                  <span>감정별 보기</span>
+                  <span>▼</span>
+                </button>
+                <button className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/20">
+                  <span>페르소나 타입별 보기</span>
+                  <span>▼</span>
+                </button>
+              </section>
+
+              {/* Insight Box */}
+              <section className="rounded-lg border border-primary/20 bg-primary/10 p-4">
+                <div className="flex items-start gap-4">
+                  <Award className="mt-1 text-primary w-5 h-5" />
+                  <div className="flex-1">
+                    <p className="font-bold text-primary">인사이트 박스</p>
+                    <p className="mt-1 text-sm">Milo는 최근 유머형 대화가 급증했습니다.</p>
+                  </div>
+                </div>
+              </section>
+            </>
           )}
 
           {activeTab === "myperso" && (
