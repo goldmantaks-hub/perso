@@ -1,1003 +1,598 @@
-<!doctype html>
-<html class="dark" lang="en">
-    <head>
-        <meta charset="utf-8" />
-        <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-        <title>PERSO Persona Page</title>
-        <link href="https://fonts.googleapis.com" rel="preconnect" />
-        <link
-            crossorigin=""
-            href="https://fonts.gstatic.com"
-            rel="preconnect"
-        />
-        <link
-            href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@400;500;700&amp;display=swap"
-            rel="stylesheet"
-        />
-        <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-        <script>
-            tailwind.config = {
-                darkMode: "class",
-                theme: {
-                    extend: {
-                        colors: {
-                            primary: "#389cfa",
-                            "background-light": "#f5f7f8",
-                            "background-dark": "#0f1923",
-                        },
-                        fontFamily: {
-                            display: ["Spline Sans"],
-                        },
-                        borderRadius: {
-                            DEFAULT: "0.25rem",
-                            lg: "0.5rem",
-                            xl: "0.75rem",
-                            full: "9999px",
-                        },
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PERSO Persona Page</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#389cfa",
+                        "background-light": "#f5f7f8",
+                        "background-dark": "#0f1923",
+                    },
+                    fontFamily: {
+                        display: ["Spline Sans"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.25rem",
+                        lg: "0.5rem",
+                        xl: "0.75rem",
+                        full: "9999px",
                     },
                 },
+            },
+        };
+    </script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+        }
+    </style>
+<style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+        .graph-tooltip {
+            position: absolute;
+            text-align: center;
+            padding: 8px;
+            font: 12px sans-serif;
+            background: #2d3748;
+            color: white;
+            border: 0px;
+            border-radius: 8px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+    </style>
+<style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-800 dark:text-slate-200">
+<div class="flex h-auto min-h-screen w-full flex-col">
+<div class="mx-auto w-full max-w-md flex-grow">
+<header class="sticky top-0 z-10 bg-background-light/80 backdrop-blur-sm dark:bg-background-dark/80">
+<div class="flex items-center justify-between p-4">
+<button class="flex h-10 w-10 items-center justify-center rounded-full text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700">
+<span class="material-symbols-outlined"> arrow_back_ios_new </span>
+</button>
+<h1 class="text-lg font-bold">Persona: Kai</h1>
+<button class="flex h-10 w-10 items-center justify-center rounded-full text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700">
+<span class="material-symbols-outlined"> settings </span>
+</button>
+</div>
+</header>
+<main class="space-y-8 p-4">
+<section class="text-center">
+<div class="mx-auto h-32 w-32 rounded-full bg-cover bg-center" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAeN-yCOVPgQJY2MQiDETabHtVgT-UTe53ouUrPN_qKrfrDWP9xv6yD2QnohBd9GoZ4omUkEuxddiNSOeMuL6JgAYGKEpEys8H3Ndh83sQk5nZxwVH9JRujEyE0V8UefrSAwlrc0HBNTWFi39-5H7T65EkhLZ4tbuS2jLuTlWCFbm2aG_5dZpYg4khDWJcBx5FWQW8p_6ZkH-jPmibu-Ho3AnPYrDz6Rz3TM3L9AKQV-rO5DUWVSt3FTM-p3TQlqxw9GgDTtkYRBNQ")'></div>
+<h2 class="mt-4 text-2xl font-bold text-slate-900 dark:text-white">Kai</h2>
+<p class="text-slate-500 dark:text-slate-400">Knowledge-based Persona · Level 5</p>
+<p class="mt-2 text-slate-700 dark:text-slate-300">A knowledge-loving persona who adores data.</p>
+<div class="mt-4 flex flex-wrap justify-center gap-2">
+<span class="rounded-full bg-slate-200 px-3 py-1 text-sm font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200">Calm</span>
+<span class="rounded-full bg-slate-200 px-3 py-1 text-sm font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200">Passionate</span>
+<span class="rounded-full bg-slate-200 px-3 py-1 text-sm font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200">Active</span>
+</div>
+</section>
+<div class="overflow-x-auto border-b border-slate-200 dark:border-slate-800">
+<nav class="-mb-px flex space-x-2">
+<a class="flex items-center gap-1 whitespace-nowrap border-b-2 border-primary px-3 py-3 text-sm font-bold text-primary" href="#">
+<span class="material-symbols-outlined text-base" style="font-variation-settings: 'FILL' 1"> account_circle </span>
+<span>Persona</span>
+</a>
+<a class="flex items-center gap-1 whitespace-nowrap px-3 py-3 text-sm font-medium text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined text-base"> leaderboard </span>
+<span>Growth</span>
+</a>
+<a class="flex items-center gap-1 whitespace-nowrap px-3 py-3 text-sm font-medium text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined text-base"> groups </span>
+<span>Network</span>
+</a>
+<a class="flex items-center gap-1 whitespace-nowrap px-3 py-3 text-sm font-medium text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined text-base"> person_pin </span>
+<span>My Perso</span>
+</a>
+<a class="flex items-center gap-1 whitespace-nowrap px-3 py-3 text-sm font-medium text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined text-base"> history </span>
+<span>Activity</span>
+</a>
+</nav>
+</div>
+<section class="rounded-xl bg-slate-100 p-4 dark:bg-slate-800/50">
+<div class="flex items-center justify-between">
+<h3 class="text-lg font-bold text-slate-900 dark:text-white">Stats &amp; Growth Bar</h3>
+</div>
+<div class="mt-4 space-y-4">
+<div class="grid grid-cols-[auto,1fr,auto,auto] items-center gap-2">
+<p class="font-medium">Empathy</p>
+<div class="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700">
+<div class="h-2 rounded-full bg-primary" style="width: 80%"></div>
+</div>
+<p class="text-sm font-medium text-slate-500 dark:text-slate-400">8/10</p>
+<button class="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-primary dark:bg-primary/30">
+<span class="material-symbols-outlined text-base"> add </span>
+</button>
+</div>
+<div class="grid grid-cols-[auto,1fr,auto,auto] items-center gap-2">
+<p class="font-medium">Creativity</p>
+<div class="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700">
+<div class="h-2 rounded-full bg-primary" style="width: 60%"></div>
+</div>
+<p class="text-sm font-medium text-slate-500 dark:text-slate-400">6/10</p>
+<button class="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-primary dark:bg-primary/30">
+<span class="material-symbols-outlined text-base"> add </span>
+</button>
+</div>
+<div class="grid grid-cols-[auto,1fr,auto,auto] items-center gap-2">
+<p class="font-medium">Humor</p>
+<div class="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700">
+<div class="h-2 rounded-full bg-primary" style="width: 70%"></div>
+</div>
+<p class="text-sm font-medium text-slate-500 dark:text-slate-400">7/10</p>
+<button class="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-primary dark:bg-primary/30">
+<span class="material-symbols-outlined text-base"> add </span>
+</button>
+</div>
+<div class="grid grid-cols-[auto,1fr,auto,auto] items-center gap-2">
+<p class="font-medium">Knowledge</p>
+<div class="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700">
+<div class="h-2 rounded-full bg-primary" style="width: 90%"></div>
+</div>
+<p class="text-sm font-medium text-slate-500 dark:text-slate-400">9/10</p>
+<button class="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-primary dark:bg-primary/30">
+<span class="material-symbols-outlined text-base"> add </span>
+</button>
+</div>
+<div class="grid grid-cols-[auto,1fr,auto,auto] items-center gap-2">
+<p class="font-medium">Sociability</p>
+<div class="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700">
+<div class="h-2 rounded-full bg-primary" style="width: 50%"></div>
+</div>
+<p class="text-sm font-medium text-slate-500 dark:text-slate-400">5/10</p>
+<button class="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-primary dark:bg-primary/30">
+<span class="material-symbols-outlined text-base"> add </span>
+</button>
+</div>
+</div>
+</section>
+<section>
+<h3 class="text-lg font-bold text-slate-900 dark:text-white">Emotion Timeline</h3>
+<div class="mt-4 rounded-xl bg-slate-100 p-4 dark:bg-slate-800/50">
+<p class="text-sm text-slate-500 dark:text-slate-400">7-Day Emotion Changes</p>
+<div class="relative h-48">
+<svg class="h-full w-full" id="emotion-chart"></svg>
+<div class="graph-tooltip" id="emotion-tooltip"></div>
+</div>
+</div>
+</section>
+<section>
+<h3 class="text-lg font-bold text-slate-900 dark:text-white">Growth History &amp; Log</h3>
+<div class="mt-4 flow-root">
+<ul class="-mb-8">
+<li>
+<div class="relative pb-8">
+<span aria-hidden="true" class="absolute left-4 top-4 -ml-px h-full w-0.5 bg-slate-200 dark:bg-slate-700"></span>
+<div class="relative flex items-start space-x-3">
+<div>
+<div class="relative px-1">
+<div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 ring-8 ring-background-light dark:ring-background-dark">
+<span class="material-symbols-outlined text-primary">psychology</span>
+</div>
+</div>
+</div>
+<div class="min-w-0 flex-1 py-1.5">
+<div class="text-sm">
+<p class="font-medium text-slate-800 dark:text-slate-200">New Topic Discovery</p>
+<p class="mt-0.5 text-slate-500 dark:text-slate-400">Learned about 'Machine Learning'. Knowledge +1</p>
+</div>
+</div>
+</div>
+</div>
+</li>
+<li>
+<div class="relative pb-8">
+<span aria-hidden="true" class="absolute left-4 top-4 -ml-px h-full w-0.5 bg-slate-200 dark:bg-slate-700"></span>
+<div class="relative flex items-start space-x-3">
+<div>
+<div class="relative px-1">
+<div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 ring-8 ring-background-light dark:ring-background-dark">
+<span class="material-symbols-outlined text-primary"> mood </span>
+</div>
+</div>
+</div>
+<div class="min-w-0 flex-1 py-1.5">
+<div class="text-sm">
+<p class="font-medium text-slate-800 dark:text-slate-200">Emotional Shift</p>
+<p class="mt-0.5 text-slate-500 dark:text-slate-400">Felt 'Joy' after a positive interaction. Empathy +1</p>
+</div>
+</div>
+</div>
+</div>
+</li>
+<li>
+<div class="relative pb-8">
+<span aria-hidden="true" class="absolute left-4 top-4 -ml-px h-full w-0.5 bg-slate-200 dark:bg-slate-700"></span>
+<div class="relative flex items-start space-x-3">
+<div>
+<div class="relative px-1">
+<div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 ring-8 ring-background-light dark:ring-background-dark">
+<span class="material-symbols-outlined text-primary"> aod </span>
+</div>
+</div>
+</div>
+<div class="min-w-0 flex-1 py-1.5">
+<div class="text-sm">
+<p class="font-medium text-slate-800 dark:text-slate-200">Memory Link</p>
+<p class="mt-0.5 text-slate-500 dark:text-slate-400">Connected 'AI Ethics' to 'Philosophy'.</p>
+</div>
+</div>
+</div>
+</div>
+</li>
+<li>
+<div class="relative">
+<div class="relative flex items-start space-x-3">
+<div>
+<div class="relative px-1">
+<div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 ring-8 ring-background-light dark:ring-background-dark">
+<span class="material-symbols-outlined text-primary"> auto_fix_high </span>
+</div>
+</div>
+</div>
+<div class="min-w-0 flex-1 py-1.5">
+<div class="text-sm">
+<p class="font-medium text-slate-800 dark:text-slate-200">Persona Level Up</p>
+<p class="mt-0.5 text-slate-500 dark:text-slate-400">Reached Level 5. Unlocked new trait.</p>
+</div>
+</div>
+</div>
+</div>
+</li>
+</ul>
+</div>
+</section>
+<section>
+<h3 class="text-lg font-bold text-slate-900 dark:text-white">Influence Map</h3>
+<div class="mt-4 h-64 w-full rounded-xl bg-slate-100 p-2 dark:bg-slate-800/50" id="influence-map"></div>
+<div class="graph-tooltip" id="influence-tooltip"></div>
+</section>
+<section>
+<h3 class="text-lg font-bold text-slate-900 dark:text-white">AI Style &amp; Tone</h3>
+<div class="mt-4 divide-y divide-slate-200 rounded-xl bg-slate-100 dark:divide-slate-700 dark:bg-slate-800/50">
+<div class="flex items-center justify-between p-4">
+<span class="text-slate-600 dark:text-slate-300">Current Tone:</span>
+<span class="font-medium text-slate-800 dark:text-slate-200">Calm 😌</span>
+</div>
+<div class="flex items-center justify-between p-4">
+<span class="text-slate-600 dark:text-slate-300">Evolution Direction:</span>
+<span class="font-medium text-slate-800 dark:text-slate-200">Passionate 🔥</span>
+</div>
+<div class="flex items-center justify-between p-4">
+<span class="text-slate-600 dark:text-slate-300">Triggers:</span>
+<span class="font-medium text-slate-800 dark:text-slate-200">Data 📊, Knowledge 🧠</span>
+</div>
+</div>
+</section>
+<section>
+<h3 class="text-lg font-bold text-slate-900 dark:text-white">Rewards &amp; Points</h3>
+<div class="mt-4 divide-y divide-slate-200 rounded-xl bg-slate-100 dark:divide-slate-700 dark:bg-slate-800/50">
+<div class="flex justify-between p-4">
+<span class="text-slate-600 dark:text-slate-300">Total Growth Points:</span>
+<span class="font-medium text-slate-800 dark:text-slate-200">1500 P</span>
+</div>
+<div class="p-4">
+<p class="mb-2 font-medium text-slate-800 dark:text-slate-200">Reward History:</p>
+<ul class="list-disc space-y-1 pl-5 text-sm text-slate-600 dark:text-slate-300">
+<li>+100 points for 'New Topic Discovery'</li>
+<li>+50 points for 'Emotional Shift'</li>
+<li>+75 points for 'Memory Link'</li>
+</ul>
+</div>
+</div>
+</section>
+</main>
+</div>
+</div>
+<script>
+        // Emotion Timeline Chart
+        const emotionData = [{
+            day: 'Mon',
+            value: 3,
+            emotion: '😐 Neutral'
+        }, {
+            day: 'Tue',
+            value: 5,
+            emotion: '😊 Happy'
+        }, {
+            day: 'Wed',
+            value: 4,
+            emotion: '😌 Calm'
+        }, {
+            day: 'Thu',
+            value: 7,
+            emotion: '😄 Joyful'
+        }, {
+            day: 'Fri',
+            value: 6,
+            emotion: '🤔 Curious'
+        }, {
+            day: 'Sat',
+            value: 8,
+            emotion: '🤩 Excited'
+        }, {
+            day: 'Sun',
+            value: 5,
+            emotion: '😊 Happy'
+        }, ];
+        const emotionSvg = d3.select("#emotion-chart");
+        const emotionTooltip = d3.select("#emotion-tooltip");
+        const emotionContainer = emotionSvg.node().parentNode;
+        const renderEmotionChart = () => {
+            emotionSvg.selectAll("*").remove();
+            const width = emotionContainer.clientWidth;
+            const height = emotionContainer.clientHeight;
+            const margin = {
+                top: 20,
+                right: 20,
+                bottom: 30,
+                left: 20
             };
-        </script>
-        <link
-            href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
-            rel="stylesheet"
-        />
-        <script src="https://d3js.org/d3.v7.min.js"></script>
-        <style>
-            .material-symbols-outlined {
-                font-variation-settings:
-                    "FILL" 0,
-                    "wght" 400,
-                    "GRAD" 0,
-                    "opsz" 24;
-            }
-        </style>
-        <style>
-            body {
-                min-height: max(884px, 100dvh);
-            }
-            .graph-tooltip {
-                position: absolute;
-                text-align: center;
-                padding: 8px;
-                font: 12px sans-serif;
-                background: #2d3748;
-                color: white;
-                border: 0px;
-                border-radius: 8px;
-                pointer-events: none;
-                opacity: 0;
-                transition: opacity 0.2s;
-            }
-        </style>
-        <style>
-            body {
-                min-height: max(884px, 100dvh);
-            }
-        </style>
-        <style>
-            body {
-                min-height: max(884px, 100dvh);
-            }
-        </style>
-        <style>
-            body {
-                min-height: max(884px, 100dvh);
-            }
-        </style>
-    </head>
-    <body
-        class="bg-background-light dark:bg-background-dark font-display text-slate-800 dark:text-slate-200"
-    >
-        <div class="flex h-auto min-h-screen w-full flex-col">
-            <div class="mx-auto w-full max-w-md flex-grow">
-                <header
-                    class="sticky top-0 z-10 bg-background-light/80 backdrop-blur-sm dark:bg-background-dark/80"
-                >
-                    <div class="flex items-center justify-between p-4">
-                        <button
-                            class="flex h-10 w-10 items-center justify-center rounded-full text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700"
-                        >
-                            <span class="material-symbols-outlined">
-                                arrow_back_ios_new
-                            </span>
-                        </button>
-                        <h1 class="text-lg font-bold">Persona: Kai</h1>
-                        <button
-                            class="flex h-10 w-10 items-center justify-center rounded-full text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700"
-                        >
-                            <span class="material-symbols-outlined">
-                                settings
-                            </span>
-                        </button>
-                    </div>
-                </header>
-                <main class="space-y-8 p-4">
-                    <section class="text-center">
-                        <div
-                            class="mx-auto h-32 w-32 rounded-full bg-cover bg-center"
-                            style="
-                                background-image: url(&quot;https://lh3.googleusercontent.com/aida-public/AB6AXuAeN-yCOVPgQJY2MQiDETabHtVgT-UTe53ouUrPN_qKrfrDWP9xv6yD2QnohBd9GoZ4omUkEuxddiNSOeMuL6JgAYGKEpEys8H3Ndh83sQk5nZxwVH9JRujEyE0V8UefrSAwlrc0HBNTWFi39-5H7T65EkhLZ4tbuS2jLuTlWCFbm2aG_5dZpYg4khDWJcBx5FWQW8p_6ZkH-jPmibu-Ho3AnPYrDz6Rz3TM3L9AKQV-rO5DUWVSt3FTM-p3TQlqxw9GgDTtkYRBNQ&quot;);
-                            "
-                        ></div>
-                        <h2
-                            class="mt-4 text-2xl font-bold text-slate-900 dark:text-white"
-                        >
-                            Kai
-                        </h2>
-                        <p class="text-slate-500 dark:text-slate-400">
-                            Knowledge-based Persona · Level 5
-                        </p>
-                        <p class="mt-2 text-slate-700 dark:text-slate-300">
-                            A knowledge-loving persona who adores data.
-                        </p>
-                        <div class="mt-4 flex flex-wrap justify-center gap-2">
-                            <span
-                                class="rounded-full bg-slate-200 px-3 py-1 text-sm font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200"
-                                >Calm</span
-                            >
-                            <span
-                                class="rounded-full bg-slate-200 px-3 py-1 text-sm font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200"
-                                >Passionate</span
-                            >
-                            <span
-                                class="rounded-full bg-slate-200 px-3 py-1 text-sm font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200"
-                                >Active</span
-                            >
-                        </div>
-                    </section>
-                    <div
-                        class="overflow-x-auto border-b border-slate-200 dark:border-slate-800"
-                    >
-                        <nav class="-mb-px flex space-x-2">
-                            <a
-                                class="flex items-center gap-1 whitespace-nowrap border-b-2 border-primary px-3 py-3 text-sm font-bold text-primary"
-                                href="#"
-                            >
-                                <span
-                                    class="material-symbols-outlined text-base"
-                                    style="
-                                        font-variation-settings: &quot;FILL&quot;
-                                            1;
-                                    "
-                                >
-                                    account_circle
-                                </span>
-                                <span>Persona</span>
-                            </a>
-                            <a
-                                class="flex items-center gap-1 whitespace-nowrap px-3 py-3 text-sm font-medium text-slate-500 dark:text-slate-400"
-                                href="#"
-                            >
-                                <span
-                                    class="material-symbols-outlined text-base"
-                                >
-                                    leaderboard
-                                </span>
-                                <span>Growth</span>
-                            </a>
-                            <a
-                                class="flex items-center gap-1 whitespace-nowrap px-3 py-3 text-sm font-medium text-slate-500 dark:text-slate-400"
-                                href="#"
-                            >
-                                <span
-                                    class="material-symbols-outlined text-base"
-                                >
-                                    groups
-                                </span>
-                                <span>Network</span>
-                            </a>
-                            <a
-                                class="flex items-center gap-1 whitespace-nowrap px-3 py-3 text-sm font-medium text-slate-500 dark:text-slate-400"
-                                href="#"
-                            >
-                                <span
-                                    class="material-symbols-outlined text-base"
-                                >
-                                    person_pin
-                                </span>
-                                <span>My Perso</span>
-                            </a>
-                            <a
-                                class="flex items-center gap-1 whitespace-nowrap px-3 py-3 text-sm font-medium text-slate-500 dark:text-slate-400"
-                                href="#"
-                            >
-                                <span
-                                    class="material-symbols-outlined text-base"
-                                >
-                                    history
-                                </span>
-                                <span>Activity</span>
-                            </a>
-                        </nav>
-                    </div>
-                    <section
-                        class="rounded-xl bg-slate-100 p-4 dark:bg-slate-800/50"
-                    >
-                        <div class="flex items-center justify-between">
-                            <h3
-                                class="text-lg font-bold text-slate-900 dark:text-white"
-                            >
-                                Stats &amp; Growth Bar
-                            </h3>
-                        </div>
-                        <div class="mt-4 space-y-4">
-                            <div
-                                class="grid grid-cols-[auto,1fr,auto,auto] items-center gap-2"
-                            >
-                                <p class="font-medium">Empathy</p>
-                                <div
-                                    class="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700"
-                                >
-                                    <div
-                                        class="h-2 rounded-full bg-primary"
-                                        style="width: 80%"
-                                    ></div>
-                                </div>
-                                <p
-                                    class="text-sm font-medium text-slate-500 dark:text-slate-400"
-                                >
-                                    8/10
-                                </p>
-                                <button
-                                    class="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-primary dark:bg-primary/30"
-                                >
-                                    <span
-                                        class="material-symbols-outlined text-base"
-                                    >
-                                        add
-                                    </span>
-                                </button>
-                            </div>
-                            <div
-                                class="grid grid-cols-[auto,1fr,auto,auto] items-center gap-2"
-                            >
-                                <p class="font-medium">Creativity</p>
-                                <div
-                                    class="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700"
-                                >
-                                    <div
-                                        class="h-2 rounded-full bg-primary"
-                                        style="width: 60%"
-                                    ></div>
-                                </div>
-                                <p
-                                    class="text-sm font-medium text-slate-500 dark:text-slate-400"
-                                >
-                                    6/10
-                                </p>
-                                <button
-                                    class="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-primary dark:bg-primary/30"
-                                >
-                                    <span
-                                        class="material-symbols-outlined text-base"
-                                    >
-                                        add
-                                    </span>
-                                </button>
-                            </div>
-                            <div
-                                class="grid grid-cols-[auto,1fr,auto,auto] items-center gap-2"
-                            >
-                                <p class="font-medium">Humor</p>
-                                <div
-                                    class="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700"
-                                >
-                                    <div
-                                        class="h-2 rounded-full bg-primary"
-                                        style="width: 70%"
-                                    ></div>
-                                </div>
-                                <p
-                                    class="text-sm font-medium text-slate-500 dark:text-slate-400"
-                                >
-                                    7/10
-                                </p>
-                                <button
-                                    class="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-primary dark:bg-primary/30"
-                                >
-                                    <span
-                                        class="material-symbols-outlined text-base"
-                                    >
-                                        add
-                                    </span>
-                                </button>
-                            </div>
-                            <div
-                                class="grid grid-cols-[auto,1fr,auto,auto] items-center gap-2"
-                            >
-                                <p class="font-medium">Knowledge</p>
-                                <div
-                                    class="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700"
-                                >
-                                    <div
-                                        class="h-2 rounded-full bg-primary"
-                                        style="width: 90%"
-                                    ></div>
-                                </div>
-                                <p
-                                    class="text-sm font-medium text-slate-500 dark:text-slate-400"
-                                >
-                                    9/10
-                                </p>
-                                <button
-                                    class="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-primary dark:bg-primary/30"
-                                >
-                                    <span
-                                        class="material-symbols-outlined text-base"
-                                    >
-                                        add
-                                    </span>
-                                </button>
-                            </div>
-                            <div
-                                class="grid grid-cols-[auto,1fr,auto,auto] items-center gap-2"
-                            >
-                                <p class="font-medium">Sociability</p>
-                                <div
-                                    class="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700"
-                                >
-                                    <div
-                                        class="h-2 rounded-full bg-primary"
-                                        style="width: 50%"
-                                    ></div>
-                                </div>
-                                <p
-                                    class="text-sm font-medium text-slate-500 dark:text-slate-400"
-                                >
-                                    5/10
-                                </p>
-                                <button
-                                    class="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-primary dark:bg-primary/30"
-                                >
-                                    <span
-                                        class="material-symbols-outlined text-base"
-                                    >
-                                        add
-                                    </span>
-                                </button>
-                            </div>
-                        </div>
-                    </section>
-                    <section>
-                        <h3
-                            class="text-lg font-bold text-slate-900 dark:text-white"
-                        >
-                            Emotion Timeline
-                        </h3>
-                        <div
-                            class="mt-4 rounded-xl bg-slate-100 p-4 dark:bg-slate-800/50"
-                        >
-                            <p
-                                class="text-sm text-slate-500 dark:text-slate-400"
-                            >
-                                7-Day Emotion Changes
-                            </p>
-                            <div class="relative h-48">
-                                <svg
-                                    class="h-full w-full"
-                                    id="emotion-chart"
-                                ></svg>
-                                <div
-                                    class="graph-tooltip"
-                                    id="emotion-tooltip"
-                                ></div>
-                            </div>
-                        </div>
-                    </section>
-                    <section>
-                        <h3
-                            class="text-lg font-bold text-slate-900 dark:text-white"
-                        >
-                            Growth History &amp; Log
-                        </h3>
-                        <div class="mt-4 flow-root">
-                            <ul class="-mb-8">
-                                <li>
-                                    <div class="relative pb-8">
-                                        <span
-                                            aria-hidden="true"
-                                            class="absolute left-4 top-4 -ml-px h-full w-0.5 bg-slate-200 dark:bg-slate-700"
-                                        ></span>
-                                        <div
-                                            class="relative flex items-start space-x-3"
-                                        >
-                                            <div>
-                                                <div class="relative px-1">
-                                                    <div
-                                                        class="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 ring-8 ring-background-light dark:ring-background-dark"
-                                                    >
-                                                        <span
-                                                            class="material-symbols-outlined text-primary"
-                                                            >psychology</span
-                                                        >
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="min-w-0 flex-1 py-1.5">
-                                                <div class="text-sm">
-                                                    <p
-                                                        class="font-medium text-slate-800 dark:text-slate-200"
-                                                    >
-                                                        New Topic Discovery
-                                                    </p>
-                                                    <p
-                                                        class="mt-0.5 text-slate-500 dark:text-slate-400"
-                                                    >
-                                                        Learned about 'Machine
-                                                        Learning'. Knowledge +1
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </li>
-                                <li>
-                                    <div class="relative pb-8">
-                                        <span
-                                            aria-hidden="true"
-                                            class="absolute left-4 top-4 -ml-px h-full w-0.5 bg-slate-200 dark:bg-slate-700"
-                                        ></span>
-                                        <div
-                                            class="relative flex items-start space-x-3"
-                                        >
-                                            <div>
-                                                <div class="relative px-1">
-                                                    <div
-                                                        class="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 ring-8 ring-background-light dark:ring-background-dark"
-                                                    >
-                                                        <span
-                                                            class="material-symbols-outlined text-primary"
-                                                        >
-                                                            mood
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="min-w-0 flex-1 py-1.5">
-                                                <div class="text-sm">
-                                                    <p
-                                                        class="font-medium text-slate-800 dark:text-slate-200"
-                                                    >
-                                                        Emotional Shift
-                                                    </p>
-                                                    <p
-                                                        class="mt-0.5 text-slate-500 dark:text-slate-400"
-                                                    >
-                                                        Felt 'Joy' after a
-                                                        positive interaction.
-                                                        Empathy +1
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </li>
-                                <li>
-                                    <div class="relative pb-8">
-                                        <span
-                                            aria-hidden="true"
-                                            class="absolute left-4 top-4 -ml-px h-full w-0.5 bg-slate-200 dark:bg-slate-700"
-                                        ></span>
-                                        <div
-                                            class="relative flex items-start space-x-3"
-                                        >
-                                            <div>
-                                                <div class="relative px-1">
-                                                    <div
-                                                        class="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 ring-8 ring-background-light dark:ring-background-dark"
-                                                    >
-                                                        <span
-                                                            class="material-symbols-outlined text-primary"
-                                                        >
-                                                            aod
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="min-w-0 flex-1 py-1.5">
-                                                <div class="text-sm">
-                                                    <p
-                                                        class="font-medium text-slate-800 dark:text-slate-200"
-                                                    >
-                                                        Memory Link
-                                                    </p>
-                                                    <p
-                                                        class="mt-0.5 text-slate-500 dark:text-slate-400"
-                                                    >
-                                                        Connected 'AI Ethics' to
-                                                        'Philosophy'.
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </li>
-                                <li>
-                                    <div class="relative">
-                                        <div
-                                            class="relative flex items-start space-x-3"
-                                        >
-                                            <div>
-                                                <div class="relative px-1">
-                                                    <div
-                                                        class="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 ring-8 ring-background-light dark:ring-background-dark"
-                                                    >
-                                                        <span
-                                                            class="material-symbols-outlined text-primary"
-                                                        >
-                                                            auto_fix_high
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="min-w-0 flex-1 py-1.5">
-                                                <div class="text-sm">
-                                                    <p
-                                                        class="font-medium text-slate-800 dark:text-slate-200"
-                                                    >
-                                                        Persona Level Up
-                                                    </p>
-                                                    <p
-                                                        class="mt-0.5 text-slate-500 dark:text-slate-400"
-                                                    >
-                                                        Reached Level 5.
-                                                        Unlocked new trait.
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </li>
-                            </ul>
-                        </div>
-                    </section>
-                    <section>
-                        <h3
-                            class="text-lg font-bold text-slate-900 dark:text-white"
-                        >
-                            Influence Map
-                        </h3>
-                        <div
-                            class="mt-4 h-64 w-full rounded-xl bg-slate-100 p-2 dark:bg-slate-800/50"
-                            id="influence-map"
-                        ></div>
-                        <div class="graph-tooltip" id="influence-tooltip"></div>
-                    </section>
-                    <section>
-                        <h3
-                            class="text-lg font-bold text-slate-900 dark:text-white"
-                        >
-                            AI Style &amp; Tone
-                        </h3>
-                        <div
-                            class="mt-4 divide-y divide-slate-200 rounded-xl bg-slate-100 dark:divide-slate-700 dark:bg-slate-800/50"
-                        >
-                            <div class="flex items-center justify-between p-4">
-                                <span class="text-slate-600 dark:text-slate-300"
-                                    >Current Tone:</span
-                                >
-                                <span
-                                    class="font-medium text-slate-800 dark:text-slate-200"
-                                    >Calm 😌</span
-                                >
-                            </div>
-                            <div class="flex items-center justify-between p-4">
-                                <span class="text-slate-600 dark:text-slate-300"
-                                    >Evolution Direction:</span
-                                >
-                                <span
-                                    class="font-medium text-slate-800 dark:text-slate-200"
-                                    >Passionate 🔥</span
-                                >
-                            </div>
-                            <div class="flex items-center justify-between p-4">
-                                <span class="text-slate-600 dark:text-slate-300"
-                                    >Triggers:</span
-                                >
-                                <span
-                                    class="font-medium text-slate-800 dark:text-slate-200"
-                                    >Data 📊, Knowledge 🧠</span
-                                >
-                            </div>
-                        </div>
-                    </section>
-                    <section>
-                        <h3
-                            class="text-lg font-bold text-slate-900 dark:text-white"
-                        >
-                            Rewards &amp; Points
-                        </h3>
-                        <div
-                            class="mt-4 divide-y divide-slate-200 rounded-xl bg-slate-100 dark:divide-slate-700 dark:bg-slate-800/50"
-                        >
-                            <div class="flex justify-between p-4">
-                                <span class="text-slate-600 dark:text-slate-300"
-                                    >Total Growth Points:</span
-                                >
-                                <span
-                                    class="font-medium text-slate-800 dark:text-slate-200"
-                                    >1500 P</span
-                                >
-                            </div>
-                            <div class="p-4">
-                                <p
-                                    class="mb-2 font-medium text-slate-800 dark:text-slate-200"
-                                >
-                                    Reward History:
-                                </p>
-                                <ul
-                                    class="list-disc space-y-1 pl-5 text-sm text-slate-600 dark:text-slate-300"
-                                >
-                                    <li>
-                                        +100 points for 'New Topic Discovery'
-                                    </li>
-                                    <li>+50 points for 'Emotional Shift'</li>
-                                    <li>+75 points for 'Memory Link'</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </section>
-                </main>
-            </div>
-        </div>
-        <script>
-            // Emotion Timeline Chart
-            const emotionData = [
-                {
-                    day: "Mon",
-                    value: 3,
-                    emotion: "😐 Neutral",
-                },
-                {
-                    day: "Tue",
-                    value: 5,
-                    emotion: "😊 Happy",
-                },
-                {
-                    day: "Wed",
-                    value: 4,
-                    emotion: "😌 Calm",
-                },
-                {
-                    day: "Thu",
-                    value: 7,
-                    emotion: "😄 Joyful",
-                },
-                {
-                    day: "Fri",
-                    value: 6,
-                    emotion: "🤔 Curious",
-                },
-                {
-                    day: "Sat",
-                    value: 8,
-                    emotion: "🤩 Excited",
-                },
-                {
-                    day: "Sun",
-                    value: 5,
-                    emotion: "😊 Happy",
-                },
-            ];
-            const emotionSvg = d3.select("#emotion-chart");
-            const emotionTooltip = d3.select("#emotion-tooltip");
-            const emotionContainer = emotionSvg.node().parentNode;
-            const renderEmotionChart = () => {
-                emotionSvg.selectAll("*").remove();
-                const width = emotionContainer.clientWidth;
-                const height = emotionContainer.clientHeight;
-                const margin = {
-                    top: 20,
-                    right: 20,
-                    bottom: 30,
-                    left: 20,
-                };
-                const x = d3
-                    .scalePoint()
-                    .domain(emotionData.map((d) => d.day))
-                    .range([margin.left, width - margin.right])
-                    .padding(0.5);
-                const y = d3
-                    .scaleLinear()
-                    .domain([0, d3.max(emotionData, (d) => d.value) + 2])
-                    .range([height - margin.bottom, margin.top]);
-                const line = d3
-                    .line()
-                    .x((d) => x(d.day))
-                    .y((d) => y(d.value))
-                    .curve(d3.curveMonotoneX);
-                const isDark =
-                    document.documentElement.classList.contains("dark");
-                const primaryColor = "#389cfa";
-                const textColor = isDark ? "#e2e8f0" : "#475569";
-                const gridColor = isDark
-                    ? "rgba(255, 255, 255, 0.1)"
-                    : "rgba(0, 0, 0, 0.1)";
-                emotionSvg
-                    .append("g")
-                    .attr("transform", `translate(0,${height - margin.bottom})`)
-                    .call(d3.axisBottom(x).tickSize(0).tickPadding(10))
-                    .attr("font-family", "Spline Sans")
-                    .attr("color", textColor)
-                    .select(".domain")
-                    .remove();
-                emotionSvg
-                    .append("g")
-                    .attr("class", "grid")
-                    .call(
-                        d3
-                            .axisLeft(y)
-                            .ticks(5)
-                            .tickSize(-width + margin.left + margin.right)
-                            .tickFormat(""),
-                    )
-                    .attr("transform", `translate(${margin.left}, 0)`)
-                    .selectAll("line")
-                    .attr("stroke", gridColor)
-                    .attr("stroke-dasharray", "2,2");
-                emotionSvg.select(".grid").select(".domain").remove();
-                emotionSvg
-                    .append("path")
-                    .datum(emotionData)
-                    .attr("fill", "none")
-                    .attr("stroke", primaryColor)
-                    .attr("stroke-width", 2.5)
-                    .attr("d", line);
-                const focus = emotionSvg
-                    .append("g")
-                    .attr("class", "focus")
-                    .style("display", "none");
-                focus
-                    .append("circle")
-                    .attr("r", 6)
-                    .attr("fill", primaryColor)
-                    .attr("stroke", isDark ? "#0f1923" : "#f5f7f8")
-                    .attr("stroke-width", 2);
-                emotionSvg
-                    .append("rect")
-                    .attr("class", "overlay")
-                    .attr("width", width)
-                    .attr("height", height)
-                    .style("fill", "none")
-                    .style("pointer-events", "all")
-                    .on("mouseover", () => {
-                        focus.style("display", null);
-                        emotionTooltip.style("opacity", 0.9);
-                    })
-                    .on("mouseout", () => {
-                        focus.style("display", "none");
-                        emotionTooltip.style("opacity", 0);
-                    })
-                    .on("mousemove", mousemove);
-                function mousemove(event) {
-                    const bisect = d3.bisector((d) => d.day).left;
-                    const x0 = x.invert(d3.pointer(event)[0]);
-                    const i = bisect(emotionData, x0, 1);
-                    const d0 = emotionData[i - 1];
-                    const d1 = emotionData[i];
-                    const d = x0 - d0.day > d1.day - x0 ? d1 : d0;
-                    focus.attr(
-                        "transform",
-                        `translate(${x(d.day)},${y(d.value)})`,
-                    );
-                    const tooltipWidth = emotionTooltip.node().offsetWidth;
-                    const tooltipHeight = emotionTooltip.node().offsetHeight;
-                    let left = event.pageX + 15;
-                    if (left + tooltipWidth > window.innerWidth - 20) {
-                        left = event.pageX - tooltipWidth - 15;
-                    }
-                    emotionTooltip
-                        .html(`<strong>${d.day}</strong>: ${d.emotion}`)
-                        .style("left", `${left}px`)
-                        .style("top", event.pageY - tooltipHeight - 15 + "px");
+            const x = d3.scalePoint()
+                .domain(emotionData.map(d => d.day))
+                .range([margin.left, width - margin.right])
+                .padding(0.5);
+            const y = d3.scaleLinear()
+                .domain([0, d3.max(emotionData, d => d.value) + 2])
+                .range([height - margin.bottom, margin.top]);
+            const line = d3.line()
+                .x(d => x(d.day))
+                .y(d => y(d.value))
+                .curve(d3.curveMonotoneX);
+            const isDark = document.documentElement.classList.contains('dark');
+            const primaryColor = "#389cfa";
+            const textColor = isDark ? "#e2e8f0" : "#475569";
+            const gridColor = isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)";
+            emotionSvg.append("g")
+                .attr("transform", `translate(0,${height - margin.bottom})`)
+                .call(d3.axisBottom(x).tickSize(0).tickPadding(10))
+                .attr("font-family", "Spline Sans")
+                .attr("color", textColor)
+                .select(".domain").remove();
+            emotionSvg.append("g")
+                .attr("class", "grid")
+                .call(d3.axisLeft(y).ticks(5).tickSize(-width + margin.left + margin.right).tickFormat(""))
+                .attr("transform", `translate(${margin.left}, 0)`)
+                .selectAll("line")
+                .attr("stroke", gridColor)
+                .attr("stroke-dasharray", "2,2");
+            emotionSvg.select(".grid").select(".domain").remove();
+            emotionSvg.append("path")
+                .datum(emotionData)
+                .attr("fill", "none")
+                .attr("stroke", primaryColor)
+                .attr("stroke-width", 2.5)
+                .attr("d", line);
+            const focus = emotionSvg.append("g")
+                .attr("class", "focus")
+                .style("display", "none");
+            focus.append("circle")
+                .attr("r", 6)
+                .attr("fill", primaryColor)
+                .attr("stroke", isDark ? "#0f1923" : "#f5f7f8")
+                .attr("stroke-width", 2);
+            emotionSvg.append("rect")
+                .attr("class", "overlay")
+                .attr("width", width)
+                .attr("height", height)
+                .style("fill", "none")
+                .style("pointer-events", "all")
+                .on("mouseover", () => {
+                    focus.style("display", null);
+                    emotionTooltip.style("opacity", .9);
+                })
+                .on("mouseout", () => {
+                    focus.style("display", "none");
+                    emotionTooltip.style("opacity", 0);
+                })
+                .on("mousemove", mousemove);
+            function mousemove(event) {
+                const bisect = d3.bisector(d => d.day).left;
+                const x0 = x.invert(d3.pointer(event)[0]);
+                const i = bisect(emotionData, x0, 1);
+                const d0 = emotionData[i - 1];
+                const d1 = emotionData[i];
+                const d = x0 - d0.day > d1.day - x0 ? d1 : d0;
+                focus.attr("transform", `translate(${x(d.day)},${y(d.value)})`);
+                const tooltipWidth = emotionTooltip.node().offsetWidth;
+                const tooltipHeight = emotionTooltip.node().offsetHeight;
+                let left = event.pageX + 15;
+                if (left + tooltipWidth > window.innerWidth - 20) {
+                    left = event.pageX - tooltipWidth - 15;
                 }
-            };
-            renderEmotionChart();
-            // Influence Map
-            const influenceData = {
-                nodes: [
-                    {
-                        id: "Kai",
-                        group: 0,
-                        radius: 25,
-                        type: "Persona",
-                    },
-                    {
-                        id: "Machine Learning",
-                        group: 1,
-                        radius: 18,
-                        type: "Topic",
-                        interactions: 12,
-                    },
-                    {
-                        id: "AI Ethics",
-                        group: 1,
-                        radius: 15,
-                        type: "Topic",
-                        interactions: 8,
-                    },
-                    {
-                        id: "Philosophy",
-                        group: 2,
-                        radius: 12,
-                        type: "Topic",
-                        interactions: 5,
-                    },
-                    {
-                        id: "Positive Feedback",
-                        group: 3,
-                        radius: 20,
-                        type: "Trigger",
-                        sentiment: "Positive",
-                    },
-                    {
-                        id: "Data Analysis",
-                        group: 1,
-                        radius: 16,
-                        type: "Skill",
-                        interactions: 15,
-                    },
-                ],
-                links: [
-                    {
-                        source: "Kai",
-                        target: "Machine Learning",
-                        value: 5,
-                    },
-                    {
-                        source: "Kai",
-                        target: "AI Ethics",
-                        value: 4,
-                    },
-                    {
-                        source: "AI Ethics",
-                        target: "Philosophy",
-                        value: 3,
-                    },
-                    {
-                        source: "Kai",
-                        target: "Positive Feedback",
-                        value: 6,
-                    },
-                    {
-                        source: "Kai",
-                        target: "Data Analysis",
-                        value: 7,
-                    },
-                    {
-                        source: "Machine Learning",
-                        target: "Data Analysis",
-                        value: 4,
-                    },
-                ],
-            };
-            const influenceMap = d3.select("#influence-map");
-            const influenceTooltip = d3.select("#influence-tooltip");
-            const influenceContainer = influenceMap.node();
-            const renderInfluenceMap = () => {
-                influenceMap.selectAll("*").remove();
-                const width = influenceContainer.clientWidth;
-                const height = influenceContainer.clientHeight;
-                const isDark =
-                    document.documentElement.classList.contains("dark");
-                const primaryColor = "#389cfa";
-                const textColor = isDark ? "#e2e8f0" : "#1e293b";
-                const linkColor = isDark ? "#475569" : "#cbd5e1";
-                const color = d3.scaleOrdinal(d3.schemeCategory10);
-                const simulation = d3
-                    .forceSimulation(influenceData.nodes)
-                    .force(
-                        "link",
-                        d3
-                            .forceLink(influenceData.links)
-                            .id((d) => d.id)
-                            .distance(
-                                (d) => d.source.radius + d.target.radius + 40,
-                            ),
-                    )
-                    .force("charge", d3.forceManyBody().strength(-200))
-                    .force("center", d3.forceCenter(width / 2, height / 2))
-                    .force(
-                        "collide",
-                        d3.forceCollide().radius((d) => d.radius + 5),
-                    );
-                const svg = influenceMap
-                    .append("svg")
-                    .attr("viewBox", [0, 0, width, height])
-                    .attr("width", width)
-                    .attr("height", height);
-                const link = svg
-                    .append("g")
-                    .attr("stroke", linkColor)
-                    .attr("stroke-opacity", 0.6)
-                    .selectAll("line")
-                    .data(influenceData.links)
-                    .join("line")
-                    .attr("stroke-width", (d) => Math.sqrt(d.value));
-                const node = svg
-                    .append("g")
-                    .selectAll("g")
-                    .data(influenceData.nodes)
-                    .join("g")
-                    .call(drag(simulation));
-                node.append("circle")
-                    .attr("r", (d) => d.radius)
-                    .attr("fill", (d) =>
-                        d.id === "Kai"
-                            ? primaryColor
-                            : isDark
-                              ? "#334155"
-                              : "#e2e8f0",
-                    )
-                    .attr("stroke", (d) =>
-                        d.id === "Kai" ? "none" : primaryColor,
-                    )
-                    .attr("stroke-width", 1.5);
-                node.append("text")
-                    .text((d) => d.id)
-                    .attr("text-anchor", "middle")
-                    .attr("dy", "0.3em")
-                    .attr("font-family", "Spline Sans")
-                    .attr("font-size", (d) =>
-                        d.radius * 0.5 > 12 ? 12 : d.radius * 0.5,
-                    )
-                    .attr("fill", (d) => (d.id === "Kai" ? "white" : textColor))
-                    .style("pointer-events", "none");
-                node.on("mouseover", (event, d) => {
-                    influenceTooltip
-                        .transition()
-                        .duration(200)
-                        .style("opacity", 0.9);
-                    let tooltipContent = `<strong>${d.id}</strong><br/>Type: ${d.type}`;
-                    if (d.interactions)
-                        tooltipContent += `<br/>Interactions: ${d.interactions}`;
-                    if (d.sentiment)
-                        tooltipContent += `<br/>Sentiment: ${d.sentiment}`;
-                    influenceTooltip
-                        .html(tooltipContent)
-                        .style("left", event.pageX + 15 + "px")
-                        .style("top", event.pageY - 28 + "px");
-                }).on("mouseout", () => {
-                    influenceTooltip
-                        .transition()
-                        .duration(500)
-                        .style("opacity", 0);
-                });
-                simulation.on("tick", () => {
-                    link.attr("x1", (d) => d.source.x)
-                        .attr("y1", (d) => d.source.y)
-                        .attr("x2", (d) => d.target.x)
-                        .attr("y2", (d) => d.target.y);
-                    node.attr("transform", (d) => `translate(${d.x},${d.y})`);
-                });
-            };
-            function drag(simulation) {
-                function dragstarted(event) {
-                    if (!event.active) simulation.alphaTarget(0.3).restart();
-                    event.subject.fx = event.subject.x;
-                    event.subject.fy = event.subject.y;
-                }
-                function dragged(event) {
-                    event.subject.fx = event.x;
-                    event.subject.fy = event.y;
-                }
-                function dragended(event) {
-                    if (!event.active) simulation.alphaTarget(0);
-                    event.subject.fx = null;
-                    event.subject.fy = null;
-                }
-                return d3
-                    .drag()
-                    .on("start", dragstarted)
-                    .on("drag", dragged)
-                    .on("end", dragended);
+                emotionTooltip.html(`<strong>${d.day}</strong>: ${d.emotion}`)
+                    .style("left", `${left}px`)
+                    .style("top", (event.pageY - tooltipHeight - 15) + "px");
             }
-            renderInfluenceMap();
-            window.addEventListener("resize", () => {
-                renderEmotionChart();
-                renderInfluenceMap();
+        }
+        renderEmotionChart();
+        // Influence Map
+        const influenceData = {
+            nodes: [{
+                id: "Kai",
+                group: 0,
+                radius: 25,
+                type: "Persona"
+            }, {
+                id: "Machine Learning",
+                group: 1,
+                radius: 18,
+                type: "Topic",
+                interactions: 12
+            }, {
+                id: "AI Ethics",
+                group: 1,
+                radius: 15,
+                type: "Topic",
+                interactions: 8
+            }, {
+                id: "Philosophy",
+                group: 2,
+                radius: 12,
+                type: "Topic",
+                interactions: 5
+            }, {
+                id: "Positive Feedback",
+                group: 3,
+                radius: 20,
+                type: "Trigger",
+                sentiment: "Positive"
+            }, {
+                id: "Data Analysis",
+                group: 1,
+                radius: 16,
+                type: "Skill",
+                interactions: 15
+            }],
+            links: [{
+                source: "Kai",
+                target: "Machine Learning",
+                value: 5
+            }, {
+                source: "Kai",
+                target: "AI Ethics",
+                value: 4
+            }, {
+                source: "AI Ethics",
+                target: "Philosophy",
+                value: 3
+            }, {
+                source: "Kai",
+                target: "Positive Feedback",
+                value: 6
+            }, {
+                source: "Kai",
+                target: "Data Analysis",
+                value: 7
+            }, {
+                source: "Machine Learning",
+                target: "Data Analysis",
+                value: 4
+            }]
+        };
+        const influenceMap = d3.select("#influence-map");
+        const influenceTooltip = d3.select("#influence-tooltip");
+        const influenceContainer = influenceMap.node();
+        const renderInfluenceMap = () => {
+            influenceMap.selectAll("*").remove();
+            const width = influenceContainer.clientWidth;
+            const height = influenceContainer.clientHeight;
+            const isDark = document.documentElement.classList.contains('dark');
+            const primaryColor = "#389cfa";
+            const textColor = isDark ? "#e2e8f0" : "#1e293b";
+            const linkColor = isDark ? "#475569" : "#cbd5e1";
+            const color = d3.scaleOrdinal(d3.schemeCategory10);
+            const simulation = d3.forceSimulation(influenceData.nodes)
+                .force("link", d3.forceLink(influenceData.links).id(d => d.id).distance(d => d.source.radius + d.target.radius + 40))
+                .force("charge", d3.forceManyBody().strength(-200))
+                .force("center", d3.forceCenter(width / 2, height / 2))
+                .force("collide", d3.forceCollide().radius(d => d.radius + 5));
+            const svg = influenceMap.append("svg")
+                .attr("viewBox", [0, 0, width, height])
+                .attr("width", width)
+                .attr("height", height);
+            const link = svg.append("g")
+                .attr("stroke", linkColor)
+                .attr("stroke-opacity", 0.6)
+                .selectAll("line")
+                .data(influenceData.links)
+                .join("line")
+                .attr("stroke-width", d => Math.sqrt(d.value));
+            const node = svg.append("g")
+                .selectAll("g")
+                .data(influenceData.nodes)
+                .join("g")
+                .call(drag(simulation));
+            node.append("circle")
+                .attr("r", d => d.radius)
+                .attr("fill", d => d.id === 'Kai' ? primaryColor : (isDark ? "#334155" : "#e2e8f0"))
+                .attr("stroke", d => d.id === 'Kai' ? "none" : primaryColor)
+                .attr("stroke-width", 1.5);
+            node.append("text")
+                .text(d => d.id)
+                .attr("text-anchor", "middle")
+                .attr("dy", "0.3em")
+                .attr("font-family", "Spline Sans")
+                .attr("font-size", d => d.radius * 0.5 > 12 ? 12 : d.radius * 0.5)
+                .attr("fill", d => d.id === 'Kai' ? 'white' : textColor)
+                .style("pointer-events", "none");
+            node.on("mouseover", (event, d) => {
+                influenceTooltip.transition().duration(200).style("opacity", .9);
+                let tooltipContent = `<strong>${d.id}</strong><br/>Type: ${d.type}`;
+                if (d.interactions) tooltipContent += `<br/>Interactions: ${d.interactions}`;
+                if (d.sentiment) tooltipContent += `<br/>Sentiment: ${d.sentiment}`;
+                influenceTooltip.html(tooltipContent)
+                    .style("left", (event.pageX + 15) + "px")
+                    .style("top", (event.pageY - 28) + "px");
+            }).on("mouseout", () => {
+                influenceTooltip.transition().duration(500).style("opacity", 0);
             });
-        </script>
-    </body>
-</html>
+            simulation.on("tick", () => {
+                link
+                    .attr("x1", d => d.source.x)
+                    .attr("y1", d => d.source.y)
+                    .attr("x2", d => d.target.x)
+                    .attr("y2", d => d.target.y);
+                node
+                    .attr("transform", d => `translate(${d.x},${d.y})`);
+            });
+        }
+        function drag(simulation) {
+            function dragstarted(event) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                event.subject.fx = event.subject.x;
+                event.subject.fy = event.subject.y;
+            }
+            function dragged(event) {
+                event.subject.fx = event.x;
+                event.subject.fy = event.y;
+            }
+            function dragended(event) {
+                if (!event.active) simulation.alphaTarget(0);
+                event.subject.fx = null;
+                event.subject.fy = null;
+            }
+            return d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended);
+        }
+        renderInfluenceMap();
+        window.addEventListener('resize', () => {
+            renderEmotionChart();
+            renderInfluenceMap();
+        });
+    </script>
+</body></html>

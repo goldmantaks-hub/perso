@@ -1,4 +1,4 @@
-import { ArrowLeft, Settings, UserCircle, TrendingUp, Users, User, History, Brain, Smile, Palette } from "lucide-react";
+import { ArrowLeft, Settings, UserCircle, TrendingUp, Users, User, History, Brain, Smile, Palette, Sparkles, Zap, Award } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -210,16 +210,73 @@ export default function PersonaStatePage() {
                     <GrowthLogItem
                       IconComponent={Smile}
                       title="Emotional Shift"
-                      description="Felt 'Joy' after a positive conversation. Empathy +1"
+                      description="Felt 'Joy' after a positive interaction. Empathy +1"
                       isLast={false}
                     />
                     <GrowthLogItem
                       IconComponent={Palette}
-                      title="Creative Breakthrough"
-                      description="Developed a new idea. Creativity +1"
+                      title="Memory Link"
+                      description="Connected 'AI Ethics' to 'Philosophy'."
+                      isLast={false}
+                    />
+                    <GrowthLogItem
+                      IconComponent={Sparkles}
+                      title="Persona Level Up"
+                      description="Reached Level 5. Unlocked new trait."
                       isLast={true}
                     />
                   </ul>
+                </div>
+              </section>
+
+              {/* Influence Map */}
+              <section>
+                <h3 className="text-lg font-bold">Influence Map</h3>
+                <div className="mt-4 h-64 w-full rounded-xl bg-muted p-2" id="influence-map" data-testid="influence-map"></div>
+                <div className="graph-tooltip" id="influence-tooltip" data-testid="tooltip-influence-map"></div>
+              </section>
+
+              {/* AI Style & Tone */}
+              <section>
+                <h3 className="text-lg font-bold">AI Style & Tone</h3>
+                <div className="mt-4 divide-y divide-border rounded-xl bg-muted">
+                  <div className="flex items-center justify-between p-4" data-testid="current-tone">
+                    <span className="text-muted-foreground">Current Tone:</span>
+                    <span className="font-medium flex items-center gap-1">
+                      Calm <Smile className="w-4 h-4" />
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-4" data-testid="evolution-direction">
+                    <span className="text-muted-foreground">Evolution Direction:</span>
+                    <span className="font-medium flex items-center gap-1">
+                      Passionate <Zap className="w-4 h-4" />
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-4" data-testid="triggers">
+                    <span className="text-muted-foreground">Triggers:</span>
+                    <span className="font-medium">
+                      Data <TrendingUp className="w-4 h-4 inline" />, Knowledge <Brain className="w-4 h-4 inline" />
+                    </span>
+                  </div>
+                </div>
+              </section>
+
+              {/* Rewards & Points */}
+              <section>
+                <h3 className="text-lg font-bold">Rewards & Points</h3>
+                <div className="mt-4 divide-y divide-border rounded-xl bg-muted">
+                  <div className="flex justify-between p-4" data-testid="total-points">
+                    <span className="text-muted-foreground">Total Growth Points:</span>
+                    <span className="font-medium">1500 P</span>
+                  </div>
+                  <div className="p-4">
+                    <p className="mb-2 font-medium">Reward History:</p>
+                    <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground" data-testid="reward-history">
+                      <li>+100 points for 'New Topic Discovery'</li>
+                      <li>+50 points for 'Emotional Shift'</li>
+                      <li>+75 points for 'Memory Link'</li>
+                    </ul>
+                  </div>
                 </div>
               </section>
             </>
