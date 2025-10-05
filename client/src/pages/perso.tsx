@@ -242,9 +242,9 @@ export default function PersoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col">
       {/* 헤더 */}
-      <header className="sticky top-0 z-10 bg-background border-b border-border">
+      <header className="flex-shrink-0 bg-background border-b border-border">
         <div className="flex items-center gap-3 p-4">
           <div className="flex items-center gap-2">
             <button className="text-foreground" onClick={handleBack} data-testid="button-back">
@@ -321,7 +321,7 @@ export default function PersoPage() {
       </header>
 
       {/* 채팅 영역 */}
-      <div className="flex-1 overflow-y-auto p-4 pb-32 md:pb-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((msg: any) => {
           if (msg.messageType === 'join' || msg.senderType === 'system') {
             return (
@@ -398,7 +398,7 @@ export default function PersoPage() {
       </div>
 
       {/* 입력 영역 */}
-      <div className="sticky bottom-20 md:bottom-0 z-20 bg-background border-t border-border p-4">
+      <div className="flex-shrink-0 bg-background border-t border-border p-4">
         <div className="flex items-center gap-2">
           <Input
             value={message}
