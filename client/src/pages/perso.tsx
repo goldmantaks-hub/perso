@@ -20,7 +20,6 @@ export default function PersoPage() {
   // 메시지 및 게시물 정보 가져오기
   const { data, isLoading } = useQuery<any>({
     queryKey: ["/api/perso", postId, "messages"],
-    queryFn: () => fetch(`/api/perso/${postId}/messages`).then(res => res.json()),
     enabled: !!postId,
   });
 

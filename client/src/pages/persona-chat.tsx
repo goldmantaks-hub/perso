@@ -20,7 +20,6 @@ export default function PersonaChatPage() {
   // 메시지 및 페르소나 정보 가져오기
   const { data, isLoading } = useQuery<any>({
     queryKey: ["/api/chat/persona", personaId, "messages"],
-    queryFn: () => fetch(`/api/chat/persona/${personaId}/messages`).then(res => res.json()),
     enabled: !!personaId,
   });
 
