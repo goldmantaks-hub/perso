@@ -13,7 +13,7 @@ The application is built as a full-stack TypeScript application with a React fro
 
 ## Recent Changes
 
-### October 5, 2025 - Persona State Page: D3.js Emotion Timeline & UI Fixes
+### October 5, 2025 - Persona State Page: D3.js Visualizations & UI Fixes
 
 **D3.js Emotion Timeline Chart**
 - Implemented interactive emotion timeline using D3.js v7
@@ -23,6 +23,19 @@ The application is built as a full-stack TypeScript application with a React fro
 - Theme-aware colors adapting to light/dark mode
 - Chart isolates D3 DOM work in React useEffect for clean integration
 
+**D3.js Influence Map (Force-Directed Graph)**
+- Implemented interactive network graph showing persona's influence connections
+- Central "Kai" node connected to Topics, Skills, and Triggers
+- Force simulation with optimized parameters for visual clarity:
+  - Link distance based on node radii + 40px
+  - Charge force: -200 (repulsion)
+  - Center force and collision detection
+- Interactive features:
+  - Hover tooltips showing node type and metadata (interactions, sentiment)
+  - Drag-to-reposition nodes with smooth physics
+- Responsive design with automatic resize handling
+- Theme-aware node colors and link styling
+
 **Gauge Bar Overflow Fix**
 - Fixed visual overflow bug where stat values exceeding max (e.g., 17/10, 16/10) caused progress bars to break layout
 - Applied `Math.min()` clamping to limit bar width to 100% maximum
@@ -30,9 +43,12 @@ The application is built as a full-stack TypeScript application with a React fro
 - Text values still display correctly (e.g., "17/10") while bars remain contained
 
 **Technical Notes**
-- D3.js library added for data visualizations
-- Current emotion data is stubbed; will be replaced with real API payload
-- Future enhancement: Live theme updates for chart colors via ThemeProvider integration
+- D3.js v7 used for all data visualizations
+- Current data is stubbed; will be replaced with real API payloads
+- Future enhancements:
+  - Live theme updates for visualizations via ThemeProvider integration
+  - Simulation cleanup in useEffect for better performance
+  - Throttled ResizeObserver to prevent layout thrash
 
 ### October 5, 2025 - WebSocket Real-time Messaging & LLM Streaming
 
