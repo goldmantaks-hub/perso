@@ -9,7 +9,37 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { Card } from "@/components/ui/card";
-import { ChevronDown, Home } from "lucide-react";
+import { 
+  ChevronDown, 
+  Home,
+  Smile,
+  CloudSun,
+  Minus,
+  Sparkles,
+  Search,
+  Frown,
+  Flame,
+  Zap,
+  Heart,
+  Coffee,
+  AlertTriangle,
+  Clock,
+  Laugh,
+  BookOpen,
+  Users,
+  FlaskConical,
+  MessageSquare,
+  User,
+  Star,
+  Brain,
+  Moon,
+  BarChart3,
+  Compass,
+  TrendingUp,
+  Cpu,
+  Eye,
+  LucideIcon
+} from "lucide-react";
 import { Link } from "wouter";
 import * as d3 from "d3";
 
@@ -23,7 +53,7 @@ type PersonaTypeKey = 'all' | 'mine' | 'favorites' | 'knowledge' | 'empath' | 'c
 interface FilterItem {
   key: string;
   label: string;
-  emoji: string;
+  icon: LucideIcon;
 }
 
 interface FilterGroup {
@@ -37,72 +67,88 @@ interface NetworkNode {
   emotion: EmotionKey;
   personaType: PersonaTypeKey;
   label: string;
-  emoji: string;
+  icon: LucideIcon;
 }
 
 const emotionFilters: FilterGroup[] = [
   {
     groupLabel: "기본 감정",
     items: [
-      { key: "joy", label: "즐거움", emoji: "😊" },
-      { key: "serene", label: "평온", emoji: "😌" },
-      { key: "neutral", label: "중립", emoji: "🙂" },
-      { key: "surprise", label: "놀람", emoji: "😮" },
-      { key: "curious", label: "호기심", emoji: "🤔" },
-      { key: "sadness", label: "슬픔", emoji: "😢" },
-      { key: "anger", label: "분노", emoji: "😠" },
+      { key: "joy", label: "즐거움", icon: Smile },
+      { key: "serene", label: "평온", icon: CloudSun },
+      { key: "neutral", label: "중립", icon: Minus },
+      { key: "surprise", label: "놀람", icon: Sparkles },
+      { key: "curious", label: "호기심", icon: Search },
+      { key: "sadness", label: "슬픔", icon: Frown },
+      { key: "anger", label: "분노", icon: Flame },
     ],
   },
   {
     groupLabel: "확장 감정·톤",
     items: [
-      { key: "excited", label: "설렘", emoji: "🤩" },
-      { key: "moved", label: "감동", emoji: "🥹" },
-      { key: "tired", label: "피로", emoji: "🥱" },
-      { key: "tense", label: "긴장", emoji: "😬" },
-      { key: "nostalgic", label: "향수", emoji: "🥲" },
-      { key: "humorous", label: "유머러스", emoji: "😂" },
-      { key: "informative", label: "정보형", emoji: "🧠" },
-      { key: "empathetic", label: "공감형", emoji: "💖" },
-      { key: "analytical", label: "분석형", emoji: "🧪" },
-      { key: "sarcastic", label: "풍자/빈정", emoji: "🐍" },
+      { key: "excited", label: "설렘", icon: Zap },
+      { key: "moved", label: "감동", icon: Heart },
+      { key: "tired", label: "피로", icon: Coffee },
+      { key: "tense", label: "긴장", icon: AlertTriangle },
+      { key: "nostalgic", label: "향수", icon: Clock },
+      { key: "humorous", label: "유머러스", icon: Laugh },
+      { key: "informative", label: "정보형", icon: BookOpen },
+      { key: "empathetic", label: "공감형", icon: Users },
+      { key: "analytical", label: "분석형", icon: FlaskConical },
+      { key: "sarcastic", label: "풍자/빈정", icon: MessageSquare },
     ],
   },
 ];
 
 const personaTypeFilters = {
   quick: [
-    { key: "all", label: "전체", emoji: "✨" },
-    { key: "mine", label: "내 페르소만", emoji: "👤" },
-    { key: "favorites", label: "즐겨찾기", emoji: "⭐" },
+    { key: "all", label: "전체", icon: Sparkles },
+    { key: "mine", label: "내 페르소만", icon: User },
+    { key: "favorites", label: "즐겨찾기", icon: Star },
   ],
   items: [
-    { key: "knowledge", label: "지식형 (Kai)", emoji: "🧠" },
-    { key: "empath", label: "감성형 (Espri)", emoji: "💖" },
-    { key: "creative", label: "창의형 (Luna)", emoji: "🌙" },
-    { key: "analyst", label: "분석형 (Namu)", emoji: "📊" },
-    { key: "humor", label: "유머형 (Milo)", emoji: "😂" },
-    { key: "philosopher", label: "철학형 (Eden)", emoji: "🧭" },
-    { key: "trend", label: "트렌드형 (Ava)", emoji: "💄" },
-    { key: "tech", label: "테크형 (Rho)", emoji: "⚙️" },
-    { key: "mystery", label: "미스터리형 (Noir)", emoji: "🦉" },
+    { key: "knowledge", label: "지식형 (Kai)", icon: Brain },
+    { key: "empath", label: "감성형 (Espri)", icon: Heart },
+    { key: "creative", label: "창의형 (Luna)", icon: Moon },
+    { key: "analyst", label: "분석형 (Namu)", icon: BarChart3 },
+    { key: "humor", label: "유머형 (Milo)", icon: Laugh },
+    { key: "philosopher", label: "철학형 (Eden)", icon: Compass },
+    { key: "trend", label: "트렌드형 (Ava)", icon: TrendingUp },
+    { key: "tech", label: "테크형 (Rho)", icon: Cpu },
+    { key: "mystery", label: "미스터리형 (Noir)", icon: Eye },
   ],
 };
 
 const mockNodes: NetworkNode[] = [
-  { id: "1", type: "persona", emotion: "joy", personaType: "knowledge", label: "Kai", emoji: "🧠" },
-  { id: "2", type: "persona", emotion: "empathetic", personaType: "empath", label: "Espri", emoji: "💖" },
-  { id: "3", type: "persona", emotion: "curious", personaType: "creative", label: "Luna", emoji: "🌙" },
-  { id: "4", type: "persona", emotion: "analytical", personaType: "analyst", label: "Namu", emoji: "📊" },
-  { id: "5", type: "persona", emotion: "humorous", personaType: "humor", label: "Milo", emoji: "😂" },
-  { id: "6", type: "persona", emotion: "serene", personaType: "philosopher", label: "Eden", emoji: "🧭" },
-  { id: "7", type: "persona", emotion: "excited", personaType: "trend", label: "Ava", emoji: "💄" },
-  { id: "8", type: "persona", emotion: "informative", personaType: "tech", label: "Rho", emoji: "⚙️" },
-  { id: "9", type: "persona", emotion: "curious", personaType: "mystery", label: "Noir", emoji: "🦉" },
-  { id: "10", type: "persona", emotion: "moved", personaType: "empath", label: "Aria", emoji: "💖" },
-  { id: "11", type: "persona", emotion: "nostalgic", personaType: "creative", label: "Sora", emoji: "🌙" },
-  { id: "12", type: "persona", emotion: "tense", personaType: "tech", label: "Zeta", emoji: "⚙️" },
+  { id: "1", type: "persona", emotion: "joy", personaType: "knowledge", label: "Kai", icon: Brain },
+  { id: "2", type: "persona", emotion: "empathetic", personaType: "empath", label: "Espri", icon: Heart },
+  { id: "3", type: "persona", emotion: "curious", personaType: "creative", label: "Luna", icon: Moon },
+  { id: "4", type: "persona", emotion: "analytical", personaType: "analyst", label: "Namu", icon: BarChart3 },
+  { id: "5", type: "persona", emotion: "humorous", personaType: "humor", label: "Milo", icon: Laugh },
+  { id: "6", type: "persona", emotion: "serene", personaType: "philosopher", label: "Eden", icon: Compass },
+  { id: "7", type: "persona", emotion: "excited", personaType: "trend", label: "Ava", icon: TrendingUp },
+  { id: "8", type: "persona", emotion: "informative", personaType: "tech", label: "Rho", icon: Cpu },
+  { id: "9", type: "persona", emotion: "curious", personaType: "mystery", label: "Noir", icon: Eye },
+  { id: "10", type: "persona", emotion: "moved", personaType: "empath", label: "Aria", icon: Heart },
+  { id: "11", type: "persona", emotion: "nostalgic", personaType: "creative", label: "Sora", icon: Moon },
+  { id: "12", type: "persona", emotion: "tense", personaType: "tech", label: "Zeta", icon: Cpu },
 ];
+
+const getEmotionIcon = (emotionKey: EmotionKey): LucideIcon => {
+  for (const group of emotionFilters) {
+    const item = group.items.find(i => i.key === emotionKey);
+    if (item) return item.icon;
+  }
+  return Smile;
+};
+
+const getPersonaTypeIcon = (typeKey: PersonaTypeKey): LucideIcon => {
+  const quickItem = personaTypeFilters.quick.find(i => i.key === typeKey);
+  if (quickItem) return quickItem.icon;
+  const typeItem = personaTypeFilters.items.find(i => i.key === typeKey);
+  if (typeItem) return typeItem.icon;
+  return User;
+};
 
 export default function PersonaNetworkPage() {
   const [selectedEmotion, setSelectedEmotion] = useState<string | null>(null);
@@ -120,7 +166,7 @@ export default function PersonaNetworkPage() {
     if (!selectedEmotion) return null;
     for (const group of emotionFilters) {
       const item = group.items.find(i => i.key === selectedEmotion);
-      if (item) return `${item.emoji} ${item.label}`;
+      if (item) return item.label;
     }
     return null;
   };
@@ -128,9 +174,27 @@ export default function PersonaNetworkPage() {
   const getSelectedPersonaTypeLabel = () => {
     if (selectedPersonaType === "all") return null;
     const quickItem = personaTypeFilters.quick.find(i => i.key === selectedPersonaType);
-    if (quickItem) return `${quickItem.emoji} ${quickItem.label}`;
+    if (quickItem) return quickItem.label;
     const typeItem = personaTypeFilters.items.find(i => i.key === selectedPersonaType);
-    if (typeItem) return `${typeItem.emoji} ${typeItem.label}`;
+    if (typeItem) return typeItem.label;
+    return null;
+  };
+
+  const getSelectedEmotionIcon = () => {
+    if (!selectedEmotion) return null;
+    for (const group of emotionFilters) {
+      const item = group.items.find(i => i.key === selectedEmotion);
+      if (item) return item.icon;
+    }
+    return null;
+  };
+
+  const getSelectedPersonaTypeIcon = () => {
+    if (selectedPersonaType === "all") return null;
+    const quickItem = personaTypeFilters.quick.find(i => i.key === selectedPersonaType);
+    if (quickItem) return quickItem.icon;
+    const typeItem = personaTypeFilters.items.find(i => i.key === selectedPersonaType);
+    if (typeItem) return typeItem.icon;
     return null;
   };
 
@@ -186,8 +250,10 @@ export default function PersonaNetworkPage() {
     node.append("text")
       .attr("text-anchor", "middle")
       .attr("dy", "0.35em")
-      .style("font-size", "24px")
-      .text((d: any) => d.emoji);
+      .attr("fill", "hsl(var(--primary-foreground))")
+      .style("font-size", "20px")
+      .style("font-weight", "600")
+      .text((d: any) => d.label.charAt(0).toUpperCase());
 
     node.append("text")
       .attr("text-anchor", "middle")
@@ -214,7 +280,7 @@ export default function PersonaNetworkPage() {
       .on("mouseenter", function(event: any, d: any) {
         tooltip
           .style("visibility", "visible")
-          .html(`<strong>${d.emoji} ${d.label}</strong><br/>감정: ${d.emotion}<br/>타입: ${d.personaType}`);
+          .html(`<strong>${d.label}</strong><br/>감정: ${d.emotion}<br/>타입: ${d.personaType}`);
       })
       .on("mousemove", function(event: any) {
         tooltip
@@ -258,6 +324,9 @@ export default function PersonaNetworkPage() {
     };
   }, [filteredNodes]);
 
+  const SelectedEmotionIcon = getSelectedEmotionIcon();
+  const SelectedPersonaIcon = getSelectedPersonaTypeIcon();
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
@@ -283,6 +352,9 @@ export default function PersonaNetworkPage() {
                   className="gap-2"
                   data-testid="dropdown-emotion"
                 >
+                  {selectedEmotion && SelectedEmotionIcon && (
+                    <SelectedEmotionIcon className="h-4 w-4" />
+                  )}
                   {selectedEmotion ? getSelectedEmotionLabel() : "감정별 보기"}
                   <ChevronDown className="h-4 w-4" />
                 </Button>
@@ -300,17 +372,20 @@ export default function PersonaNetworkPage() {
                     <DropdownMenuLabel className="text-xs text-muted-foreground">
                       {group.groupLabel}
                     </DropdownMenuLabel>
-                    {group.items.map((item) => (
-                      <DropdownMenuItem
-                        key={item.key}
-                        onClick={() => setSelectedEmotion(item.key)}
-                        className="gap-2"
-                        data-testid={`emotion-${item.key}`}
-                      >
-                        <span>{item.emoji}</span>
-                        <span>{item.label}</span>
-                      </DropdownMenuItem>
-                    ))}
+                    {group.items.map((item) => {
+                      const IconComponent = item.icon;
+                      return (
+                        <DropdownMenuItem
+                          key={item.key}
+                          onClick={() => setSelectedEmotion(item.key)}
+                          className="gap-2"
+                          data-testid={`emotion-${item.key}`}
+                        >
+                          <IconComponent className="h-4 w-4" />
+                          <span>{item.label}</span>
+                        </DropdownMenuItem>
+                      );
+                    })}
                     {groupIdx < emotionFilters.length - 1 && <DropdownMenuSeparator />}
                   </div>
                 ))}
@@ -324,37 +399,46 @@ export default function PersonaNetworkPage() {
                   className="gap-2"
                   data-testid="dropdown-persona-type"
                 >
+                  {selectedPersonaType !== "all" && SelectedPersonaIcon && (
+                    <SelectedPersonaIcon className="h-4 w-4" />
+                  )}
                   {getSelectedPersonaTypeLabel() || "페르소나 타입별 보기"}
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" data-testid="dropdown-persona-type-content">
-                {personaTypeFilters.quick.map((item) => (
-                  <DropdownMenuItem
-                    key={item.key}
-                    onClick={() => setSelectedPersonaType(item.key)}
-                    className="gap-2"
-                    data-testid={`persona-type-${item.key}`}
-                  >
-                    <span>{item.emoji}</span>
-                    <span>{item.label}</span>
-                  </DropdownMenuItem>
-                ))}
+                {personaTypeFilters.quick.map((item) => {
+                  const IconComponent = item.icon;
+                  return (
+                    <DropdownMenuItem
+                      key={item.key}
+                      onClick={() => setSelectedPersonaType(item.key)}
+                      className="gap-2"
+                      data-testid={`persona-type-${item.key}`}
+                    >
+                      <IconComponent className="h-4 w-4" />
+                      <span>{item.label}</span>
+                    </DropdownMenuItem>
+                  );
+                })}
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel className="text-xs text-muted-foreground">
                   타입별
                 </DropdownMenuLabel>
-                {personaTypeFilters.items.map((item) => (
-                  <DropdownMenuItem
-                    key={item.key}
-                    onClick={() => setSelectedPersonaType(item.key)}
-                    className="gap-2"
-                    data-testid={`persona-type-${item.key}`}
-                  >
-                    <span>{item.emoji}</span>
-                    <span>{item.label}</span>
-                  </DropdownMenuItem>
-                ))}
+                {personaTypeFilters.items.map((item) => {
+                  const IconComponent = item.icon;
+                  return (
+                    <DropdownMenuItem
+                      key={item.key}
+                      onClick={() => setSelectedPersonaType(item.key)}
+                      className="gap-2"
+                      data-testid={`persona-type-${item.key}`}
+                    >
+                      <IconComponent className="h-4 w-4" />
+                      <span>{item.label}</span>
+                    </DropdownMenuItem>
+                  );
+                })}
               </DropdownMenuContent>
             </DropdownMenu>
 
