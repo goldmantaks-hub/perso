@@ -71,6 +71,7 @@ export function evolvePersonaStyle(personaId: string, personaName: string): Styl
 
   markStyleUpdated(personaId);
 
+  console.log(`[MEMORY SYNC] Persona tone evolved → "${update.newTone}" (${personaName})`);
   console.log(`[STYLE EVOLUTION] ${personaName} style evolved:`, {
     from: update.oldTone || 'initial',
     to: update.newTone,

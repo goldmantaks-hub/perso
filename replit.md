@@ -130,3 +130,54 @@ The application is a full-stack TypeScript application, utilizing React for the 
 
 ### Authentication & Sessions
 - **connect-pg-simple**: PostgreSQL session store (configured).
+
+## Recent Changes
+
+### October 5, 2025 - Step 8: Comprehensive Integration & Logging System
+
+**Enhanced Logging System** - All systems now use standardized console log formats:
+- `[DELTA]` - Growth stat changes (e.g., "Espri: Empathy +1 (user interaction)")
+- `[OPEN]` - Perso open conditions (e.g., "Perso triggered by similarity 0.92 (by @user)")
+- `[CHAT]` - AI dialogue messages (e.g., 'Milo: "이거 맛집 각이네 😂"')
+- `[REASONING]` - Persona selection logic (e.g., "Selected 3 personas based on random selection: Kai, Milo, Espri")
+- `[JACKPOT]` - Jackpot triggers (e.g., "JACKPOT TRIGGERED Persona Espri growth doubled")
+- `[MEMORY SYNC]` - Tone evolution (e.g., 'Persona tone evolved → "gentle" (Espri)')
+
+**Integration Test Results** - Verified complete ecosystem flow:
+1. ✅ Sentiment Analysis → AI extracts emotion & tones from user posts
+2. ✅ Growth Reflection → Stats update based on interaction patterns  
+3. ✅ Perso Open → Validates conditions (similarity ≥0.75, 2min cooldown, no duplicates)
+4. ✅ AI Dialogue → Multi-persona conversations with context awareness
+5. ✅ User Participation → Human bridge integrates user messages
+6. ✅ Visualization → Real-time emotion timeline & influence map updates
+
+**System Flow** (End-to-End):
+```
+User Post → Sentiment Analysis → [DELTA] Growth +1 
+          → Perso Open Check → [OPEN] similarity 0.82
+          → AI Dialogue → [REASONING] Selected personas 
+                       → [CHAT] AI responses
+          → User Reply → Human Bridge → [CHAT] More AI responses
+          → Memory Sync → [MEMORY SYNC] Tone evolved
+          → Visualization → conversation:end event → Chart update
+```
+
+**Console Log Examples from Live System:**
+```
+[REASONING] Selected 4 personas based on random selection: Rho, Ava, Eden, Namu
+[CHAT] Rho: "소중한 추억을 친구들과 나누셨군요!"
+[DIALOGUE] Rho (tech): 소중한 추억을 친구들과 나누셨군요! ...
+[OPEN] Perso triggered by similarity 0.92 (by @jieun_kim) → no growth
+[HUMAN BRIDGE] User jieun_kim said: "정말 재밌었어요! 다음에 또 가고 싶네요"
+[DIALOGUE MEMORY] Stored message for post integration-test (3/50)
+[PERSONA MEMORY] Espri emotion recorded: empathetic (total: 1)
+[DELTA] Espri: Empathy +1 (user interaction)
+[MEMORY SYNC] Persona tone evolved → "따뜻하고 공감적인" (Espri)
+[WS] Conversation ended for post integration-test
+```
+
+**Files Modified:**
+- `server/api/personas.ts` - Added [OPEN] log with similarity score
+- `server/memory/personaMemory.ts` - Added [DELTA] log for growth tracking
+- `server/engine/dialogueOrchestrator.ts` - Added [CHAT] and [REASONING] logs
+- `server/engine/styleEvolution.ts` - Added [MEMORY SYNC] log for tone evolution

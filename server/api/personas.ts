@@ -84,7 +84,7 @@ export async function openPerso(input: OpenPersoInput): Promise<{
   if (jackpotChance < 0.02) {
     jackpot = true;
     growthMultiplier = 2;
-    console.log(`🎉 [JACKPOT TRIGGERED] Persona ${input.personaName || 'Unknown'} growth doubled`);
+    console.log(`[JACKPOT] Triggered for ${input.personaName || 'Unknown'} - growth doubled`);
   }
 
   const deltaLog = input.deltas 
@@ -94,7 +94,7 @@ export async function openPerso(input: OpenPersoInput): Promise<{
         .join(', ')
     : '';
 
-  console.log(`[PERSO OPENED] by @${input.username} → ${deltaLog || 'no growth'}`);
+  console.log(`[OPEN] Perso triggered by similarity ${similarity.toFixed(2)} (by @${input.username}) → ${deltaLog || 'no growth'}`);
 
   persoOpenHistory.push({
     userId: input.userId,

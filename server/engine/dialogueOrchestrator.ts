@@ -176,6 +176,8 @@ export async function dialogueOrchestrator(
   const dialogues: Array<{ persona: string; message: string; type: string }> = [];
   const context: DialogueContext = { previousMessages: [] };
 
+  console.log(`[REASONING] Selected ${selectedPersonas.length} personas based on ${requestedPersonas ? 'request' : 'random selection'}: ${selectedPersonas.join(', ')}`);
+
   for (const personaName of selectedPersonas) {
     const profile = personaProfiles[personaName];
     if (!profile) continue;
@@ -191,6 +193,7 @@ export async function dialogueOrchestrator(
     context.previousMessages = context.previousMessages || [];
     context.previousMessages.push({ persona: personaName, message });
 
+    console.log(`[CHAT] ${personaName}: "${message}"`);
     console.log(`[DIALOGUE] ${personaName} (${profile.type}): ${message}`);
   }
 

@@ -45,7 +45,7 @@ export function calculateReward(event: RewardEvent): RewardResult {
       if (jackpotChance < 0.02) {
         jackpot = true;
         growthMultiplier = 2;
-        console.log(`🎉 [JACKPOT TRIGGERED] Persona ${event.personaId} growth doubled`);
+        console.log(`[JACKPOT] Triggered for persona ${event.personaId} - growth doubled`);
       }
       break;
   }

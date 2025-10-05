@@ -91,6 +91,7 @@ export function recordGrowth(
     memory.growthHistory.shift();
   }
 
+  console.log(`[DELTA] ${personaName}: ${stat} +${delta} (${trigger})`);
   console.log(`[PERSONA MEMORY] ${personaName} growth: ${stat} +${delta} (${trigger})`);
 }
 
