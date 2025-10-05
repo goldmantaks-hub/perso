@@ -35,13 +35,45 @@ export default function PersoPage() {
   const participants = data?.participants || [];
   const post = data?.post;
 
-  // 메시지 전송
+  // 메시지 전송 (낙관적 업데이트)
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
       return await apiRequest("POST", `/api/perso/${postId}/messages`, { content, isAI: false });
     },
+    onMutate: async (content: string) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/perso", postId, "messages"] });
+      
+      const previousData = queryClient.getQueryData(["/api/perso", postId, "messages"]);
+      
+      const currentUser = await queryClient.ensureQueryData({ queryKey: ['/api/user/persona'] }) as any;
+      
+      const optimisticMessage = {
+        id: `temp-${Date.now()}`,
+        content,
+        isAI: false,
+        createdAt: new Date().toISOString(),
+        user: {
+          name: currentUser?.name || '나',
+          profileImage: currentUser?.profileImage,
+        },
+      };
+      
+      queryClient.setQueryData(["/api/perso", postId, "messages"], (old: any) => ({
+        ...old,
+        messages: [...(old?.messages || []), optimisticMessage],
+      }));
+      
+      return { previousData };
+    },
+    onError: (err, content, context: any) => {
+      queryClient.setQueryData(["/api/perso", postId, "messages"], context?.previousData);
+      toast({
+        title: "메시지 전송 실패",
+        description: "다시 시도해주세요.",
+        variant: "destructive",
+      });
+    },
     onSuccess: async (_, sentMessageContent) => {
-      // 페르소나 데이터 확보 (로딩 중이면 완료 대기)
       let personaData: any;
       try {
         personaData = await queryClient.ensureQueryData({
@@ -67,35 +99,28 @@ export default function PersoPage() {
         return;
       }
       
-      // AI 자동 응답 생성 (OpenAI 기반, 1초 후)
       setTimeout(async () => {
         try {
-          // 최신 메시지 목록을 확실하게 가져오기 (refetch 후 데이터 반환)
           await queryClient.refetchQueries({ queryKey: ["/api/perso", postId, "messages"] });
           const updatedData = await queryClient.ensureQueryData({
             queryKey: ["/api/perso", postId, "messages"],
           }) as any;
           
           const allMessages = updatedData?.messages || [];
-          
-          // 최근 5개 메시지 (방금 보낸 메시지 포함 보장)
           const recentMessages = allMessages.slice(-5);
           
-          // OpenAI를 사용한 AI 응답 생성 (apiRequest는 이미 에러 체크함)
           const response = await apiRequest("POST", `/api/perso/${postId}/ai-response`, {
             personaId,
             recentMessages,
           });
           const aiResponse = await response.json();
           
-          // 빈 응답 체크
           const aiContent = aiResponse.content?.trim();
           if (!aiContent || aiContent.length === 0) {
             console.warn('[PERSO] Empty AI response received, skipping');
             return;
           }
           
-          // AI 응답을 메시지로 저장
           await apiRequest("POST", `/api/perso/${postId}/messages`, { 
             content: aiContent,
             isAI: true,
@@ -106,7 +131,6 @@ export default function PersoPage() {
         } catch (error: any) {
           console.error('AI 응답 생성 실패:', error);
           
-          // OpenAI 키 미설정 등의 특정 에러 메시지 처리
           let errorMessage = "다시 시도해주세요.";
           if (error.message?.includes("OpenAI")) {
             errorMessage = "AI 서비스를 사용할 수 없습니다. 관리자에게 문의하세요.";
@@ -119,6 +143,9 @@ export default function PersoPage() {
           });
         }
       }, 1000);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/perso", postId, "messages"] });
     },
   });
 

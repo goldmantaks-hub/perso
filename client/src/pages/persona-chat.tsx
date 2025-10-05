@@ -27,20 +27,50 @@ export default function PersonaChatPage() {
   const targetPersona = data?.targetPersona;
   const userPersona = data?.userPersona;
 
-  // 메시지 전송
+  // 메시지 전송 (낙관적 업데이트)
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
       return await apiRequest("POST", `/api/chat/persona/${personaId}/messages`, { content });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/chat/persona", personaId, "messages"] });
+    onMutate: async (content: string) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/chat/persona", personaId, "messages"] });
+      
+      const previousData = queryClient.getQueryData(["/api/chat/persona", personaId, "messages"]);
+      
+      const currentData = queryClient.getQueryData(["/api/chat/persona", personaId, "messages"]) as any;
+      const userPersona = currentData?.userPersona;
+      
+      const optimisticMessage = {
+        id: `temp-${Date.now()}`,
+        content,
+        isAI: false,
+        createdAt: new Date().toISOString(),
+        senderType: 'persona',
+        senderId: userPersona?.id,
+        persona: userPersona ? {
+          id: userPersona.id,
+          name: userPersona.name,
+          image: userPersona.image,
+        } : null,
+      };
+      
+      queryClient.setQueryData(["/api/chat/persona", personaId, "messages"], (old: any) => ({
+        ...old,
+        messages: [...(old?.messages || []), optimisticMessage],
+      }));
+      
+      return { previousData };
     },
-    onError: (error: any) => {
+    onError: (err, content, context: any) => {
+      queryClient.setQueryData(["/api/chat/persona", personaId, "messages"], context?.previousData);
       toast({
         title: "메시지 전송 실패",
-        description: error.message || "다시 시도해주세요.",
+        description: err.message || "다시 시도해주세요.",
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/chat/persona", personaId, "messages"] });
     },
   });
 
