@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ArrowLeft, Send, Trash2 } from "lucide-react";
-import { Link, useRoute } from "wouter";
+import { Link, useRoute, useLocation } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,8 +15,10 @@ export default function PersoPage() {
   const [, params] = useRoute("/perso/:postId");
   const postId = params?.postId;
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   const [message, setMessage] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 메시지 및 게시물 정보 가져오기 (WebSocket으로 실시간 업데이트)
   const { data, isLoading } = useQuery<any>({
@@ -59,11 +61,35 @@ export default function PersoPage() {
     });
   }, [postId]);
 
-  useWebSocket({
+  // 시스템 메시지 수신
+  const handleSystemMessage = useCallback((systemMessage: any) => {
+    queryClient.setQueryData(["/api/perso", postId, "messages"], (old: any) => {
+      if (!old) return old;
+      
+      return {
+        ...old,
+        messages: [...(old.messages || []), systemMessage],
+      };
+    });
+  }, [postId]);
+
+  const { leaveConversation } = useWebSocket({
     conversationId,
     onMessage: handleNewMessage,
+    onSystemMessage: handleSystemMessage,
     enabled: !!conversationId,
   });
+
+  // 자동 스크롤
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // 뒤로가기 핸들러
+  const handleBack = () => {
+    leaveConversation();
+    setLocation("/feed");
+  };
 
   // 메시지 전송 (낙관적 업데이트)
   const sendMessageMutation = useMutation({
@@ -221,11 +247,9 @@ export default function PersoPage() {
       <header className="sticky top-0 z-10 bg-background border-b border-border">
         <div className="flex items-center gap-3 p-4">
           <div className="flex items-center gap-2">
-            <Link href="/feed">
-              <button className="text-foreground" data-testid="button-back">
-                <ArrowLeft className="w-6 h-6" />
-              </button>
-            </Link>
+            <button className="text-foreground" onClick={handleBack} data-testid="button-back">
+              <ArrowLeft className="w-6 h-6" />
+            </button>
             <Button
               variant="ghost"
               size="icon"
@@ -370,6 +394,7 @@ export default function PersoPage() {
           </div>
           );
         })}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* 입력 영역 */}

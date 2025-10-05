@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ArrowLeft, Send } from "lucide-react";
-import { Link, useRoute } from "wouter";
+import { useRoute, useLocation } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ export default function PersonaChatPage() {
   const [, params] = useRoute("/chat/:personaId");
   const personaId = params?.personaId;
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   const [message, setMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -120,9 +121,22 @@ export default function PersonaChatPage() {
     });
   }, [personaId]);
 
-  useWebSocket({
+  // 시스템 메시지 수신
+  const handleSystemMessage = useCallback((systemMessage: any) => {
+    queryClient.setQueryData(["/api/chat/persona", personaId, "messages"], (old: any) => {
+      if (!old) return old;
+      
+      return {
+        ...old,
+        messages: [...(old.messages || []), systemMessage],
+      };
+    });
+  }, [personaId]);
+
+  const { leaveConversation } = useWebSocket({
     conversationId,
     onMessage: handleNewMessage,
+    onSystemMessage: handleSystemMessage,
     onStreamStart: handleStreamStart,
     onStreamChunk: handleStreamChunk,
     onStreamEnd: handleStreamEnd,
@@ -130,6 +144,17 @@ export default function PersonaChatPage() {
   });
 
   // 메시지 전송 (낙관적 업데이트)
+  // 자동 스크롤
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // 뒤로가기 핸들러
+  const handleBack = () => {
+    leaveConversation();
+    setLocation("/feed");
+  };
+
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
       return await apiRequest("POST", `/api/chat/persona/${personaId}/messages`, { content });
@@ -216,11 +241,9 @@ export default function PersonaChatPage() {
       {/* 헤더 */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="flex items-center gap-3 p-4">
-          <Link href="/feed">
-            <Button variant="ghost" size="icon" data-testid="button-back">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-          </Link>
+          <Button variant="ghost" size="icon" onClick={handleBack} data-testid="button-back">
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
           
           <div className="flex items-center gap-3 flex-1">
             <div className="relative">
@@ -259,6 +282,19 @@ export default function PersonaChatPage() {
             </div>
           ) : (
             messages.map((msg: any) => {
+              // 시스템 메시지 처리
+              if (msg.senderType === 'system' || msg.messageType === 'join' || msg.messageType === 'leave') {
+                return (
+                  <div key={msg.id} className="flex justify-center my-2">
+                    <div className="bg-muted rounded-full px-3 py-1">
+                      <p className="text-xs text-muted-foreground" data-testid={`system-message-${msg.id}`}>
+                        {msg.content}
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
+
               const isAI = msg.isAI;
               const persona = msg.persona;
 

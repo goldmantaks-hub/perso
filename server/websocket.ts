@@ -39,18 +39,44 @@ export function setupWebSocket(server: Server) {
 
   io.on("connection", (socket) => {
     const userId = socket.data.userId;
+    const username = socket.data.username;
     log(`[WS] User ${userId} connected`);
 
     // 대화방 참여
     socket.on("join:conversation", (conversationId: string) => {
       socket.join(`conversation:${conversationId}`);
       log(`[WS] User ${userId} joined conversation ${conversationId}`);
+      
+      // 입장 시스템 메시지 브로드캐스트
+      const joinMessage = {
+        id: `system-join-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+        conversationId,
+        senderType: 'system',
+        messageType: 'join',
+        content: `${username}님이 입장했습니다`,
+        createdAt: new Date().toISOString(),
+      };
+      
+      io.to(`conversation:${conversationId}`).emit('message:system', joinMessage);
     });
 
     // 대화방 나가기
     socket.on("leave:conversation", (conversationId: string) => {
-      socket.leave(`conversation:${conversationId}`);
       log(`[WS] User ${userId} left conversation ${conversationId}`);
+      
+      // 퇴장 시스템 메시지 브로드캐스트
+      const leaveMessage = {
+        id: `system-leave-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+        conversationId,
+        senderType: 'system',
+        messageType: 'leave',
+        content: `${username}님이 나갔습니다`,
+        createdAt: new Date().toISOString(),
+      };
+      
+      io.to(`conversation:${conversationId}`).emit('message:system', leaveMessage);
+      
+      socket.leave(`conversation:${conversationId}`);
     });
 
     // 연결 해제

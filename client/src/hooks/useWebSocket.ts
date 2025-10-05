@@ -4,6 +4,7 @@ import { io, Socket } from 'socket.io-client';
 interface UseWebSocketOptions {
   conversationId?: string;
   onMessage?: (message: any) => void;
+  onSystemMessage?: (message: any) => void;
   onStreamStart?: (data: { id: string; personaId: string }) => void;
   onStreamChunk?: (data: { id: string; chunk: string; content: string }) => void;
   onStreamEnd?: (message: any) => void;
@@ -12,7 +13,8 @@ interface UseWebSocketOptions {
 
 export function useWebSocket({ 
   conversationId, 
-  onMessage, 
+  onMessage,
+  onSystemMessage,
   onStreamStart,
   onStreamChunk,
   onStreamEnd,
@@ -70,6 +72,11 @@ export function useWebSocket({
       socket.on('message:new', onMessage);
     }
     
+    // 시스템 메시지 수신
+    if (onSystemMessage) {
+      socket.on('message:system', onSystemMessage);
+    }
+    
     // 스트리밍 이벤트
     if (onStreamStart) {
       socket.on('message:stream:start', onStreamStart);
@@ -92,6 +99,7 @@ export function useWebSocket({
       }
       
       socket.off('message:new');
+      socket.off('message:system');
       socket.off('message:stream:start');
       socket.off('message:stream:chunk');
       socket.off('message:stream:end');
@@ -107,23 +115,26 @@ export function useWebSocket({
 
     // 기존 핸들러 제거
     socket.off('message:new');
+    socket.off('message:system');
     socket.off('message:stream:start');
     socket.off('message:stream:chunk');
     socket.off('message:stream:end');
     
     // 새 핸들러 등록
     if (onMessage) socket.on('message:new', onMessage);
+    if (onSystemMessage) socket.on('message:system', onSystemMessage);
     if (onStreamStart) socket.on('message:stream:start', onStreamStart);
     if (onStreamChunk) socket.on('message:stream:chunk', onStreamChunk);
     if (onStreamEnd) socket.on('message:stream:end', onStreamEnd);
 
     return () => {
       socket.off('message:new');
+      socket.off('message:system');
       socket.off('message:stream:start');
       socket.off('message:stream:chunk');
       socket.off('message:stream:end');
     };
-  }, [onMessage, onStreamStart, onStreamChunk, onStreamEnd]);
+  }, [onMessage, onSystemMessage, onStreamStart, onStreamChunk, onStreamEnd]);
 
   // 대화방 변경 시 join/leave
   useEffect(() => {
@@ -143,8 +154,16 @@ export function useWebSocket({
     }
   }, []);
 
+  const leaveConversation = useCallback(() => {
+    const socket = socketRef.current;
+    if (socket && socket.connected && conversationId) {
+      socket.emit('leave:conversation', conversationId);
+    }
+  }, [conversationId]);
+
   return {
     socket: socketRef.current,
     disconnect,
+    leaveConversation,
   };
 }
