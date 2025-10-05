@@ -13,6 +13,39 @@ The application is built as a full-stack TypeScript application with a React fro
 
 ## Recent Changes
 
+### October 5, 2025 - PERSO Open Conditions & Reward System
+
+**Perso Open System** (`POST /api/perso/open`)
+- Implemented complete perso opening validation and reward logic
+- Opening conditions:
+  - **Positive sentiment** ≥ 0.8 (threshold validation)
+  - **Similarity/Resonance** ≥ 0.75 (calculated from positive sentiment)
+  - **Cooldown enforcement**: 2-minute cooldown per user
+  - **Duplicate detection**: Content hash-based deduplication (10-minute window)
+- Console logging: `[PERSO OPENED] by @username → empathy +1, creativity +1`
+
+**Reward System** (`calculateReward`)
+- Base points: +10 for successful perso open
+- High resonance bonus: +20 points when resonance ≥ 0.9
+- Jackpot system:
+  - 2% random chance per opening
+  - Growth multiplier: 2x (doubles all stat gains)
+  - Console log: `🎉 [JACKPOT TRIGGERED] Persona {name} growth doubled`
+- Reward types: `perso_opened`, `post_created`, `dialogue_participated`, `empathy_shown`, `growth_achieved`
+
+**Validation Rules**
+- Content hash tracking prevents duplicate submissions
+- 10-minute history cleanup to manage memory
+- User-specific cooldown tracking (2 minutes)
+- Graceful failure with descriptive error messages
+
+**Test Results**
+- ✅ Success case (positive ≥ 0.8): Points awarded correctly
+- ✅ Failure case (positive < 0.8): Proper rejection with reason
+- ✅ Cooldown enforcement: 2-minute blocking works
+- ✅ Jackpot trigger: 2% probability confirmed working
+- ✅ High resonance (≥0.9): 20 points awarded vs 10 base points
+
 ### October 5, 2025 - PERSO Sentiment Analysis & Growth System
 
 **Sentiment Analysis Engine** (`POST /api/analyze`)

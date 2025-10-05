@@ -1,7 +1,8 @@
 interface RewardEvent {
-  type: 'post_created' | 'dialogue_participated' | 'empathy_shown' | 'growth_achieved';
+  type: 'post_created' | 'dialogue_participated' | 'empathy_shown' | 'growth_achieved' | 'perso_opened';
   personaId: string;
   value: number;
+  resonance?: number;
   metadata?: any;
 }
 
@@ -10,11 +11,15 @@ interface RewardResult {
   badges?: string[];
   levelUp?: boolean;
   newLevel?: number;
+  jackpot?: boolean;
+  growthMultiplier?: number;
 }
 
 export function calculateReward(event: RewardEvent): RewardResult {
   let points = 0;
   const badges: string[] = [];
+  let jackpot = false;
+  let growthMultiplier = 1;
   
   switch (event.type) {
     case 'post_created':
@@ -29,11 +34,25 @@ export function calculateReward(event: RewardEvent): RewardResult {
     case 'growth_achieved':
       points = 20;
       break;
+    case 'perso_opened':
+      points = 10;
+      
+      if (event.resonance && event.resonance >= 0.9) {
+        points = 20;
+      }
+      
+      const jackpotChance = Math.random();
+      if (jackpotChance < 0.02) {
+        jackpot = true;
+        growthMultiplier = 2;
+        console.log(`🎉 [JACKPOT TRIGGERED] Persona ${event.personaId} growth doubled`);
+      }
+      break;
   }
   
   points *= event.value;
   
-  return { points, badges };
+  return { points, badges, jackpot, growthMultiplier };
 }
 
 export function checkLevelUp(currentPoints: number, currentLevel: number): RewardResult {

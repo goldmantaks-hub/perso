@@ -8,6 +8,7 @@ import { db } from "./db";
 import { eq } from "drizzle-orm";
 import type { SocketServer } from "./websocket";
 import { analyzeSentiment } from "./api/analyze.js";
+import { openPerso } from "./api/personas.js";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // WebSocket 서버 참조를 위한 헬퍼 함수
@@ -56,6 +57,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // POST /api/analyze - 감성 분석 + 페르소나 델타 계산
   app.post("/api/analyze", analyzeSentiment);
+
+  // POST /api/perso/open - 페르소 오픈
+  app.post("/api/perso/open", authenticateToken, async (req, res) => {
+    try {
+      if (!req.userId) {
+        return res.status(401).json({ error: "인증되지 않은 사용자입니다" });
+      }
+
+      const { postId, content, sentiment, deltas, personaName } = req.body;
+      
+      const user = await storage.getUser(req.userId);
+      if (!user) {
+        return res.status(404).json({ error: "사용자를 찾을 수 없습니다" });
+      }
+
+      const result = await openPerso({
+        userId: req.userId,
+        username: user.username,
+        postId,
+        content,
+        sentiment,
+        deltas,
+        personaName
+      });
+
+      if (!result.success) {
+        return res.status(400).json({ 
+          success: false, 
+          reason: result.reason 
+        });
+      }
+
+      res.json({
+        success: true,
+        points: result.points,
+        jackpot: result.jackpot,
+        growthMultiplier: result.growthMultiplier
+      });
+    } catch (error) {
+      console.error("Perso open error:", error);
+      res.status(500).json({ error: "페르소 오픈 실패" });
+    }
+  });
 
   // POST /api/ai/analyze - AI 감성 분석 (Mock)
   app.post("/api/ai/analyze", async (req, res) => {
