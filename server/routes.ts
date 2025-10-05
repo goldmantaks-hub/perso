@@ -677,11 +677,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         max_tokens: 200,
       });
 
-      const assistantResponse = completion.choices[0]?.message?.content || "응답을 생성할 수 없습니다.";
+      const rawResponse = completion.choices[0]?.message?.content?.trim() || "";
+      
+      // 빈 응답 체크
+      if (!rawResponse || rawResponse.length === 0) {
+        console.warn(`[AI RESPONSE] Empty response for persona ${personaId}, rejecting`);
+        return res.status(400).json({ message: "AI가 빈 응답을 생성했습니다" });
+      }
 
       // 7. 응답 반환
       res.json({
-        response: assistantResponse,
+        content: rawResponse,
         persona: {
           id: persona.id,
           name: persona.name,
@@ -1230,11 +1236,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           max_tokens: 200,
         });
         
-        const response = completion.choices[0]?.message?.content || "...";
+        const content = completion.choices[0]?.message?.content?.trim() || "";
+        
+        // 빈 응답은 건너뛰기
+        if (!content || content.length === 0) {
+          console.warn(`[AI CONVERSE] Empty response from persona ${personaId}, skipping`);
+          continue;
+        }
+        
         responses.push({
           personaId,
           personaName: persona.name,
-          response,
+          content,
         });
       }
       

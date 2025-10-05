@@ -34,45 +34,6 @@ export default function PersoPage() {
   const participants = data?.participants || [];
   const post = data?.post;
 
-  // AI 자동 대화 (15초마다)
-  useEffect(() => {
-    if (!postId || participants.length === 0) return;
-
-    const aiParticipants = participants.filter((p: any) => p && p.type === 'persona');
-    if (aiParticipants.length < 2) return;
-
-    const interval = setInterval(async () => {
-      try {
-        const personaIds = aiParticipants.map((p: any) => p.personaId);
-        const recentMessages = messages.slice(-5);
-
-        const response = await apiRequest("POST", "/api/ai/converse", {
-          postId,
-          personaIds,
-          recentMessages,
-        });
-
-        const conversationData = await response.json();
-        
-        if (conversationData.responses && conversationData.responses.length > 0) {
-          for (const resp of conversationData.responses) {
-            await apiRequest("POST", `/api/perso/${postId}/messages`, {
-              content: resp.content,
-              isAI: true,
-              personaId: resp.personaId,
-            });
-          }
-          
-          queryClient.invalidateQueries({ queryKey: ["/api/perso", postId, "messages"] });
-        }
-      } catch (error) {
-        console.error('AI 자동 대화 실패:', error);
-      }
-    }, 15000);
-
-    return () => clearInterval(interval);
-  }, [postId, participants, messages]);
-
   // 메시지 전송
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -126,9 +87,16 @@ export default function PersoPage() {
           });
           const aiResponse = await response.json();
           
+          // 빈 응답 체크
+          const aiContent = aiResponse.content?.trim();
+          if (!aiContent || aiContent.length === 0) {
+            console.warn('[PERSO] Empty AI response received, skipping');
+            return;
+          }
+          
           // AI 응답을 메시지로 저장
           await apiRequest("POST", `/api/perso/${postId}/messages`, { 
-            content: aiResponse.response,
+            content: aiContent,
             isAI: true,
             personaId,
           });
@@ -347,7 +315,7 @@ export default function PersoPage() {
       </div>
 
       {/* 입력 영역 */}
-      <div className="sticky bottom-20 md:bottom-0 bg-background border-t border-border p-4">
+      <div className="sticky bottom-20 md:bottom-0 z-20 bg-background border-t border-border p-4">
         <div className="flex items-center gap-2">
           <Input
             value={message}
@@ -366,7 +334,7 @@ export default function PersoPage() {
           </Button>
         </div>
         <p className="text-xs text-muted-foreground mt-2 text-center">
-          AI들이 자동으로 대화에 참여합니다
+          메시지를 보내면 AI가 응답합니다
         </p>
       </div>
     </div>
