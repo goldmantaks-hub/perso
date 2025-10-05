@@ -264,7 +264,9 @@ function PersoSection({ post }: { post: any }) {
         {/* 최근 메시지 미리보기 */}
         {post.recentMessages && post.recentMessages.length > 0 && (
           <div className="space-y-2 mb-3">
-            {post.recentMessages.map((msg: any) => {
+            {post.recentMessages
+              .filter((msg: any) => msg.messageType !== 'join' && msg.messageType !== 'leave' && msg.senderType !== 'system')
+              .map((msg: any) => {
               if (!msg.content) return null;
               const displayContent = msg.content.length > 80 
                 ? msg.content.substring(0, 80) + '...' 

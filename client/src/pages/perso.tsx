@@ -66,6 +66,13 @@ export default function PersoPage() {
     queryClient.setQueryData(["/api/perso", postId, "messages"], (old: any) => {
       if (!old) return old;
       
+      // 중복 메시지 체크 (ID 기반)
+      const existingMessage = old.messages?.find((m: any) => m.id === systemMessage.id);
+      
+      if (existingMessage) {
+        return old;
+      }
+      
       return {
         ...old,
         messages: [...(old.messages || []), systemMessage],
@@ -263,9 +270,15 @@ export default function PersoPage() {
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary" />
-              <h1 className="text-lg font-bold">@{post?.author?.username?.split('_')?.[0] ?? '알수없음'}의 페르소</h1>
+              <h1 className="text-lg font-bold">{post?.title ?? '게시물'}의 페르소 공간</h1>
             </div>
-            <p className="text-xs text-muted-foreground">AI들이 대화 중 · 참여자 {participants.length}명</p>
+            <p className="text-xs text-muted-foreground">
+              {(() => {
+                const personaCount = participants.filter((p: any) => p?.type === 'persona').length;
+                const userCount = participants.filter((p: any) => p?.type === 'user').length;
+                return `페르소나 ${personaCount}명, 회원 ${userCount}명`;
+              })()}
+            </p>
           </div>
         </div>
         
