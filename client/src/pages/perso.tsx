@@ -50,14 +50,25 @@ export default function PersoPage() {
     queryClient.setQueryData(["/api/perso", postId, "messages"], (old: any) => {
       if (!old) return old;
       
-      // 중복 메시지 체크 (임시 ID와 실제 ID 모두 확인)
-      const existingMessage = old.messages?.find((m: any) => 
-        m.id === newMessage.id || 
-        (m.content === newMessage.content && 
-         Math.abs(new Date(m.createdAt).getTime() - new Date(newMessage.createdAt).getTime()) < 1000)
-      );
+      // 중복 메시지 체크
+      const existingMessage = old.messages?.find((m: any) => {
+        // 같은 ID
+        if (m.id === newMessage.id) return true;
+        
+        // 같은 내용 + 비슷한 시간 (5초 이내)
+        if (m.content === newMessage.content && 
+            m.isAI === newMessage.isAI) {
+          const timeDiff = Math.abs(
+            new Date(m.createdAt).getTime() - new Date(newMessage.createdAt).getTime()
+          );
+          if (timeDiff < 5000) return true;
+        }
+        
+        return false;
+      });
       
       if (existingMessage) {
+        console.log('[PERSO] Duplicate message detected, skipping:', newMessage.id);
         return old;
       }
       
@@ -111,7 +122,8 @@ export default function PersoPage() {
       if (!isAuthenticated()) {
         throw new Error('로그인이 필요합니다');
       }
-      return await apiRequest("POST", `/api/perso/${postId}/messages`, { content, isAI: false });
+      const response = await apiRequest("POST", `/api/perso/${postId}/messages`, { content, isAI: false });
+      return response.json();
     },
     onMutate: async (content: string) => {
       await queryClient.cancelQueries({ queryKey: ["/api/perso", postId, "messages"] });
@@ -126,8 +138,9 @@ export default function PersoPage() {
         currentUser = null;
       }
       
+      const tempId = `temp-${Date.now()}`;
       const optimisticMessage = {
-        id: `temp-${Date.now()}`,
+        id: tempId,
         content,
         isAI: false,
         createdAt: new Date().toISOString(),
@@ -142,7 +155,7 @@ export default function PersoPage() {
         messages: [...(old?.messages || []), optimisticMessage],
       }));
       
-      return { previousData };
+      return { previousData, tempId };
     },
     onError: (err: any, content, context: any) => {
       queryClient.setQueryData(["/api/perso", postId, "messages"], context?.previousData);
@@ -160,7 +173,19 @@ export default function PersoPage() {
         variant: "destructive",
       });
     },
-    onSuccess: async (_, sentMessageContent) => {
+    onSuccess: async (serverMessage: any, sentMessageContent, context: any) => {
+      queryClient.setQueryData(["/api/perso", postId, "messages"], (old: any) => {
+        if (!old) return old;
+        
+        return {
+          ...old,
+          messages: (old.messages || []).map((m: any) => 
+            m.id === context?.tempId ? serverMessage : m
+          ),
+        };
+      });
+      
+
       let personaData: any;
       try {
         personaData = await queryClient.ensureQueryData({
@@ -230,9 +255,6 @@ export default function PersoPage() {
           });
         }
       }, 1000);
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/perso", postId, "messages"] });
     },
   });
 
