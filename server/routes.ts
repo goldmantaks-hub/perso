@@ -409,6 +409,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/user/persona/growth-timeline - 성장 타임라인 가져오기 (7일간)
+  app.get("/api/user/persona/growth-timeline", authenticateToken, async (req, res) => {
+    try {
+      if (!req.userId) {
+        return res.status(401).json({ message: "인증되지 않은 사용자입니다" });
+      }
+      
+      const persona = await storage.getPersonaByUserId(req.userId);
+      if (!persona) {
+        return res.status(404).json({ message: "페르소나를 찾을 수 없습니다" });
+      }
+
+      // DB에서 최근 7일간 성장 로그 가져오기
+      const growthLogs = await storage.getGrowthLogsByPersona(persona.id);
+      
+      console.log(`[GROWTH TIMELINE] Loaded ${growthLogs.length} growth logs from DB for persona ${persona.id}`);
+      
+      // 날짜별로 그룹화하여 총 성장량 계산
+      const days = ['월', '화', '수', '목', '금', '토', '일'];
+      const today = new Date();
+      const growthTimeline = [];
+      
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const dayOfWeek = days[date.getDay() === 0 ? 6 : date.getDay() - 1];
+        
+        // 해당 날짜의 로그 필터링
+        const dayLogs = growthLogs.filter(log => {
+          const logDate = new Date(log.createdAt);
+          return logDate.toDateString() === date.toDateString();
+        });
+        
+        if (dayLogs.length > 0) {
+          // 총 성장량 계산 (모든 delta 합산)
+          const totalGrowth = dayLogs.reduce((sum, log) => {
+            return sum + log.delta;
+          }, 0);
+          
+          growthTimeline.push({
+            day: dayOfWeek,
+            value: totalGrowth,
+          });
+        } else {
+          // 데이터가 없으면 0
+          growthTimeline.push({
+            day: dayOfWeek,
+            value: 0,
+          });
+        }
+      }
+      
+      console.log(`[GROWTH TIMELINE] Returning ${growthTimeline.length} days of growth data`);
+      res.json(growthTimeline);
+    } catch (error) {
+      console.error("Get growth timeline error:", error);
+      res.status(500).json({ message: "성장 타임라인을 가져오는데 실패했습니다" });
+    }
+  });
+
   // POST /api/user/persona/clear-memory - 페르소나 메모리 초기화
   app.post("/api/user/persona/clear-memory", authenticateToken, async (req, res) => {
     try {

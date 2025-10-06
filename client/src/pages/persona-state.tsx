@@ -703,17 +703,30 @@ function EmotionTimeline() {
     icon: string;
   }
 
+  interface GrowthDataPoint {
+    day: string;
+    value: number;
+  }
+
   // 실제 API에서 감정 타임라인 데이터 가져오기
-  const { data: emotionData = [], isLoading } = useQuery<EmotionDataPoint[]>({
+  const { data: emotionData = [], isLoading: emotionLoading } = useQuery<EmotionDataPoint[]>({
     queryKey: ['/api/user/persona/emotion-timeline'],
+  });
+
+  // 실제 API에서 성장 타임라인 데이터 가져오기
+  const { data: growthData = [], isLoading: growthLoading } = useQuery<GrowthDataPoint[]>({
+    queryKey: ['/api/user/persona/growth-timeline'],
   });
 
   // 데이터 로드 완료 시 콘솔 로그
   useEffect(() => {
-    if (!isLoading && emotionData.length > 0) {
+    if (!emotionLoading && emotionData.length > 0) {
       console.log('[EMOTION TIMELINE] Loaded from DB:', emotionData);
     }
-  }, [isLoading, emotionData]);
+    if (!growthLoading && growthData.length > 0) {
+      console.log('[GROWTH TIMELINE] Loaded from DB:', growthData);
+    }
+  }, [emotionLoading, emotionData, growthLoading, growthData]);
 
   // 기본값 설정 (로딩 중이거나 데이터가 없을 때)
   const defaultEmotionData: EmotionDataPoint[] = [
@@ -726,10 +739,23 @@ function EmotionTimeline() {
     { day: '일', value: 5, emotion: '보통', icon: 'Meh' },
   ];
 
-  const displayData = isLoading || emotionData.length === 0 ? defaultEmotionData : emotionData;
+  const defaultGrowthData: GrowthDataPoint[] = [
+    { day: '월', value: 0 },
+    { day: '화', value: 0 },
+    { day: '수', value: 0 },
+    { day: '목', value: 0 },
+    { day: '금', value: 0 },
+    { day: '토', value: 0 },
+    { day: '일', value: 0 },
+  ];
+
+  const displayEmotionData = emotionLoading || emotionData.length === 0 ? defaultEmotionData : emotionData;
+  const displayGrowthData = growthLoading || growthData.length === 0 ? defaultGrowthData : growthData;
+  
+  const isLoading = emotionLoading || growthLoading;
   
   if (isLoading) {
-    console.log('[EMOTION TIMELINE] Loading emotion data...');
+    console.log('[TIMELINE] Loading data...');
   }
 
   useEffect(() => {
@@ -749,21 +775,32 @@ function EmotionTimeline() {
       const margin = { top: 20, right: 20, bottom: 30, left: 20 };
 
       const x = d3.scalePoint()
-        .domain(displayData.map(d => d.day))
+        .domain(displayEmotionData.map(d => d.day))
         .range([margin.left, width - margin.right])
         .padding(0.5);
 
+      // 두 데이터셋의 최대값을 고려한 Y축 설정
+      const maxEmotion = d3.max(displayEmotionData, d => d.value) || 10;
+      const maxGrowth = d3.max(displayGrowthData, d => d.value) || 10;
+      const yMax = Math.max(maxEmotion, maxGrowth);
+
       const y = d3.scaleLinear()
-        .domain([0, d3.max(displayData, d => d.value)! + 2])
+        .domain([0, yMax + 2])
         .range([height - margin.bottom, margin.top]);
 
-      const line = d3.line<typeof displayData[0]>()
+      const emotionLine = d3.line<EmotionDataPoint>()
+        .x(d => x(d.day)!)
+        .y(d => y(d.value))
+        .curve(d3.curveMonotoneX);
+
+      const growthLine = d3.line<GrowthDataPoint>()
         .x(d => x(d.day)!)
         .y(d => y(d.value))
         .curve(d3.curveMonotoneX);
 
       const isDark = document.documentElement.classList.contains('dark');
       const primaryColor = "hsl(var(--primary))";
+      const growthColor = "#10b981"; // green-500
       const textColor = isDark ? "#e2e8f0" : "#475569";
       const gridColor = isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)";
 
@@ -783,17 +820,39 @@ function EmotionTimeline() {
 
       svg.select(".grid").select(".domain").remove();
 
-      // 그라데이션 라인 (감정별 색상 적용)
+      // 성장 라인 (배경에 먼저 그리기)
       svg.append("path")
-        .datum(displayData)
+        .datum(displayGrowthData)
+        .attr("fill", "none")
+        .attr("stroke", growthColor)
+        .attr("stroke-width", 2.5)
+        .attr("stroke-dasharray", "5,5")
+        .attr("d", growthLine);
+
+      // 감정 라인 (위에 그리기)
+      svg.append("path")
+        .datum(displayEmotionData)
         .attr("fill", "none")
         .attr("stroke", primaryColor)
         .attr("stroke-width", 2.5)
-        .attr("d", line);
+        .attr("d", emotionLine);
 
-      // 감정별 색상 포인트 추가
+      // 성장 포인트
+      svg.selectAll(".growth-point")
+        .data(displayGrowthData)
+        .enter()
+        .append("circle")
+        .attr("class", "growth-point")
+        .attr("cx", d => x(d.day)!)
+        .attr("cy", d => y(d.value))
+        .attr("r", 4)
+        .attr("fill", growthColor)
+        .attr("stroke", "hsl(var(--background))")
+        .attr("stroke-width", 2);
+
+      // 감정 포인트
       svg.selectAll(".emotion-point")
-        .data(displayData)
+        .data(displayEmotionData)
         .enter()
         .append("circle")
         .attr("class", "emotion-point")
@@ -831,7 +890,6 @@ function EmotionTimeline() {
         .on("mousemove", function(event) {
           const [mouseX] = d3.pointer(event);
           const domain = x.domain();
-          const range = x.range();
           const rangePoints = domain.map(d => x(d)!);
           
           let closestIndex = 0;
@@ -845,10 +903,11 @@ function EmotionTimeline() {
             }
           });
 
-          const d = displayData[closestIndex];
-          const emotionColor = emotionColors[d.emotion] || primaryColor;
+          const emotionPoint = displayEmotionData[closestIndex];
+          const growthPoint = displayGrowthData[closestIndex];
+          const emotionColor = emotionColors[emotionPoint.emotion] || primaryColor;
           
-          focus.attr("transform", `translate(${x(d.day)},${y(d.value)})`);
+          focus.attr("transform", `translate(${x(emotionPoint.day)},${y(emotionPoint.value)})`);
           focus.select("circle").attr("stroke", emotionColor);
 
           const tooltipNode = tooltip.node() as HTMLElement;
@@ -861,9 +920,15 @@ function EmotionTimeline() {
           }
 
           tooltip.html(`
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <div style="width: 12px; height: 12px; border-radius: 50%; background-color: ${emotionColor};"></div>
-              <strong>${d.day}</strong>: ${d.emotion} (${d.value})
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: ${emotionColor};"></div>
+                <strong>${emotionPoint.day}</strong>: ${emotionPoint.emotion} (${emotionPoint.value})
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: ${growthColor};"></div>
+                성장: ${growthPoint.value}
+              </div>
             </div>
           `)
             .style("left", `${left}px`)
@@ -884,18 +949,32 @@ function EmotionTimeline() {
     return () => {
       resizeObserver.disconnect();
     };
-  }, [displayData]);
+  }, [displayEmotionData, displayGrowthData, emotionColors]);
 
   return (
-    <div ref={containerRef} className="relative h-48" data-testid="emotion-timeline">
-      <svg ref={svgRef} className="w-full h-full" id="emotion-chart"></svg>
-      <div 
-        ref={tooltipRef}
-        id="emotion-tooltip"
-        data-testid="tooltip-emotion"
-        className="absolute text-center px-2 py-1 text-xs bg-slate-700 text-white rounded-lg pointer-events-none opacity-0 transition-opacity"
-        style={{ position: 'absolute' }}
-      ></div>
+    <div>
+      {/* 범례 */}
+      <div className="flex items-center justify-center gap-4 mb-2">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-0.5 bg-primary"></div>
+          <span className="text-xs text-muted-foreground">감정</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-0.5 bg-green-500" style={{ backgroundImage: 'repeating-linear-gradient(to right, #10b981 0, #10b981 5px, transparent 5px, transparent 10px)' }}></div>
+          <span className="text-xs text-muted-foreground">성장</span>
+        </div>
+      </div>
+      
+      <div ref={containerRef} className="relative h-48" data-testid="emotion-timeline">
+        <svg ref={svgRef} className="w-full h-full" id="emotion-chart"></svg>
+        <div 
+          ref={tooltipRef}
+          id="emotion-tooltip"
+          data-testid="tooltip-emotion"
+          className="absolute text-center px-2 py-1 text-xs bg-slate-700 text-white rounded-lg pointer-events-none opacity-0 transition-opacity"
+          style={{ position: 'absolute' }}
+        ></div>
+      </div>
     </div>
   );
 }
