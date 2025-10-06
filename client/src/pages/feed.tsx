@@ -8,7 +8,7 @@ import { Sparkles } from "lucide-react";
 import logoImage from "@assets/logo.svg";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isAuthenticated } from "@/lib/auth";
 import { 
@@ -358,54 +358,12 @@ export default function FeedPage() {
     queryKey: ["/api/posts"],
   });
 
-  // 토큰 확인 (리액티브 상태로 관리)
-  const [token, setTokenState] = useState<string | null>(null);
-  
-  useEffect(() => {
-    // 컴포넌트 마운트 시 토큰 확인
-    const authToken = localStorage.getItem('auth_token');
-    setTokenState(authToken);
-    
-    // 토큰 변경 감지를 위한 interval (자동 로그인 대응)
-    const checkToken = setInterval(() => {
-      const currentToken = localStorage.getItem('auth_token');
-      if (currentToken !== token) {
-        setTokenState(currentToken);
-      }
-    }, 500);
-    
-    return () => clearInterval(checkToken);
-  }, []);
-  
-  // 사용자의 페르소나 가져오기 (토큰이 있을 때만)
+  // 사용자의 페르소나 가져오기 (로그인된 경우에만)
   const { data: userPersona } = useQuery<any>({
     queryKey: ["/api/user/persona"],
-    enabled: !!token,
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    enabled: isAuthenticated(),
     retry: false,
-    queryFn: async () => {
-      try {
-        const response = await fetch("/api/user/persona", {
-          headers: {
-            "Authorization": `Bearer ${token}`,
-          },
-          credentials: "include",
-        });
-        
-        // 인증 실패 시 null 반환 (에러 던지지 않음)
-        if (response.status === 401 || response.status === 403) {
-          return null;
-        }
-        
-        if (!response.ok) {
-          throw new Error(`${response.status}: ${response.statusText}`);
-        }
-        
-        return await response.json();
-      } catch (err) {
-        console.error('[PERSONA] Failed to fetch user persona:', err);
-        return null;
-      }
-    },
   });
 
   // API 에러 발생 시 토스트 표시
