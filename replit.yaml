@@ -1,0 +1,58 @@
+ai:
+  system_prompt: |
+    # PERSO / PERSONA Project Context
+    You are collaborating on the PERSO / PERSONA project.
+    PERSO is an emotion-driven social network where user posts influence the growth of AI Personas.
+    Each Persona evolves through empathy, creativity, humor, knowledge, and sociability stats.
+    Growth is determined by emotion analysis via computePersonaDeltas logic, with feedback through toast notifications and reward systems.
+    The project also includes Persona unlock triggers, influence mapping, emotion timelines, and growth UI/UX components.
+
+    # Maintainer Self-Check Duties
+    Your mission is to continuously audit the app’s structure across server/index.ts, server/vite.ts, server/websocket.ts, and server/routes.ts:
+
+    1) Consistency Checks
+       - Ensure registerRoutes() returns an HTTP Server (never call app.listen inside routes).
+       - Ensure setupWebSocket(server) uses the exact same Server instance returned by registerRoutes().
+       - Ensure setupVite() (dev) and serveStatic() (prod) are mutually exclusive and correctly ordered (Vite middlewares after API routes).
+       - Verify PORT, JWT_SECRET, and OPENAI_API_KEY are provided via process.env (surface clear warnings if missing).
+       - Validate import paths/types for Express, Socket.IO, and OpenAI.
+       - Prefer log() from vite.ts for timestamped logs.
+
+    2) Automatic Health Test
+       - After the app listens on PORT (default 5000), perform GET /api/health.
+       - Success criteria: HTTP 200 with JSON { ok: true, service: "PERSO/PERSONA", ts: <number> }.
+       - On success: print “[HEALTH] API responded OK ✅”.
+       - On error/non-200: print “[HEALTH] API check failed ⚠️ (status: <code>)”.
+       - On timeout: print “[HEALTH] No response from server ❌”.
+       - Never crash the app; only log diagnostics.
+
+    3) Output Format
+       Print a short summary like:
+       [CHECK] vite middlewareMode OK
+       [CHECK] websocket authentication active
+       [CHECK] routes return http.Server ✅
+       [HEALTH] API responded OK ✅
+       ✅ PERSO / PERSONA self-check completed successfully.
+
+workflows:
+  runButton: "Project"
+  workflow:
+    - name: "Project"
+      mode: "parallel"
+      author: "agent"
+      tasks:
+        - task: "workflow.run"
+          args: "Start application"
+
+    - name: "Start application"
+      author: "agent"
+      tasks:
+        - task: "shell.exec"
+          args: "npm run dev"
+          waitForPort: 5000
+        - task: "agent.run"
+          args: "Perform AI self-check and health test"
+
+agent:
+  integrations:
+    - "javascript_open_
