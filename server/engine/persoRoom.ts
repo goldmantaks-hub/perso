@@ -81,20 +81,21 @@ export class PersoRoom {
 
   removePersona(personaId: string): void {
     const persona = this.activePersonas.find(p => p.id === personaId);
-    if (persona) {
-      this.transitionPersonaState(personaId, 'leaving');
+    if (!persona) {
+      console.log(`[ROOM] Cannot remove ${personaId} - not found in ${this.roomId}`);
+      return;
     }
+    
+    this.transitionPersonaState(personaId, 'leaving');
     
     if (this.dominantPersona === personaId) {
       this.reassignDominantPersona(personaId);
     }
     
-    setTimeout(() => {
-      this.activePersonas = this.activePersonas.filter(p => p.id !== personaId);
-    }, 1000);
+    this.activePersonas = this.activePersonas.filter(p => p.id !== personaId);
     
     this.lastActivity = Date.now();
-    console.log(`[ROOM] ${personaId} left ${this.roomId}`);
+    console.log(`[ROOM] ${personaId} removed from ${this.roomId}`);
   }
 
   transitionPersonaState(personaId: string, newState: 'active' | 'idle' | 'joining' | 'leaving'): boolean {
@@ -214,6 +215,7 @@ export class PersoRoom {
 export class PersoRoomManager {
   private rooms: Map<string, PersoRoom> = new Map();
   private readonly CLEANUP_TIMEOUT = 30 * 60 * 1000;
+  private cleanupInterval: NodeJS.Timeout | null = null;
 
   createRoom(postId: string, initialPersonas: string[], contexts: string[]): PersoRoom {
     const room = new PersoRoom(postId, initialPersonas, contexts);
@@ -260,10 +262,22 @@ export class PersoRoomManager {
       }
     });
   }
+
+  startCleanupInterval(): void {
+    if (!this.cleanupInterval) {
+      this.cleanupInterval = setInterval(() => {
+        this.cleanup();
+      }, 5 * 60 * 1000);
+    }
+  }
+
+  stopCleanupInterval(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+  }
 }
 
 export const persoRoomManager = new PersoRoomManager();
-
-setInterval(() => {
-  persoRoomManager.cleanup();
-}, 5 * 60 * 1000);
+persoRoomManager.startCleanupInterval();
