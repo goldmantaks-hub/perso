@@ -348,9 +348,34 @@ export default function FeedPage() {
     queryKey: ["/api/posts"],
   });
 
-  // 사용자의 페르소나 가져오기
+  // 사용자의 페르소나 가져오기 (인증 실패 시 null 반환)
   const { data: userPersona } = useQuery<any>({
     queryKey: ["/api/user/persona"],
+    retry: false,
+    queryFn: async () => {
+      try {
+        const response = await fetch("/api/user/persona", {
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem('token') || ''}`,
+          },
+          credentials: "include",
+        });
+        
+        // 인증 실패 시 null 반환 (에러 던지지 않음)
+        if (response.status === 401 || response.status === 403) {
+          return null;
+        }
+        
+        if (!response.ok) {
+          throw new Error(`${response.status}: ${response.statusText}`);
+        }
+        
+        return await response.json();
+      } catch (err) {
+        console.error('[PERSONA] Failed to fetch user persona:', err);
+        return null;
+      }
+    },
   });
 
   // API 에러 발생 시 토스트 표시
@@ -440,22 +465,30 @@ export default function FeedPage() {
       <section className="px-4 py-3">
         <div className="flex justify-between items-center mb-2">
           <div className="flex items-center gap-2">
-            <Link href="/persona-state" data-testid="link-persona-state">
-              <Avatar className="w-8 h-8 cursor-pointer hover-elevate active-elevate-2" data-testid="avatar-persona-empathy">
-                <AvatarImage src={userPersona?.image || currentUser.avatar} />
-                <AvatarFallback>AI</AvatarFallback>
+            {userPersona ? (
+              <Link href="/persona-state" data-testid="link-persona-state">
+                <Avatar className="w-8 h-8 cursor-pointer hover-elevate active-elevate-2" data-testid="avatar-persona-empathy">
+                  <AvatarImage src={userPersona.image} />
+                  <AvatarFallback>AI</AvatarFallback>
+                </Avatar>
+              </Link>
+            ) : (
+              <Avatar className="w-8 h-8" data-testid="avatar-persona-empathy">
+                <AvatarFallback className="bg-primary/10 text-primary">
+                  <Sparkles className="w-4 h-4" />
+                </AvatarFallback>
               </Avatar>
-            </Link>
+            )}
             <h2 className="text-sm font-medium text-muted-foreground">
               페르소나와의 공감 상태
             </h2>
           </div>
         </div>
         <div className="w-full bg-muted rounded-full h-2 mb-1.5">
-          <div className="bg-primary h-2 rounded-full" style={{ width: `${userPersona ? Math.min((userPersona.empathy / 10 * 100), 100) : 60}%` }}></div>
+          <div className="bg-primary h-2 rounded-full" style={{ width: `${userPersona ? Math.min((userPersona.empathy / 10 * 100), 100) : 0}%` }}></div>
         </div>
         <p className="text-xs text-muted-foreground">
-          {userPersona ? `감성 ${userPersona.empathy * 10} · 유머 ${userPersona.humor * 10} · 사교성 ${userPersona.sociability * 10}` : '감성 80 · 유머 60 · 사교성 75'}
+          {userPersona ? `감성 ${userPersona.empathy * 10} · 유머 ${userPersona.humor * 10} · 사교성 ${userPersona.sociability * 10}` : '로그인하여 페르소나를 확인하세요'}
         </p>
       </section>
 
