@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { getToken } from '@/lib/auth';
+import { getToken, logout } from '@/lib/auth';
 
 interface UseWebSocketOptions {
   conversationId?: string;
@@ -67,6 +67,12 @@ export function useWebSocket({
 
     socket.on('connect_error', (error) => {
       console.error('[WS] Connection error:', error.message);
+      
+      if (error.message && (error.message.includes('토큰') || error.message.includes('token'))) {
+        console.log('[AUTH] Invalid token in WebSocket, logging out...');
+        logout();
+        window.location.href = '/login';
+      }
     });
 
     // 메시지 수신
