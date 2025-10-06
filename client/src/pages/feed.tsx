@@ -316,6 +316,8 @@ function PersoSection({ post }: { post: any }) {
 }
 
 export default function FeedPage() {
+  const { toast } = useToast();
+  
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== 'undefined') {
       return document.documentElement.classList.contains('dark');
@@ -342,7 +344,7 @@ export default function FeedPage() {
   };
 
   // 게시물 가져오기
-  const { data: posts = [], isLoading } = useQuery<any[]>({
+  const { data: posts = [], isLoading, isError, error } = useQuery<any[]>({
     queryKey: ["/api/posts"],
   });
 
@@ -350,6 +352,17 @@ export default function FeedPage() {
   const { data: userPersona } = useQuery<any>({
     queryKey: ["/api/user/persona"],
   });
+
+  // API 에러 발생 시 토스트 표시
+  useEffect(() => {
+    if (isError) {
+      toast({
+        title: "피드를 불러올 수 없습니다",
+        description: error instanceof Error ? error.message : "네트워크 연결을 확인해주세요",
+        variant: "destructive",
+      });
+    }
+  }, [isError, error, toast]);
 
   const stories = [
     {
@@ -476,9 +489,27 @@ export default function FeedPage() {
       {/* 피드 섹션 */}
       <section className="py-2 bg-card rounded-t-2xl min-h-[400px] pb-28 md:pb-2">
         <div className="px-4 space-y-4">
-          {posts.map((post: any) => (
-            <PostCard key={post.id} post={post} />
-          ))}
+          {posts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="mb-4 text-muted-foreground">
+                <Sparkles className="w-16 h-16 mx-auto mb-4 opacity-50" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">아직 피드가 없습니다</h3>
+              <p className="text-sm text-muted-foreground mb-6 max-w-sm">
+                첫 번째 게시물을 작성하거나 다른 사용자를 팔로우하여 피드를 채워보세요!
+              </p>
+              <Link href="/create-post">
+                <Button data-testid="button-create-first-post">
+                  <Plus className="w-4 h-4 mr-2" />
+                  첫 게시물 작성하기
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            posts.map((post: any) => (
+              <PostCard key={post.id} post={post} />
+            ))
+          )}
         </div>
       </section>
 

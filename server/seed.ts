@@ -205,11 +205,19 @@ async function seed() {
 
   console.log("✅ 페르소 메시지 생성 완료");
   console.log("🎉 시드 데이터 생성이 완료되었습니다!");
-  
-  process.exit(0);
 }
 
-seed().catch((error) => {
-  console.error("❌ 시드 데이터 생성 실패:", error);
-  process.exit(1);
-});
+// API 엔드포인트에서 호출할 수 있도록 export
+export async function runSeed() {
+  await seed();
+}
+
+// 직접 실행 시에만 process.exit 호출
+if (import.meta.url === `file://${process.argv[1]}`) {
+  seed()
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error("❌ 시드 데이터 생성 실패:", error);
+      process.exit(1);
+    });
+}

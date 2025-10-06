@@ -1801,6 +1801,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // 관리자 엔드포인트: 시드 데이터 생성
+  app.post("/api/admin/seed", async (req, res) => {
+    try {
+      // 프로덕션 환경에서만 실행 가능하도록 체크 (선택사항)
+      const { runSeed } = await import('./seed.js');
+      await runSeed();
+      
+      res.json({ 
+        success: true, 
+        message: "시드 데이터가 성공적으로 생성되었습니다" 
+      });
+    } catch (error) {
+      console.error("Seed error:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "시드 데이터 생성 실패",
+        error: error instanceof Error ? error.message : "알 수 없는 오류"
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
