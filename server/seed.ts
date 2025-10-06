@@ -48,6 +48,11 @@ async function seed() {
     name: "지은이의 AI 페르소나",
     image: "https://api.dicebear.com/7.x/bottts/svg?seed=persona-jieun",
     description: "감성적이고 따뜻한 AI",
+    empathy: 5,
+    humor: 5,
+    sociability: 5,
+    creativity: 5,
+    knowledge: 5,
   }).returning();
 
   const [persona2] = await db.insert(personas).values({
@@ -55,6 +60,11 @@ async function seed() {
     name: "민수의 AI 페르소나",
     image: "https://api.dicebear.com/7.x/bottts/svg?seed=persona-minsu",
     description: "활발하고 유머러스한 AI",
+    empathy: 5,
+    humor: 5,
+    sociability: 5,
+    creativity: 5,
+    knowledge: 5,
   }).returning();
 
   const [persona3] = await db.insert(personas).values({
@@ -62,6 +72,11 @@ async function seed() {
     name: "서연이의 AI 페르소나",
     image: "https://api.dicebear.com/7.x/bottts/svg?seed=persona-seoyeon",
     description: "지적이고 차분한 AI",
+    empathy: 5,
+    humor: 5,
+    sociability: 5,
+    creativity: 5,
+    knowledge: 5,
   }).returning();
 
   const [persona4] = await db.insert(personas).values({
@@ -69,6 +84,11 @@ async function seed() {
     name: "준호의 AI 페르소나",
     image: "https://api.dicebear.com/7.x/bottts/svg?seed=persona-junho",
     description: "열정적이고 긍정적인 AI",
+    empathy: 5,
+    humor: 5,
+    sociability: 5,
+    creativity: 5,
+    knowledge: 5,
   }).returning();
 
   console.log("✅ 페르소나 생성 완료");

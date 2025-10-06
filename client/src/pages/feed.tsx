@@ -348,15 +348,35 @@ export default function FeedPage() {
     queryKey: ["/api/posts"],
   });
 
-  // 사용자의 페르소나 가져오기 (인증 실패 시 null 반환)
+  // 토큰 확인 (리액티브 상태로 관리)
+  const [token, setTokenState] = useState<string | null>(null);
+  
+  useEffect(() => {
+    // 컴포넌트 마운트 시 토큰 확인
+    const authToken = localStorage.getItem('auth_token');
+    setTokenState(authToken);
+    
+    // 토큰 변경 감지를 위한 interval (자동 로그인 대응)
+    const checkToken = setInterval(() => {
+      const currentToken = localStorage.getItem('auth_token');
+      if (currentToken !== token) {
+        setTokenState(currentToken);
+      }
+    }, 500);
+    
+    return () => clearInterval(checkToken);
+  }, []);
+  
+  // 사용자의 페르소나 가져오기 (토큰이 있을 때만)
   const { data: userPersona } = useQuery<any>({
     queryKey: ["/api/user/persona"],
+    enabled: !!token,
     retry: false,
     queryFn: async () => {
       try {
         const response = await fetch("/api/user/persona", {
           headers: {
-            "Authorization": `Bearer ${localStorage.getItem('token') || ''}`,
+            "Authorization": `Bearer ${token}`,
           },
           credentials: "include",
         });
