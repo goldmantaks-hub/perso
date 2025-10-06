@@ -133,6 +133,29 @@ The application is a full-stack TypeScript application, utilizing React for the 
 
 ## Recent Changes
 
+### October 6, 2025 - Authentication Error Handling & Auto-Logout
+
+**Problem Fixed:**
+- Users with old JWT tokens (from previous server sessions) encountered 403 errors when accessing feed/perso pages
+- Invalid tokens caused "유효하지 않은 토큰입니다" errors, blocking persona data retrieval and message sending
+
+**Solution Implemented:**
+- **Automatic Logout System:** Added automatic detection and logout for invalid JWT tokens
+  - `client/src/lib/queryClient.ts` - REST API calls now detect 401/403 errors with invalid token messages and trigger automatic logout
+  - `client/src/hooks/useWebSocket.ts` - WebSocket connections detect authentication errors and trigger logout
+  - `client/src/pages/perso.tsx` - Enhanced error handling for authentication failures with clear user feedback
+  
+**User Experience:**
+- Invalid tokens automatically trigger logout and redirect to /login page
+- Users receive clear error messages before being redirected
+- After re-login, all features work correctly (feed, perso chat, AI responses)
+
+**Technical Details:**
+- JWT_SECRET changes (server restarts) invalidate all existing tokens
+- Solution: Automatic logout when invalid tokens are detected
+- Error detection pattern: `/invalid|만료|expired/i` in 401/403 response messages
+- Both REST API and WebSocket connections handle authentication errors consistently
+
 ### October 5, 2025 - Extended AI Persona Routing System
 
 **AI Persona Routing System** - Implemented intelligent routing system for automatic persona selection:
