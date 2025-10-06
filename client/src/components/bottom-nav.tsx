@@ -2,6 +2,7 @@ import { Home, Search, Plus, MessageCircle, User } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useState } from "react";
 import CreatePostModal from "./create-post-modal";
+import { isAuthenticated } from "@/lib/auth";
 
 interface BottomNavProps {
   currentUser?: {
@@ -12,10 +13,25 @@ interface BottomNavProps {
 }
 
 export default function BottomNav({ currentUser }: BottomNavProps) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [createPostOpen, setCreatePostOpen] = useState(false);
 
   const isActive = (path: string) => location === path;
+
+  const handleProtectedNavigation = (e: React.MouseEvent, path: string) => {
+    if (!isAuthenticated()) {
+      e.preventDefault();
+      setLocation("/login");
+    }
+  };
+
+  const handleCreatePost = () => {
+    if (!isAuthenticated()) {
+      setLocation("/login");
+    } else {
+      setCreatePostOpen(true);
+    }
+  };
 
   return (
     <>
@@ -33,7 +49,7 @@ export default function BottomNav({ currentUser }: BottomNavProps) {
                 <Home className={`w-7 h-7 ${isActive("/feed") ? "fill-current" : ""}`} />
               </button>
             </Link>
-            <Link href="/search">
+            <Link href="/search" onClick={(e) => handleProtectedNavigation(e, "/search")}>
               <button
                 className={`flex flex-col items-center ${
                   isActive("/search") ? "text-primary" : "text-muted-foreground"
@@ -47,7 +63,7 @@ export default function BottomNav({ currentUser }: BottomNavProps) {
 
           {/* 중앙 큰 버튼 */}
           <button
-            onClick={() => setCreatePostOpen(true)}
+            onClick={handleCreatePost}
             className="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-primary-foreground shadow-lg -translate-y-6"
             data-testid="bottom-nav-글쓰기"
           >
@@ -56,7 +72,7 @@ export default function BottomNav({ currentUser }: BottomNavProps) {
 
           {/* 오른쪽 버튼들 */}
           <div className="flex justify-around items-center w-2/5">
-            <Link href="/chat">
+            <Link href="/chat" onClick={(e) => handleProtectedNavigation(e, "/chat")}>
               <button
                 className={`flex flex-col items-center ${
                   isActive("/chat") ? "text-primary" : "text-muted-foreground"
@@ -66,7 +82,7 @@ export default function BottomNav({ currentUser }: BottomNavProps) {
                 <MessageCircle className="w-7 h-7" />
               </button>
             </Link>
-            <Link href="/profile">
+            <Link href="/profile" onClick={(e) => handleProtectedNavigation(e, "/profile")}>
               <button
                 className={`flex flex-col items-center ${
                   isActive("/profile") ? "text-primary" : "text-muted-foreground"

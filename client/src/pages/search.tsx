@@ -1,12 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "@/components/navbar";
 import BottomNav from "@/components/bottom-nav";
 import { Input } from "@/components/ui/input";
 import { Search as SearchIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
+import { isAuthenticated } from "@/lib/auth";
 
 export default function SearchPage() {
+  const [, setLocation] = useLocation();
+  
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      setLocation("/login");
+    }
+  }, [setLocation]);
   const currentUser = {
     name: "김지은",
     username: "jieun_kim",
