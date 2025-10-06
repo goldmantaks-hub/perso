@@ -48,7 +48,6 @@ export function selectNextSpeaker(
   
   for (const persona of activePersonas) {
     if (persona.status !== 'active') continue;
-    if (persona.id === lastSpeaker) continue;
     
     let score = 0;
     
@@ -73,6 +72,10 @@ export function selectNextSpeaker(
     
     const interest = calculateInterestMatch(persona, lastMessage);
     score += interest * 0.1;
+    
+    if (persona.id === lastSpeaker) {
+      score -= 0.15;
+    }
     
     scores.set(persona.id, Math.max(0, Math.min(1, score)));
   }
