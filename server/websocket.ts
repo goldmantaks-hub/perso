@@ -56,6 +56,20 @@ export function setupWebSocket(server: Server) {
       socket.join(`conversation:${conversationId}`);
       log(`[WS] User ${userId} joined conversation ${conversationId}`);
       
+      // 사용자를 participant로 추가 (없으면 추가, 있으면 무시)
+      try {
+        await storage.addParticipant({
+          conversationId,
+          participantType: 'user',
+          participantId: userId,
+          role: 'member',
+        });
+        console.log(`[WS] User ${userId} added as participant`);
+      } catch (error) {
+        // Unique constraint 에러는 무시 (이미 참가자임)
+        console.log(`[WS] User ${userId} already a participant or error:`, error);
+      }
+      
       // 입장 시스템 메시지 생성
       const content = `${username}님이 입장했습니다`;
       console.log(`[WS] Creating join message: ${content}`);

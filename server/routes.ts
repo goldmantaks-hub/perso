@@ -698,21 +698,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           authorPersona?.id || 'system'
         );
 
-        // 2. 작성자(user)와 작성자 페르소나를 participant로 추가
-        const author = await storage.getUser(post.userId);
-        if (author) {
-          try {
-            await storage.addParticipant({
-              conversationId: conversation.id,
-              participantType: 'user',
-              participantId: author.id,
-              role: 'member',
-            });
-          } catch (error) {
-            // Unique constraint 에러 무시
-          }
-        }
-
+        // 2. 작성자 페르소나를 participant로 추가 (사용자는 WebSocket join 시 추가됨)
         if (authorPersona) {
           try {
             await storage.addParticipant({
