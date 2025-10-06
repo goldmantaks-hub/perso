@@ -228,6 +228,8 @@ export default function PersoPage() {
           const aiResponse = await response.json();
           
           const aiContent = aiResponse.content?.trim();
+          const aiThinking = aiResponse.thinking?.trim();
+          
           if (!aiContent || aiContent.length === 0) {
             console.warn('[PERSO] Empty AI response received, skipping');
             return;
@@ -235,6 +237,7 @@ export default function PersoPage() {
           
           await apiRequest("POST", `/api/perso/${postId}/messages`, { 
             content: aiContent,
+            thinking: aiThinking,
             isAI: true,
             personaId,
           });

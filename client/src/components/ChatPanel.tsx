@@ -11,6 +11,7 @@ interface Message {
   sender: string;
   senderType: 'user' | 'ai';
   message: string;
+  thinking?: string;
   type?: string;
   timestamp?: number;
 }
@@ -106,6 +107,14 @@ export default function ChatPanel({
                     <Sparkles className="w-3 h-3 mr-1" />
                     AI
                   </Badge>
+                </div>
+              )}
+              
+              {msg.senderType === 'ai' && msg.thinking && (
+                <div className="mb-2 px-3 py-1.5 rounded-lg bg-muted/50 border border-border/50">
+                  <p className="text-xs text-muted-foreground italic">
+                    💭 {msg.thinking}
+                  </p>
                 </div>
               )}
               

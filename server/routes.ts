@@ -1130,7 +1130,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // 6. OpenAI API 호출
+      // 6. 내부 추론 생성
+      const thinkingPrompt = `당신은 "${persona.name}"입니다. 다음 대화에 응답하기 전에 내부적으로 무엇을 생각하고 있는지 1문장으로 표현하세요.
+
+대화 맥락: ${recentMessages && recentMessages.length > 0 ? recentMessages[recentMessages.length - 1]?.content : post.title}
+
+이 상황에 대해 당신이 생각하는 것은? (1문장으로)`;
+
+      const thinkingCompletion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: `당신은 ${persona.name}입니다. ${persona.description || ''}` },
+          { role: "user", content: thinkingPrompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 50,
+      });
+
+      const thinking = thinkingCompletion.choices[0]?.message?.content?.trim() || "";
+      console.log(`[${persona.name} THINKS]: ${thinking}`);
+
+      // 7. OpenAI API 호출
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages,
@@ -1146,9 +1166,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "AI가 빈 응답을 생성했습니다" });
       }
 
-      // 7. 응답 반환
+      // 8. 응답 반환
       res.json({
         content: rawResponse,
+        thinking,
         persona: {
           id: persona.id,
           name: persona.name,

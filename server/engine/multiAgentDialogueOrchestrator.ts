@@ -106,7 +106,8 @@ export async function multiAgentDialogueOrchestrator(
     
     conversationHistory.push({
       persona: nextSpeaker,
-      message
+      message,
+      thinking
     });
     
     persoRoomManager.recordPersonaTurn(room.roomId, nextSpeaker);
