@@ -161,43 +161,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/ai/analyze - AI 감성 분석 (Mock)
+  // POST /api/ai/analyze - AI 감성 분석 (analyzeSentiment와 동일한 응답)
   app.post("/api/ai/analyze", async (req, res) => {
-    try {
-      const { content, imageUrl } = req.body;
-      
-      // Mock: 정규화된 감성 분석 결과 생성
-      // 세 개의 랜덤 값을 생성하고 정규화하여 합이 1이 되도록 함
-      let positive = Math.random();
-      let negative = Math.random();
-      let neutral = Math.random();
-      
-      const total = positive + negative + neutral;
-      positive = positive / total;
-      negative = negative / total;
-      neutral = neutral / total;
-      
-      const tones = [];
-      if (positive > 0.4) tones.push('joyful', 'optimistic');
-      if (negative > 0.3) tones.push('serious');
-      if (neutral > 0.4) tones.push('neutral');
-      
-      const result = {
-        positive: Math.max(0, Math.min(1, positive)),
-        neutral: Math.max(0, Math.min(1, neutral)),
-        negative: Math.max(0, Math.min(1, negative)),
-        tones,
-        media_scores: imageUrl ? {
-          aesthetics: Math.max(0, Math.min(1, Math.random() * 0.5 + 0.5)),
-          quality: Math.max(0, Math.min(1, Math.random() * 0.5 + 0.5)),
-        } : undefined,
-      };
-      
-      res.json(result);
-    } catch (error) {
-      console.error("AI analyze error:", error);
-      res.status(500).json({ error: "분석 실패" });
-    }
+    await analyzeSentiment(req, res);
   });
 
   // GET /api/personas - 모든 페르소나 가져오기

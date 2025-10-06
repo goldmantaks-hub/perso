@@ -74,7 +74,7 @@ function inferContexts(content: string, subjects: Subject[], tones: string[]): s
   return Array.from(new Set(contexts));
 }
 
-function analyzeSentimentFromContent(content: string): { positive: number; neutral: number; negative: number } {
+export function analyzeSentimentFromContent(content: string): { positive: number; neutral: number; negative: number } {
   const contentLower = content.toLowerCase();
   
   const positiveKeywords = ['좋', '행복', '기쁨', '즐거', '사랑', '완벽', '최고', '대박', '감사', '훌륭', '멋', '예쁘', '아름다', '재미', '웃', 'ㅋㅋ', 'ㅎㅎ', '😊', '😄', '🎉', '❤️', 'good', 'happy', 'great', 'love', 'perfect', 'amazing', 'wonderful', 'excellent', 'beautiful', 'fun'];
@@ -102,7 +102,7 @@ function analyzeSentimentFromContent(content: string): { positive: number; neutr
   };
 }
 
-function inferTonesFromContent(content: string, sentiment: { positive: number; neutral: number; negative: number }): string[] {
+export function inferTonesFromContent(content: string, sentiment: { positive: number; neutral: number; negative: number }): string[] {
   const tones: string[] = [];
   const contentLower = content.toLowerCase();
   
@@ -157,8 +157,8 @@ export async function analyzeSentiment(req: Request, res: Response) {
     const contexts = inferContexts(content, subjects, tones);
     
     const imageScores = media ? {
-      aesthetics: Math.max(0, Math.min(1, Math.random() * 0.5 + 0.5)),
-      quality: Math.max(0, Math.min(1, Math.random() * 0.5 + 0.5)),
+      aesthetics: 0.7,
+      quality: 0.75,
     } : undefined;
     
     const deltas = computePersonaDeltas({
