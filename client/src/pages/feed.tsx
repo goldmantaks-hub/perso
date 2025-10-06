@@ -1,5 +1,5 @@
 import { Settings, Plus, Moon, Sun, Heart, MessageCircle, Share2, Smile, Meh, Frown } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import BottomNav from "@/components/bottom-nav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { isAuthenticated } from "@/lib/auth";
 import { 
   normalizeSentiment, 
   computeWeight, 
@@ -316,7 +317,16 @@ function PersoSection({ post }: { post: any }) {
 }
 
 export default function FeedPage() {
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
+  
+  // 로그인 체크 - 로그인하지 않은 경우 로그인 페이지로 리다이렉트
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      console.log('[FEED] Not authenticated, redirecting to /login');
+      setLocation("/login");
+    }
+  }, [setLocation]);
   
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== 'undefined') {
