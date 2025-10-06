@@ -108,6 +108,9 @@ export default function PersoPage() {
   // 메시지 전송 (낙관적 업데이트)
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
+      if (!isAuthenticated()) {
+        throw new Error('로그인이 필요합니다');
+      }
       return await apiRequest("POST", `/api/perso/${postId}/messages`, { content, isAI: false });
     },
     onMutate: async (content: string) => {
@@ -115,7 +118,13 @@ export default function PersoPage() {
       
       const previousData = queryClient.getQueryData(["/api/perso", postId, "messages"]);
       
-      const currentUser = await queryClient.ensureQueryData({ queryKey: ['/api/user/persona'] }) as any;
+      let currentUser: any;
+      try {
+        currentUser = await queryClient.ensureQueryData({ queryKey: ['/api/user/persona'] });
+      } catch (error) {
+        console.error('[PERSO] Failed to get user persona:', error);
+        currentUser = null;
+      }
       
       const optimisticMessage = {
         id: `temp-${Date.now()}`,
@@ -135,11 +144,19 @@ export default function PersoPage() {
       
       return { previousData };
     },
-    onError: (err, content, context: any) => {
+    onError: (err: any, content, context: any) => {
       queryClient.setQueryData(["/api/perso", postId, "messages"], context?.previousData);
+      
+      let errorMessage = "다시 시도해주세요.";
+      if (err.message?.includes('로그인')) {
+        errorMessage = "로그인이 필요합니다.";
+      } else if (err.message?.includes('403') || err.message?.includes('401')) {
+        errorMessage = "인증이 만료되었습니다. 다시 로그인해주세요.";
+      }
+      
       toast({
         title: "메시지 전송 실패",
-        description: "다시 시도해주세요.",
+        description: errorMessage,
         variant: "destructive",
       });
     },
