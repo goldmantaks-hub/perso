@@ -109,19 +109,43 @@ function findLastTurnIndex(personaId: string, history: ConversationMessage[]): n
   return -1;
 }
 
+const PERSONA_INTEREST_KEYWORDS: Record<string, string[]> = {
+  'Kai': ['지식', '학습', '탐구', '분석', '이해', '연구', '발견', '여행', '모험', '세계', 'knowledge', 'learn', 'explore', 'analyze', 'understand', 'research', 'discover', 'travel', 'adventure', 'world'],
+  'Espri': ['감정', '공감', '위로', '마음', '느낌', '이해', '따뜻', '사랑', '행복', '슬픔', 'emotion', 'empathy', 'comfort', 'feeling', 'heart', 'warm', 'love', 'happy', 'sad'],
+  'Luna': ['상상', '창의', '예술', '아름다움', '감성', '영감', '꿈', '시', '음악', '그림', 'imagination', 'creative', 'art', 'beauty', 'inspiration', 'dream', 'poetry', 'music', 'painting'],
+  'Namu': ['논리', '분석', '체계', '구조', '원리', '과학', '데이터', '패턴', '추론', '검증', 'logic', 'analysis', 'system', 'structure', 'principle', 'science', 'data', 'pattern', 'reasoning'],
+  'Milo': ['재미', '유머', '웃음', '농담', '즐거움', '놀이', '음식', '맛집', '요리', '먹방', 'fun', 'humor', 'laugh', 'joke', 'enjoy', 'play', 'food', 'restaurant', 'cooking', 'delicious'],
+  'Eden': ['철학', '본질', '의미', '진리', '사색', '깨달음', '존재', '우주', '인생', '질문', 'philosophy', 'essence', 'meaning', 'truth', 'contemplation', 'enlightenment', 'existence', 'universe', 'life', 'question'],
+  'Ava': ['트렌드', '유행', '소셜', '인기', '스타일', '패션', '미디어', '브랜드', '문화', '최신', 'trend', 'viral', 'social', 'popular', 'style', 'fashion', 'media', 'brand', 'culture', 'latest'],
+  'Rho': ['기술', '코딩', '프로그래밍', '시스템', '알고리즘', '개발', '엔지니어', '컴퓨터', '소프트웨어', '최적화', 'technology', 'coding', 'programming', 'system', 'algorithm', 'development', 'engineer', 'computer', 'software', 'optimization'],
+  'Noir': ['미스터리', '비밀', '수수께끼', '진실', '숨겨진', '어둠', '심리', '추리', '탐정', '비밀스러운', 'mystery', 'secret', 'riddle', 'truth', 'hidden', 'dark', 'psychology', 'detective', 'enigma', 'cryptic']
+};
+
 function calculateInterestMatch(persona: PersonaState, lastMessage: string): number {
-  const messageLength = lastMessage.length;
-  const baseInterest = Math.random() * 0.5 + 0.3;
+  const keywords = PERSONA_INTEREST_KEYWORDS[persona.id] || [];
+  const messageLower = lastMessage.toLowerCase();
   
-  if (messageLength > 100) {
-    return Math.min(1.0, baseInterest + 0.2);
+  let matchCount = 0;
+  for (const keyword of keywords) {
+    if (messageLower.includes(keyword.toLowerCase())) {
+      matchCount++;
+    }
   }
   
-  if (lastMessage.includes('?')) {
-    return Math.min(1.0, baseInterest + 0.3);
-  }
+  const keywordScore = Math.min(1.0, matchCount * 0.15);
   
-  return baseInterest;
+  const hasQuestion = lastMessage.includes('?') || lastMessage.includes('？');
+  const questionBonus = hasQuestion ? 0.3 : 0;
+  
+  const isLongMessage = lastMessage.length > 100;
+  const lengthBonus = isLongMessage ? 0.2 : 0;
+  
+  const hasEmotionalMarkers = /[!！❤️😊😢💕🎉✨]/.test(lastMessage);
+  const emotionalBonus = hasEmotionalMarkers && ['Espri', 'Luna', 'Milo'].includes(persona.id) ? 0.15 : 0;
+  
+  const totalInterest = keywordScore + questionBonus + lengthBonus + emotionalBonus;
+  
+  return Math.min(1.0, Math.max(0, totalInterest));
 }
 
 function weightedRandomSelection(scores: Map<string, number>, temperature: number): string {
