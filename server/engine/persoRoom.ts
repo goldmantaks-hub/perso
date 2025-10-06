@@ -11,7 +11,16 @@ export interface TopicWeight {
   weight: number;
 }
 
-export interface PersoRoom {
+export interface DialogueMessage {
+  id: string;
+  personaId?: string;
+  userId?: string;
+  content: string;
+  timestamp: number;
+  isAI: boolean;
+}
+
+export class PersoRoom {
   roomId: string;
   postId: string;
   activePersonas: PersonaState[];
@@ -22,6 +31,184 @@ export interface PersoRoom {
   totalTurns: number;
   createdAt: number;
   lastActivity: number;
+  dialogueHistory: DialogueMessage[];
+
+  constructor(postId: string, initialPersonas: string[], contexts: string[]) {
+    const now = Date.now();
+    
+    this.roomId = `room-${postId}-${now}`;
+    this.postId = postId;
+    this.activePersonas = initialPersonas.map(id => ({
+      id,
+      status: 'active' as const,
+      joinedAt: now,
+      lastSpokeAt: 0,
+      messageCount: 0
+    }));
+    this.currentTopics = this.contextsToTopicWeights(contexts);
+    this.previousTopics = [];
+    this.dominantPersona = null;
+    this.turnsSinceDominantChange = 0;
+    this.totalTurns = 0;
+    this.createdAt = now;
+    this.lastActivity = now;
+    this.dialogueHistory = [];
+
+    console.log(`[ROOM] Created ${this.roomId} with ${initialPersonas.length} personas, ${contexts.length} topics`);
+  }
+
+  addPersona(personaId: string): void {
+    this.lastActivity = Date.now();
+    
+    const existing = this.activePersonas.find(p => p.id === personaId);
+    if (existing) {
+      this.transitionPersonaState(personaId, 'active');
+      existing.joinedAt = Date.now();
+      console.log(`[ROOM] ${personaId} rejoined ${this.roomId}`);
+      return;
+    }
+    
+    this.activePersonas.push({
+      id: personaId,
+      status: 'joining',
+      joinedAt: Date.now(),
+      lastSpokeAt: 0,
+      messageCount: 0
+    });
+    
+    console.log(`[ROOM] ${personaId} joined ${this.roomId}`);
+  }
+
+  removePersona(personaId: string): void {
+    const persona = this.activePersonas.find(p => p.id === personaId);
+    if (persona) {
+      this.transitionPersonaState(personaId, 'leaving');
+    }
+    
+    if (this.dominantPersona === personaId) {
+      this.reassignDominantPersona(personaId);
+    }
+    
+    setTimeout(() => {
+      this.activePersonas = this.activePersonas.filter(p => p.id !== personaId);
+    }, 1000);
+    
+    this.lastActivity = Date.now();
+    console.log(`[ROOM] ${personaId} left ${this.roomId}`);
+  }
+
+  transitionPersonaState(personaId: string, newState: 'active' | 'idle' | 'joining' | 'leaving'): boolean {
+    const persona = this.activePersonas.find(p => p.id === personaId);
+    if (!persona) {
+      console.log(`[ROOM] Cannot transition ${personaId} - not found in ${this.roomId}`);
+      return false;
+    }
+
+    const oldState = persona.status;
+    persona.status = newState;
+    this.lastActivity = Date.now();
+    
+    console.log(`[ROOM] ${personaId} transitioned from ${oldState} → ${newState} in ${this.roomId}`);
+    return true;
+  }
+
+  setPersonaIdle(personaId: string): boolean {
+    return this.transitionPersonaState(personaId, 'idle');
+  }
+
+  setPersonaActive(personaId: string): boolean {
+    return this.transitionPersonaState(personaId, 'active');
+  }
+
+  recordPersonaTurn(personaId: string): void {
+    const persona = this.activePersonas.find(p => p.id === personaId);
+    if (persona) {
+      persona.lastSpokeAt = Date.now();
+      persona.messageCount++;
+      
+      if (persona.status === 'joining') {
+        this.transitionPersonaState(personaId, 'active');
+      }
+    }
+    
+    this.totalTurns++;
+    this.turnsSinceDominantChange++;
+    this.lastActivity = Date.now();
+  }
+
+  addMessage(message: DialogueMessage): void {
+    this.dialogueHistory.push(message);
+    this.lastActivity = Date.now();
+    
+    const maxHistory = 100;
+    if (this.dialogueHistory.length > maxHistory) {
+      this.dialogueHistory = this.dialogueHistory.slice(-maxHistory);
+    }
+  }
+
+  getRecentMessages(count: number = 10): DialogueMessage[] {
+    return this.dialogueHistory.slice(-count);
+  }
+
+  clearDialogueHistory(): void {
+    this.dialogueHistory = [];
+    console.log(`[ROOM] Cleared dialogue history for ${this.roomId}`);
+  }
+
+  setDominantPersona(personaId: string): void {
+    if (this.dominantPersona !== personaId) {
+      this.dominantPersona = personaId;
+      this.turnsSinceDominantChange = 0;
+      console.log(`[ROOM] Dominant persona changed to ${personaId} in ${this.roomId}`);
+    }
+  }
+
+  updateTopics(newContexts: string[]): void {
+    this.previousTopics = this.currentTopics;
+    this.currentTopics = this.contextsToTopicWeights(newContexts);
+    this.lastActivity = Date.now();
+    
+    console.log(`[ROOM] Updated topics for ${this.roomId}: ${newContexts.join(', ')}`);
+  }
+
+  getActivePersonas(): PersonaState[] {
+    return this.activePersonas.filter(p => p.status === 'active');
+  }
+
+  getPersonaState(personaId: string): PersonaState | undefined {
+    return this.activePersonas.find(p => p.id === personaId);
+  }
+
+  isActive(): boolean {
+    return this.getActivePersonas().length > 0;
+  }
+
+  private reassignDominantPersona(leavingPersonaId: string): void {
+    const remainingActive = this.activePersonas.filter(
+      p => p.id !== leavingPersonaId && p.status === 'active'
+    );
+    
+    if (remainingActive.length > 0) {
+      const newDominant = remainingActive.reduce((prev, curr) => 
+        curr.messageCount > prev.messageCount ? curr : prev
+      );
+      this.dominantPersona = newDominant.id;
+      this.turnsSinceDominantChange = 0;
+      console.log(`[ROOM] Dominant persona reassigned to ${newDominant.id} after ${leavingPersonaId} left`);
+    } else {
+      this.dominantPersona = null;
+      console.log(`[ROOM] No dominant persona after ${leavingPersonaId} left`);
+    }
+  }
+
+  private contextsToTopicWeights(contexts: string[]): TopicWeight[] {
+    if (contexts.length === 0) {
+      return [{ topic: 'general', weight: 1.0 }];
+    }
+    
+    const weight = 1.0 / contexts.length;
+    return contexts.map(topic => ({ topic, weight }));
+  }
 }
 
 export class PersoRoomManager {
@@ -29,35 +216,8 @@ export class PersoRoomManager {
   private readonly CLEANUP_TIMEOUT = 30 * 60 * 1000;
 
   createRoom(postId: string, initialPersonas: string[], contexts: string[]): PersoRoom {
-    const roomId = `room-${postId}-${Date.now()}`;
-    const now = Date.now();
-    
-    const activePersonas: PersonaState[] = initialPersonas.map(id => ({
-      id,
-      status: 'active' as const,
-      joinedAt: now,
-      lastSpokeAt: 0,
-      messageCount: 0
-    }));
-    
-    const currentTopics = this.contextsToTopicWeights(contexts);
-    
-    const room: PersoRoom = {
-      roomId,
-      postId,
-      activePersonas,
-      currentTopics,
-      previousTopics: [],
-      dominantPersona: null,
-      turnsSinceDominantChange: 0,
-      totalTurns: 0,
-      createdAt: now,
-      lastActivity: now
-    };
-    
-    this.rooms.set(roomId, room);
-    console.log(`[ROOM] Created ${roomId} with ${initialPersonas.length} personas, ${contexts.length} topics`);
-    
+    const room = new PersoRoom(postId, initialPersonas, contexts);
+    this.rooms.set(room.roomId, room);
     return room;
   }
   
@@ -68,108 +228,25 @@ export class PersoRoomManager {
   getRoomByPostId(postId: string): PersoRoom | undefined {
     return Array.from(this.rooms.values()).find(room => room.postId === postId);
   }
-  
-  updateTopics(roomId: string, newContexts: string[]): void {
-    const room = this.rooms.get(roomId);
-    if (!room) return;
-    
-    room.previousTopics = room.currentTopics;
-    room.currentTopics = this.contextsToTopicWeights(newContexts);
-    room.lastActivity = Date.now();
-    
-    console.log(`[ROOM] Updated topics for ${roomId}: ${newContexts.join(', ')}`);
+
+  deleteRoom(roomId: string): boolean {
+    const deleted = this.rooms.delete(roomId);
+    if (deleted) {
+      console.log(`[ROOM] Deleted room ${roomId}`);
+    }
+    return deleted;
   }
-  
-  addPersona(roomId: string, personaId: string): void {
-    const room = this.rooms.get(roomId);
-    if (!room) return;
-    
-    room.lastActivity = Date.now();
-    
-    const existing = room.activePersonas.find(p => p.id === personaId);
-    if (existing) {
-      existing.status = 'active';
-      existing.joinedAt = Date.now();
-      console.log(`[ROOM] ${personaId} rejoined ${roomId}`);
-      return;
-    }
-    
-    room.activePersonas.push({
-      id: personaId,
-      status: 'joining',
-      joinedAt: Date.now(),
-      lastSpokeAt: 0,
-      messageCount: 0
-    });
-    
-    console.log(`[ROOM] ${personaId} joined ${roomId}`);
+
+  getAllRooms(): PersoRoom[] {
+    return Array.from(this.rooms.values());
   }
-  
-  removePersona(roomId: string, personaId: string): void {
-    const room = this.rooms.get(roomId);
-    if (!room) return;
-    
-    const persona = room.activePersonas.find(p => p.id === personaId);
-    if (persona) {
-      persona.status = 'leaving';
-    }
-    
-    if (room.dominantPersona === personaId) {
-      const remainingActive = room.activePersonas.filter(
-        p => p.id !== personaId && p.status === 'active'
-      );
-      
-      if (remainingActive.length > 0) {
-        const newDominant = remainingActive.reduce((prev, curr) => 
-          curr.messageCount > prev.messageCount ? curr : prev
-        );
-        room.dominantPersona = newDominant.id;
-        room.turnsSinceDominantChange = 0;
-        console.log(`[ROOM] Dominant persona reassigned to ${newDominant.id} after ${personaId} left`);
-      } else {
-        room.dominantPersona = null;
-        console.log(`[ROOM] No dominant persona after ${personaId} left`);
-      }
-    }
-    
-    setTimeout(() => {
-      const room = this.rooms.get(roomId);
-      if (room) {
-        room.activePersonas = room.activePersonas.filter(p => p.id !== personaId);
-      }
-    }, 1000);
-    
-    room.lastActivity = Date.now();
-    console.log(`[ROOM] ${personaId} left ${roomId}`);
+
+  getActiveRooms(): PersoRoom[] {
+    return this.getAllRooms().filter(room => room.isActive());
   }
-  
-  recordPersonaTurn(roomId: string, personaId: string): void {
-    const room = this.rooms.get(roomId);
-    if (!room) return;
-    
-    const persona = room.activePersonas.find(p => p.id === personaId);
-    if (persona) {
-      persona.lastSpokeAt = Date.now();
-      persona.messageCount++;
-      if (persona.status === 'joining') {
-        persona.status = 'active';
-      }
-    }
-    
-    room.totalTurns++;
-    room.turnsSinceDominantChange++;
-    room.lastActivity = Date.now();
-  }
-  
-  setDominantPersona(roomId: string, personaId: string): void {
-    const room = this.rooms.get(roomId);
-    if (!room) return;
-    
-    if (room.dominantPersona !== personaId) {
-      room.dominantPersona = personaId;
-      room.turnsSinceDominantChange = 0;
-      console.log(`[ROOM] Dominant persona changed to ${personaId} in ${roomId}`);
-    }
+
+  getRoomCount(): number {
+    return this.rooms.size;
   }
   
   cleanup(): void {
@@ -182,15 +259,6 @@ export class PersoRoomManager {
         console.log(`[ROOM] Cleaned up inactive room ${roomId}`);
       }
     });
-  }
-  
-  private contextsToTopicWeights(contexts: string[]): TopicWeight[] {
-    if (contexts.length === 0) {
-      return [{ topic: 'general', weight: 1.0 }];
-    }
-    
-    const weight = 1.0 / contexts.length;
-    return contexts.map(topic => ({ topic, weight }));
   }
 }
 
