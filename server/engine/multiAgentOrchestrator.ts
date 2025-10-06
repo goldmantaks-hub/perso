@@ -24,6 +24,7 @@ interface ConversationMessage {
   id?: string;
   persona?: string;
   message: string;
+  thinking?: string;
   timestamp?: number;
 }
 
