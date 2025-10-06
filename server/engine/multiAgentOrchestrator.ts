@@ -66,9 +66,23 @@ export function selectNextSpeaker(
     }
     
     const personaTurns = conversationHistory.filter(m => m.persona === persona.id).length;
-    const avgParticipation = Math.max(1, conversationHistory.length / activePersonas.length);
-    const fairness = Math.max(0, 1.0 - Math.abs(personaTurns - avgParticipation) / (avgParticipation + 0.1));
-    score += fairness * 0.1;
+    const totalTurns = conversationHistory.length;
+    
+    if (totalTurns === 0) {
+      score += 0.1;
+    } else {
+      const avgParticipation = totalTurns / activePersonas.length;
+      let fairness;
+      
+      if (personaTurns < avgParticipation) {
+        const underrepBonus = (avgParticipation - personaTurns) / (avgParticipation + 1);
+        fairness = 1.0 + underrepBonus * 0.15;
+      } else {
+        fairness = Math.max(0, 1.0 - (personaTurns - avgParticipation) / avgParticipation);
+      }
+      
+      score += fairness * 0.1;
+    }
     
     const interest = calculateInterestMatch(persona, lastMessage);
     score += interest * 0.1;
