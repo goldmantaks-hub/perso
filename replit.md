@@ -133,6 +133,33 @@ The application is a full-stack TypeScript application, utilizing React for the 
 
 ## Recent Changes
 
+### October 6, 2025 - AI Persona Internal Thinking System
+
+**Feature Implemented:**
+- AI personas now display internal reasoning before generating responses, showing their thought process to users
+- Thinking appears as a brief (1-sentence) internal monologue that explains what the persona is considering
+
+**Technical Implementation:**
+- **Database Schema:** Added nullable `thinking` text column to `messages` table
+- **Backend API:** `/api/perso/:postId/ai-response` generates thinking using OpenAI (temperature 0.7, max 50 tokens) before main response
+- **Message Storage:** Thinking is saved to database and included in WebSocket broadcasts
+- **Frontend Display:** 
+  - Thinking appears above AI messages with sparkles icon and italic styling
+  - Visual indicator: muted background (bg-muted/50) with text-muted-foreground
+  - Only displayed for AI messages when thinking data exists
+- **Console Logging:** Backend logs thinking as `[${persona.name} THINKS]: ${thinking}`
+
+**User Experience:**
+- Users can see AI personas' internal reasoning before responses
+- Provides transparency into AI decision-making process
+- Enhances engagement by showing persona's thought patterns
+
+**Files Modified:**
+- `shared/schema.ts` - Added thinking column to messages table
+- `server/routes.ts` - Updated AI response generation to include thinking
+- `client/src/pages/perso.tsx` - Added UI display for thinking with sparkles icon
+- Database migrated via `npm run db:push`
+
 ### October 6, 2025 - Authentication Error Handling & Auto-Logout
 
 **Problem Fixed:**

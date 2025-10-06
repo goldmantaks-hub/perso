@@ -470,6 +470,12 @@ export default function PersoPage() {
                   {new Date(msg.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
+              {msg.isAI && msg.thinking && (
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-muted/50 rounded-md text-xs text-muted-foreground italic" data-testid={`thinking-${msg.id}`}>
+                  <Sparkles className="w-3 h-3" />
+                  <span>{msg.thinking}</span>
+                </div>
+              )}
               <div className={`p-3 rounded-lg ${
                 !msg.isAI
                   ? 'bg-primary text-primary-foreground rounded-tr-none' 

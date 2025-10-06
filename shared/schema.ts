@@ -96,6 +96,7 @@ export const messages = pgTable("messages", {
   senderType: varchar("sender_type", { length: 20 }).notNull(),
   senderId: varchar("sender_id").notNull(),
   content: text("content").notNull(),
+  thinking: text("thinking"),
   messageType: varchar("message_type", { length: 20 }).notNull().default('text'),
   replyToId: varchar("reply_to_id"),
   meta: jsonb("meta"),

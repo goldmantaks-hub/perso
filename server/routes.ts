@@ -899,7 +899,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "인증되지 않은 사용자입니다" });
       }
       
-      const { content, isAI, personaId } = req.body;
+      const { content, isAI, personaId, thinking } = req.body;
       const postId = req.params.postId;
       
       // Conversation 가져오기 또는 생성
@@ -928,7 +928,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // 임시 메시지 ID 생성 (클라이언트에게 즉시 반환)
       const tempMessageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const tempMessage = {
+      const tempMessage: any = {
         id: tempMessageId,
         conversationId: conversation.id,
         senderType,
@@ -937,6 +937,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         messageType: 'text',
         createdAt: new Date().toISOString(),
       };
+      
+      if (thinking) {
+        tempMessage.thinking = thinking;
+      }
       
       // WebSocket으로 즉시 브로드캐스트
       const io = getIO();
@@ -968,13 +972,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // DB 저장은 비동기로 (await 없이, 성능 향상)
-      storage.createMessageInConversation({
+      const messageData: any = {
         conversationId: conversation.id,
         senderType,
         senderId,
         content,
         messageType: 'text',
-      }).catch(error => {
+      };
+      
+      if (thinking) {
+        messageData.thinking = thinking;
+      }
+      
+      storage.createMessageInConversation(messageData).catch(error => {
         console.error('[MESSAGE SAVE ERROR]', error);
         // TODO: 에러 시 재시도 로직 또는 Dead Letter Queue
       });
