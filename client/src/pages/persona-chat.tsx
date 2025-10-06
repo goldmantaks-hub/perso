@@ -9,12 +9,19 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useWebSocket } from "@/hooks/useWebSocket";
+import { isAuthenticated } from "@/lib/auth";
 
 export default function PersonaChatPage() {
   const [, params] = useRoute("/chat/:personaId");
   const personaId = params?.personaId;
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      setLocation("/login");
+    }
+  }, [setLocation]);
 
   const [message, setMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);

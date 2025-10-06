@@ -3,8 +3,18 @@ import BottomNav from "@/components/bottom-nav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sparkles, Heart, MessageCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useEffect } from "react";
+import { useLocation } from "wouter";
+import { isAuthenticated } from "@/lib/auth";
 
 export default function ActivityPage() {
+  const [, setLocation] = useLocation();
+  
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      setLocation("/login");
+    }
+  }, [setLocation]);
   const currentUser = {
     name: "김지은",
     username: "jieun_kim",

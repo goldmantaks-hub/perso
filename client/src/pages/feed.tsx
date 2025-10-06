@@ -320,14 +320,6 @@ export default function FeedPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   
-  // 로그인 체크 - 로그인하지 않은 경우 로그인 페이지로 리다이렉트
-  useEffect(() => {
-    if (!isAuthenticated()) {
-      console.log('[FEED] Not authenticated, redirecting to /login');
-      setLocation("/login");
-    }
-  }, [setLocation]);
-  
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== 'undefined') {
       return document.documentElement.classList.contains('dark');

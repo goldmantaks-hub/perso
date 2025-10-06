@@ -42,8 +42,9 @@ import {
   Eye,
   LucideIcon
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import * as d3 from "d3";
+import { isAuthenticated } from "@/lib/auth";
 
 type EmotionKey = 'joy' | 'serene' | 'neutral' | 'surprise' | 'curious' | 'sadness' | 'anger' | 
   'excited' | 'moved' | 'tired' | 'tense' | 'nostalgic' | 'humorous' | 'informative' | 
@@ -153,10 +154,17 @@ const getPersonaTypeIcon = (typeKey: PersonaTypeKey): LucideIcon => {
 };
 
 export default function PersonaNetworkPage() {
+  const [, setLocation] = useLocation();
   const [selectedEmotion, setSelectedEmotion] = useState<string | null>(null);
   const [selectedPersonaType, setSelectedPersonaType] = useState<string>("all");
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      setLocation("/login");
+    }
+  }, [setLocation]);
 
   const filteredNodes = mockNodes.filter((node) => {
     const emotionMatch = !selectedEmotion || node.emotion === selectedEmotion;

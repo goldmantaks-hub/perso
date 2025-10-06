@@ -8,6 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Send, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import BottomNav from "@/components/bottom-nav";
+import { useLocation } from "wouter";
+import { isAuthenticated } from "@/lib/auth";
 
 interface Message {
   id: string;
@@ -26,10 +28,17 @@ interface ChatResponse {
 }
 
 export default function ChatPage() {
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      setLocation("/login");
+    }
+  }, [setLocation]);
 
   // 현재 사용자의 페르소나 가져오기
   const { data: persona, isLoading: personaLoading } = useQuery<any>({

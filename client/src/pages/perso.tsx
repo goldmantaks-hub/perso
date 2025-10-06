@@ -10,12 +10,19 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useWebSocket } from "@/hooks/useWebSocket";
+import { isAuthenticated } from "@/lib/auth";
 
 export default function PersoPage() {
   const [, params] = useRoute("/perso/:postId");
   const postId = params?.postId;
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      setLocation("/login");
+    }
+  }, [setLocation]);
 
   const [message, setMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);

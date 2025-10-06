@@ -14,6 +14,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
 import * as d3 from "d3";
+import { isAuthenticated } from "@/lib/auth";
 
 interface InfluenceNode {
   id: string;
@@ -1147,6 +1148,12 @@ function InfluenceMap() {
 export default function PersonaStatePage() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState("persona");
+  
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      setLocation("/login");
+    }
+  }, [setLocation]);
 
   const { data: userPersona, isLoading } = useQuery<any>({
     queryKey: ["/api/user/persona"],

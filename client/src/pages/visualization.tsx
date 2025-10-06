@@ -21,6 +21,8 @@ import { buildGraphData, calculateNodePositions, getNodeGlowIntensity, getLinkOp
 import { normalizeInfluenceScores } from "@/lib/influence";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import BottomNav from "@/components/bottom-nav";
+import { useLocation } from "wouter";
+import { isAuthenticated } from "@/lib/auth";
 
 ChartJS.register(
   CategoryScale,
@@ -53,9 +55,16 @@ interface PersonaData {
 }
 
 export default function VisualizationPage() {
+  const [, setLocation] = useLocation();
   const svgRef = useRef<SVGSVGElement>(null);
   const [emotionHistory, setEmotionHistory] = useState<EmotionDataPoint[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+  
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      setLocation("/login");
+    }
+  }, [setLocation]);
 
   const { data: personas = [] } = useQuery<PersonaData[]>({
     queryKey: ['/api/personas/visualization', refreshKey],

@@ -3,8 +3,18 @@ import BottomNav from "@/components/bottom-nav";
 import ProfileHeader from "@/components/profile-header";
 import FeedPost from "@/components/feed-post";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useEffect } from "react";
+import { useLocation } from "wouter";
+import { isAuthenticated } from "@/lib/auth";
 
 export default function ProfilePage() {
+  const [, setLocation] = useLocation();
+  
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      setLocation("/login");
+    }
+  }, [setLocation]);
   const currentUser = {
     name: "김지은",
     username: "jieun_kim",
