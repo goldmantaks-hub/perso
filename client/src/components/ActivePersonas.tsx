@@ -304,9 +304,17 @@ export default function ActivePersonas({
         {/* 주도권 교체 알림 */}
         {dominantPersona && (() => {
           // dominantPersona가 UUID인 경우와 이름인 경우 모두 처리
+          console.log('[DOMINANT PERSONA DEBUG]', {
+            dominantPersona,
+            activePersonas: activePersonas.map(p => ({ id: p.id, name: p.name }))
+          });
+          
           const dominantPersonaData = activePersonas.find(p => 
             p.id === dominantPersona || p.name === dominantPersona
           );
+          
+          console.log('[DOMINANT PERSONA DEBUG] Found:', dominantPersonaData);
+          
           const displayName = dominantPersonaData?.owner 
             ? `${dominantPersonaData.owner.name}의 ${dominantPersonaData.name}`
             : dominantPersonaData?.name || dominantPersona;

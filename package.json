@@ -25,7 +25,11 @@
     "migrate:participants": "tsx server/scripts/migrate-participants.ts",
     "migrate:participants:preview": "tsx server/scripts/migrate-participants.ts preview",
     "migrate:participants:migrate": "tsx server/scripts/migrate-participants.ts migrate",
-    "check:luna": "tsx server/scripts/check-luna-persona.ts"
+    "check:luna": "tsx server/scripts/check-luna-persona.ts",
+    "check:room": "tsx server/scripts/check-room-status.ts",
+    "cleanup:duplicates": "tsx server/scripts/cleanup-duplicate-participants.ts",
+    "fix:dominant": "tsx server/scripts/fix-dominant-persona.ts",
+    "cleanup:all": "npm run cleanup:duplicates && npm run fix:dominant"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

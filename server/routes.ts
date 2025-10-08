@@ -31,6 +31,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // 관리자 API: 소유주 페르소나 재초대
+  app.post("/api/admin/reinvite-owner/:postId", async (req, res) => {
+    try {
+      const { postId } = req.params;
+      
+      console.log(`[ADMIN] 소유주 페르소나 재초대 요청: ${postId}`);
+      
+      // 게시물 정보 조회
+      const post = await storage.getPost(postId);
+      if (!post) {
+        return res.status(404).json({ error: "게시물을 찾을 수 없습니다" });
+      }
+      
+      // 게시물 작성자의 페르소나 조회
+      const authorPersonas = await storage.getPersonasByUserId(post.authorId);
+      if (authorPersonas.length === 0) {
+        return res.status(404).json({ error: "작성자의 페르소나를 찾을 수 없습니다" });
+      }
+      
+      const primaryPersona = authorPersonas[0]; // 첫 번째 페르소나 사용
+      
+      // 대화방 정보 조회
+      const conversation = await storage.getConversationByPostId(postId);
+      if (!conversation) {
+        return res.status(404).json({ error: "대화방을 찾을 수 없습니다" });
+      }
+      
+      // 소유주 페르소나를 참가자로 추가
+      await storage.addParticipant({
+        conversationId: conversation.id,
+        participantType: 'persona',
+        participantId: primaryPersona.id,
+        role: 'owner'
+      });
+      
+      console.log(`[ADMIN] 소유주 페르소나 재초대 완료: ${primaryPersona.name}`);
+      
+      res.json({
+        success: true,
+        message: "소유주 페르소나가 성공적으로 재초대되었습니다",
+        persona: {
+          id: primaryPersona.id,
+          name: primaryPersona.name,
+          owner: {
+            id: post.authorId,
+            name: (await storage.getUser(post.authorId))?.name || 'Unknown'
+          }
+        }
+      });
+      
+    } catch (error) {
+      console.error('[ADMIN] 소유주 페르소나 재초대 오류:', error);
+      res.status(500).json({ error: "소유주 페르소나 재초대 중 오류가 발생했습니다" });
+    }
+  });
+
   // Mock 로그인 엔드포인트
   app.post("/api/auth/login", async (req, res) => {
     try {
@@ -2382,6 +2438,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: "게시물 삭제에 실패했습니다.",
         message: error instanceof Error ? error.message : "알 수 없는 오류"
       });
+    }
+  });
+
+  // 관리자 API: 중복 참가자 정리
+  app.post("/api/admin/cleanup-duplicates/:postId", async (req, res) => {
+    try {
+      const { postId } = req.params;
+      console.log(`[ADMIN] 중복 참가자 정리 요청: ${postId}`);
+      
+      const conversation = await storage.getConversationByPostId(postId);
+      if (!conversation) {
+        return res.status(404).json({ error: "대화방을 찾을 수 없습니다" });
+      }
+
+      // 중복된 사용자 참가자 찾기
+      const participants = await storage.getParticipants(conversation.id);
+      const userParticipants = participants.filter(p => p.participantType === 'user');
+      
+      // userId별로 그룹화
+      const userGroups = userParticipants.reduce((acc, participant) => {
+        const userId = participant.participantId;
+        if (!acc[userId]) {
+          acc[userId] = [];
+        }
+        acc[userId].push(participant);
+        return acc;
+      }, {} as Record<string, any[]>);
+
+      let removedCount = 0;
+      for (const [userId, duplicates] of Object.entries(userGroups)) {
+        if (duplicates.length > 1) {
+          // 첫 번째(가장 오래된) 것만 남기고 나머지 삭제
+          const toKeep = duplicates[0];
+          const toRemove = duplicates.slice(1);
+          
+          for (const participant of toRemove) {
+            await storage.removeParticipant({
+              conversationId: conversation.id,
+              participantType: participant.participantType,
+              participantId: participant.participantId
+            });
+            removedCount++;
+            console.log(`[ADMIN] 중복 참가자 삭제: ${participant.id}`);
+          }
+        }
+      }
+
+      console.log(`[ADMIN] 중복 참가자 정리 완료: ${removedCount}개 삭제`);
+      res.json({
+        success: true,
+        message: `중복 참가자 ${removedCount}개가 정리되었습니다`,
+        removedCount
+      });
+    } catch (error) {
+      console.error('[ADMIN] 중복 참가자 정리 오류:', error);
+      res.status(500).json({ error: "중복 참가자 정리 중 오류가 발생했습니다" });
+    }
+  });
+
+  // 관리자 API: 주도권 수정
+  app.post("/api/admin/fix-dominant/:postId", async (req, res) => {
+    try {
+      const { postId } = req.params;
+      console.log(`[ADMIN] 주도권 수정 요청: ${postId}`);
+      
+      const conversation = await storage.getConversationByPostId(postId);
+      if (!conversation) {
+        return res.status(404).json({ error: "대화방을 찾을 수 없습니다" });
+      }
+
+      // 활성 페르소나 참가자 확인
+      const participants = await storage.getParticipants(conversation.id);
+      const activePersonas = participants.filter(p => p.participantType === 'persona');
+      
+      let newDominant = null;
+      if (activePersonas.length > 0) {
+        // 첫 번째 활성 페르소나로 주도권 설정
+        newDominant = activePersonas[0].participantId;
+        await storage.updateConversation(conversation.id, { dominantPersona: newDominant });
+        console.log(`[ADMIN] 주도권 변경: ${conversation.dominantPersona} → ${newDominant}`);
+      } else {
+        // 활성 페르소나가 없으면 주도권을 null로 설정
+        await storage.updateConversation(conversation.id, { dominantPersona: null });
+        console.log(`[ADMIN] 주도권 초기화: ${conversation.dominantPersona} → null`);
+      }
+
+      res.json({
+        success: true,
+        message: "주도권이 수정되었습니다",
+        oldDominant: conversation.dominantPersona,
+        newDominant
+      });
+    } catch (error) {
+      console.error('[ADMIN] 주도권 수정 오류:', error);
+      res.status(500).json({ error: "주도권 수정 중 오류가 발생했습니다" });
     }
   });
 

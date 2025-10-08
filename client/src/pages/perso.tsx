@@ -282,6 +282,26 @@ export default function PersoPage() {
     }
   }, [dominantPersonaId]);
 
+  // dominantPersona 검증 및 자동 수정
+  useEffect(() => {
+    if (dominantPersona && activePersonas.length > 0) {
+      const isDominantActive = activePersonas.some(p => p.id === dominantPersona);
+      if (!isDominantActive) {
+        console.log('[DOMINANT PERSONA DEBUG] 주도권 페르소나가 활성 상태가 아님, 자동 수정');
+        console.log('[DOMINANT PERSONA DEBUG] 현재 주도권:', dominantPersona);
+        console.log('[DOMINANT PERSONA DEBUG] 활성 페르소나:', activePersonas.map(p => ({ id: p.id, name: p.name })));
+        
+        // 첫 번째 활성 페르소나로 주도권 변경
+        const newDominant = activePersonas[0];
+        setDominantPersona(newDominant.id);
+        console.log('[DOMINANT PERSONA DEBUG] 새로운 주도권자로 설정:', newDominant.name);
+      }
+    } else if (dominantPersona && activePersonas.length === 0) {
+      console.log('[DOMINANT PERSONA DEBUG] 활성 페르소나가 없음, 주도권 초기화');
+      setDominantPersona(null);
+    }
+  }, [dominantPersona, activePersonas]);
+
   // currentTopics와 totalTurns 설정
   useEffect(() => {
     console.log('[TOPICS/TURNS] 서버에서 받은 토픽:', serverCurrentTopics);
@@ -463,7 +483,9 @@ export default function PersoPage() {
     queryKey: ["/api/personas"],
     queryFn: async () => {
       try {
-        const response = await apiRequest('/api/personas');
+        const response = await apiRequest('GET', '/api/personas');
+        const personas = await response.json();
+        
         // 현재 사용자 정보 가져오기
         const currentUser = getUser();
         if (!currentUser) {
@@ -472,7 +494,7 @@ export default function PersoPage() {
         }
         
         // 현재 사용자의 페르소나만 필터링
-        const userPersonas = response.filter((persona: any) => 
+        const userPersonas = personas.filter((persona: any) => 
           persona.user && persona.user.id === currentUser.id
         );
         

@@ -583,6 +583,17 @@ export class DbStorage implements IStorage {
       .set({ updatedAt: new Date() })
       .where(eq(conversations.id, conversationId));
   }
+
+  async updateConversation(conversationId: string, updates: Partial<Conversation>): Promise<void> {
+    await db
+      .update(conversations)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(conversations.id, conversationId));
+  }
+
+  async getParticipants(conversationId: string): Promise<ConversationParticipant[]> {
+    return await this.getParticipantsByConversation(conversationId);
+  }
 }
 
 export const storage = new DbStorage();
