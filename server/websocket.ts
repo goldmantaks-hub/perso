@@ -613,6 +613,11 @@ export function setupWebSocket(server: Server) {
         let autoRoom = room;
         if (!autoRoom) {
           console.log(`[WS] Room not found for post ${data.postId}, creating new room for auto-chat`);
+          
+          // Post 내용 조회
+          const post = await storage.getPost(data.postId);
+          const postContent = post ? (post.description || post.title) : '';
+          
           // 초기 페르소나 선택 (랜덤 3-4개)
           const allPersonas = ['Espri', 'Kai', 'Milo', 'Luna', 'Namu', 'Eden', 'Ava', 'Rho', 'Noir'];
           const personaCount = Math.floor(Math.random() * 2) + 3; // 3-4개
@@ -621,7 +626,7 @@ export function setupWebSocket(server: Server) {
             .slice(0, personaCount);
           
           const contexts = data.analysis?.tones || [];
-          autoRoom = persoRoomManager.createRoom(data.postId, initialPersonas, contexts);
+          autoRoom = persoRoomManager.createRoom(data.postId, postContent, initialPersonas, contexts);
           console.log(`[WS] Created room ${autoRoom.roomId} with personas: ${initialPersonas.join(', ')}`);
         }
         

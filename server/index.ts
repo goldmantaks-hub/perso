@@ -71,7 +71,8 @@ async function reloadActiveRooms() {
       
       // Room 재생성
       const personaIds = personaParticipants.map(p => p.participantId);
-      const room = persoRoomManager.createRoom(post.id, personaIds, []);
+      const postContent = post.description || post.title;
+      const room = persoRoomManager.createRoom(post.id, postContent, personaIds, []);
       room.setConversationId(conversation.id);
       
       loadedCount++;

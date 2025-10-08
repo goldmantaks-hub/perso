@@ -5,12 +5,7 @@ import { checkJoinLeaveEvents, executeJoinLeaveEvents } from './joinLeaveManager
 import { storage } from '../storage.js';
 import { getExpandedInfoForPersona } from './infoExpansion.js';
 import { personaTalk } from './dialogueOrchestrator.js';
-
-interface Post {
-  id: string;
-  content: string;
-  userId?: string;
-}
+import type { Post } from '@shared/schema';
 
 interface Analysis {
   sentiment: any;
@@ -41,7 +36,7 @@ export async function multiAgentDialogueOrchestrator(
   initialPersonas?: string[]
 ): Promise<MultiAgentDialogueResult> {
   console.log(`[MULTI AGENT] Starting multiAgentDialogueOrchestrator for post ${post.id}`);
-  console.log(`[MULTI AGENT] Post content: "${post.content}"`);
+  console.log(`[MULTI AGENT] Post content: "${post.description || post.title}"`);
   console.log(`[MULTI AGENT] Analysis:`, analysis);
   
   const contexts = analysis.contexts || [];
@@ -68,7 +63,8 @@ export async function multiAgentDialogueOrchestrator(
   }
   
   console.log(`[MULTI AGENT] About to create room with post.id: ${post.id}`);
-  const room = persoRoomManager.createRoom(post.id, selectedPersonas, contexts);
+  const postContent = post.description || post.title;
+  const room = persoRoomManager.createRoom(post.id, postContent, selectedPersonas, contexts);
   console.log(`[MULTI AGENT] Created room:`, room.roomId);
   
   if (!room.dominantPersona && room.activePersonas.length > 0) {
@@ -82,7 +78,7 @@ export async function multiAgentDialogueOrchestrator(
   const initialTurns = 3 + Math.floor(Math.random() * 3);
   
   let lastSpeaker = '';
-  let lastMessage = post.content;
+  let lastMessage = postContent;
   
   // 초기 대화 진행
   for (let turn = 0; turn < initialTurns; turn++) {

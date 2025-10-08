@@ -33,11 +33,14 @@ export class AutoChatOrchestrator {
     const lastMessages = room.getLastMessages(12);
     const lastMessageText = lastMessages.map(m => m.text).join(' ');
 
+    // 게시물 원본 내용 + 최근 대화 내용을 함께 분석 (context drift 방지)
+    const combinedText = `${room.postContent}\n\n${lastMessageText}`;
+
     // 컨텍스트 분석
-    const sentiment = analyzeSentimentFromContent(lastMessageText);
-    const tones = inferTonesFromContent(lastMessageText, sentiment);
-    const subjects = detectSubjects(lastMessageText, undefined);
-    const contexts = inferContexts(lastMessageText, subjects, tones);
+    const sentiment = analyzeSentimentFromContent(combinedText);
+    const tones = inferTonesFromContent(combinedText, sentiment);
+    const subjects = detectSubjects(combinedText, undefined);
+    const contexts = inferContexts(combinedText, subjects, tones);
 
     const ctx = {
       subjects: subjects.map(s => typeof s === 'string' ? s : s.kind || String(s)),

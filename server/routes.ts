@@ -685,7 +685,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const subjects = detectSubjects(postContent, undefined);
               const contexts = inferContexts(postContent, subjects, []);
               
-              room = persoRoomManager.createRoom(post.id, personaIds, contexts);
+              room = persoRoomManager.createRoom(post.id, postContent, personaIds, contexts);
               console.log(`[POST CREATE] Created Room ${room.roomId} with personas: ${personaNames.join(', ')}`);
               
               // Conversation 생성 및 페르소나 참가자 추가
@@ -1230,6 +1230,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (!room) {
               console.log(`[USER MESSAGE] Room not found for post ${postId}, restoring from conversation`);
               
+              // Post 내용 조회
+              const post = await storage.getPost(postId);
+              const postContent = post ? (post.description || post.title) : '';
+              
               // Conversation에서 페르소나 참가자 추출
               const participants = await storage.getParticipants(conversation.id);
               const personaParticipants = participants.filter(p => p.participantType === 'persona');
@@ -1247,7 +1251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 );
                 
                 const contexts: string[] = [];
-                room = persoRoomManager.createRoom(postId, personaIds, contexts);
+                room = persoRoomManager.createRoom(postId, postContent, personaIds, contexts);
                 console.log(`[USER MESSAGE] Restored room ${room.roomId} with existing personas: ${personaNames.join(', ')} (IDs: ${personaIds.join(', ')})`);
               } else {
                 // 참가자가 없으면 DB에서 랜덤 페르소나 선택 (ID 사용!)
@@ -1265,7 +1269,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   const personaNames = selectedPersonas.map(p => p.name);
                   
                   const contexts: string[] = [];
-                  room = persoRoomManager.createRoom(postId, personaIds, contexts);
+                  room = persoRoomManager.createRoom(postId, postContent, personaIds, contexts);
                   console.log(`[USER MESSAGE] Created new room ${room.roomId} with random personas: ${personaNames.join(', ')} (IDs: ${personaIds.join(', ')})`);
                 } else {
                   console.error(`[USER MESSAGE] No personas available in database for room creation`);
@@ -1771,6 +1775,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (!room) {
             console.log(`[AI RESPONSE] Room not found for post ${postId}, restoring from conversation`);
             
+            // Post 내용 조회
+            const post = await storage.getPost(postId);
+            const postContent = post ? (post.description || post.title) : '';
+            
             // Conversation 조회
             const conversation = await storage.getConversationByPost(postId);
             if (conversation) {
@@ -1791,7 +1799,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 );
                 
                 const contexts: string[] = [];
-                room = persoRoomManager.createRoom(postId, personaIds, contexts);
+                room = persoRoomManager.createRoom(postId, postContent, personaIds, contexts);
                 console.log(`[AI RESPONSE] Restored room ${room.roomId} with existing personas: ${personaNames.join(', ')} (IDs: ${personaIds.join(', ')})`);
               } else {
                 // 참가자가 없으면 DB에서 랜덤 페르소나 선택 (ID 사용!)
@@ -1809,7 +1817,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   const personaNames = selectedPersonas.map(p => p.name);
                   
                   const contexts: string[] = [];
-                  room = persoRoomManager.createRoom(postId, personaIds, contexts);
+                  room = persoRoomManager.createRoom(postId, postContent, personaIds, contexts);
                   console.log(`[AI RESPONSE] Created new room ${room.roomId} with random personas: ${personaNames.join(', ')} (IDs: ${personaIds.join(', ')})`);
                 } else {
                   console.error(`[AI RESPONSE] No personas available in database for room creation`);

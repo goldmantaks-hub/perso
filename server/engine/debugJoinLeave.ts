@@ -25,7 +25,7 @@ async function debugJoinLeaveLogic() {
     const testRoomId = `debug-test-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const initialPersonas = ['Kai', 'Espri'];
     
-    const room = persoRoomManager.createRoom(testRoomId, initialPersonas, ['tech', 'ai']);
+    const room = persoRoomManager.createRoom(testRoomId, 'Test post content for debugging', initialPersonas, ['tech', 'ai']);
     
     if (!room) {
       console.log('❌ 룸 생성 실패');
@@ -148,7 +148,7 @@ async function debugProbabilityLogic() {
   const testRoomId = `probability-debug-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   const initialPersonas = ['Kai', 'Espri'];
   
-  persoRoomManager.createRoom(testRoomId, initialPersonas, ['tech']);
+  persoRoomManager.createRoom(testRoomId, 'Test post content for probability debugging', initialPersonas, ['tech']);
   const room = persoRoomManager.getRoom(testRoomId);
   
   if (!room) {

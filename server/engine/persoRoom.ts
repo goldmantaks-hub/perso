@@ -23,6 +23,7 @@ export interface DialogueMessage {
 export class PersoRoom {
   roomId: string;
   postId: string;
+  postContent: string; // 게시물 원본 내용 (대화가 게시물과 관련되도록 유지)
   conversationId: string | null;
   activePersonas: PersonaState[];
   currentTopics: TopicWeight[];
@@ -44,12 +45,13 @@ export class PersoRoom {
   autoChatEnabled: boolean;
   lastMessageAt: Date;
 
-  constructor(postId: string, initialPersonas: string[], contexts: string[]) {
+  constructor(postId: string, postContent: string, initialPersonas: string[], contexts: string[]) {
     const now = Date.now();
     
     // postId를 기반으로 고정된 roomId 생성 (timestamp 제거)
     this.roomId = `room-${postId}`;
     this.postId = postId;
+    this.postContent = postContent; // 게시물 원본 내용 저장
     this.conversationId = null;
     this.activePersonas = initialPersonas.map(id => ({
       id,
@@ -269,7 +271,7 @@ export class PersoRoomManager {
   private readonly CLEANUP_TIMEOUT = 30 * 60 * 1000;
   private cleanupInterval: NodeJS.Timeout | null = null;
 
-  createRoom(postId: string, initialPersonas: string[], contexts: string[]): PersoRoom {
+  createRoom(postId: string, postContent: string, initialPersonas: string[], contexts: string[]): PersoRoom {
     // 같은 postId에 대한 기존 Room이 있는지 확인
     const existingRoom = this.getRoomByPostId(postId);
     if (existingRoom) {
@@ -278,7 +280,7 @@ export class PersoRoomManager {
     }
     
     // 새 Room 생성
-    const room = new PersoRoom(postId, initialPersonas, contexts);
+    const room = new PersoRoom(postId, postContent, initialPersonas, contexts);
     this.rooms.set(room.roomId, room);
     return room;
   }
