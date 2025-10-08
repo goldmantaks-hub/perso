@@ -345,7 +345,16 @@ export default function EnhancedChatPanel({
                   )}
                   
                   {/* 내부 추론 표시 */}
-                  {msg.senderType === 'ai' && msg.thinking && (
+                  {(() => {
+                    const hasThinking = msg.senderType === 'ai' && msg.thinking;
+                    console.log(`[THINKING DEBUG] EnhancedChatPanel - Message ${msg.id}:`, {
+                      senderType: msg.senderType,
+                      hasThinking: !!msg.thinking,
+                      thinking: msg.thinking,
+                      willShow: hasThinking
+                    });
+                    return hasThinking;
+                  })() && (
                     <motion.div
                       initial={false}
                       animate={{ height: isThinkingVisible ? 'auto' : 0, opacity: isThinkingVisible ? 1 : 0 }}
@@ -410,7 +419,7 @@ export default function EnhancedChatPanel({
                         : colors ? `${colors.bg} ${colors.text} ${colors.border} border` : 'bg-muted text-foreground'
                     }`}
                   >
-                    <p className="text-sm">{msg.message}</p>
+                    <p className="text-sm break-words whitespace-pre-wrap">{msg.message}</p>
                   </motion.div>
                 </div>
 

@@ -1972,6 +1972,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         senderId: targetPersonaId,
         content: fullResponse,
         messageType: 'text',
+        thinking: thinking, // thinking 필드 추가
       }).catch(error => {
         console.error('[AI MESSAGE SAVE ERROR]', error);
       });
@@ -1985,6 +1986,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           senderType: 'persona',
           senderId: targetPersonaId,
           content: fullResponse,
+          thinking: thinking, // thinking 필드 추가
           createdAt: new Date().toISOString(),
           persona: {
             id: targetPersona.id,

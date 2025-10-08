@@ -38,6 +38,15 @@ export default function PersoPage() {
   // 페르소나 상태 관리
   const [activePersonas, setActivePersonas] = useState<any[]>([]);
   const [dominantPersona, setDominantPersona] = useState<string | null>(null);
+  
+  // 주도권을 가진 페르소나를 맨 앞에 정렬하는 함수
+  const sortPersonasByDominance = (personas: any[]) => {
+    return personas.sort((a, b) => {
+      if (a.id === dominantPersona) return -1;
+      if (b.id === dominantPersona) return 1;
+      return 0;
+    });
+  };
   const [currentTopics, setCurrentTopics] = useState<Array<{ topic: string; weight: number }>>([]);
   const [totalTurns, setTotalTurns] = useState(0);
   
@@ -222,7 +231,7 @@ export default function PersoPage() {
         
         if (hasChanges) {
           console.log('[ACTIVE PERSONAS] 상태 업데이트 필요, 변경사항 감지됨');
-          return personasFromParticipants;
+          return sortPersonasByDominance(personasFromParticipants);
         } else {
           console.log('[ACTIVE PERSONAS] 상태 업데이트 불필요, 변경사항 없음');
           return prevPersonas;
@@ -269,7 +278,7 @@ export default function PersoPage() {
       
       if (hasChanges) {
         console.log('[ACTIVE PERSONAS] 메시지 수 포함:', personasWithMessageCount);
-        setActivePersonas(personasWithMessageCount);
+        setActivePersonas(sortPersonasByDominance(personasWithMessageCount));
       }
     }
   }, [personasWithMessageCount]);
@@ -329,6 +338,15 @@ export default function PersoPage() {
 
   // WebSocket으로 실시간 메시지 수신
   const handleNewMessage = useCallback((newMessage: any) => {
+    // thinking 필드 디버깅
+    if (newMessage.senderType === 'persona' && newMessage.thinking) {
+      console.log(`[THINKING DEBUG] WebSocket received thinking for ${newMessage.persona?.name}:`, {
+        messageId: newMessage.id,
+        thinking: newMessage.thinking,
+        hasThinking: !!newMessage.thinking && newMessage.thinking !== "..."
+      });
+    }
+    
     // 시스템 메시지는 handleSystemMessage에서 처리하도록 제외
     if (newMessage.senderType === 'system' || newMessage.messageType === 'join' || newMessage.messageType === 'leave') {
       console.log('[PERSO] 시스템 메시지는 handleSystemMessage로 처리:', newMessage.id);
@@ -529,7 +547,7 @@ export default function PersoPage() {
 
   // 페르소나 상태 업데이트 핸들러
   const handlePersonaStatusUpdate = useCallback((statusData: any) => {
-    setActivePersonas(statusData.activePersonas || []);
+    setActivePersonas(sortPersonasByDominance(statusData.activePersonas || []));
     setDominantPersona(statusData.dominantPersona);
     setCurrentTopics(statusData.currentTopics || []);
     setTotalTurns(statusData.totalTurns || 0);
@@ -854,8 +872,8 @@ export default function PersoPage() {
               const newSet = new Set(prev);
               newSet.delete(data.persona.id);
               return newSet;
-            });
-          }, 1000);
+          });
+        }, 1000);
         } else {
           console.error(`[LUNA TOGGLE] ${personaId} 초대 실패:`, data.message);
           toast({
@@ -913,7 +931,7 @@ export default function PersoPage() {
           setRecentlyLeft(prev => new Set([...prev, actualPersonaId]));
           
           // 1초 후 실제로 제거
-          setTimeout(() => {
+        setTimeout(() => {
             setActivePersonas(prev => prev.filter(p => p.id !== actualPersonaId));
             setRecentlyLeft(prev => {
               const newSet = new Set(prev);
@@ -1279,7 +1297,7 @@ export default function PersoPage() {
         displayName = msg.user.name || '사용자';
       }
 
-      return {
+      const transformedMessage = {
         id: msg.id,
         sender: displayName,
         senderType: msg.isAI ? 'ai' : 'user',
@@ -1293,6 +1311,18 @@ export default function PersoPage() {
         user: msg.user,
         persona: msg.persona
       };
+      
+      // thinking 필드 디버깅 - 모든 AI 메시지에 대해 확인
+      if (msg.isAI) {
+        console.log(`[THINKING DEBUG] AI Message ${msg.id} (${displayName}):`, {
+          hasThinking: !!msg.thinking,
+          thinking: msg.thinking,
+          thinkingLength: msg.thinking?.length || 0,
+          isThinkingEmpty: msg.thinking === "..." || msg.thinking === ""
+        });
+      }
+      
+      return transformedMessage;
     });
   };
 
@@ -1362,7 +1392,7 @@ export default function PersoPage() {
                     .filter((p: any) => p?.type === 'user')
                     .map((p: any) => p.userId)
                 );
-                return `페르소나 ${uniquePersonas.size}명, 회원 ${uniqueUsers.size}명`;
+                return `활성 페르소나 ${uniquePersonas.size}명, 참여자 ${uniqueUsers.size}명`;
               })()}
             </p>
           </div>
@@ -1378,46 +1408,25 @@ export default function PersoPage() {
           )}
         </div>
         
-        {/* 참여자 리스트 */}
+        {/* 참여자 리스트 - 사용자만 표시 */}
         {participants.length > 0 && (
           <div className="px-4 pb-3">
             <div className="flex items-center gap-2 overflow-x-auto pb-2">
               <span className="text-xs text-muted-foreground shrink-0">참여 중:</span>
               {(() => {
-                const uniqueParticipants = participants.reduce((acc: any[], p: any) => {
-                  if (!p) return acc;
+                // 사용자만 필터링
+                const uniqueUsers = participants.reduce((acc: any[], p: any) => {
+                  if (!p || p.type !== 'user') return acc;
                   
-                  // 페르소나의 경우 personaId로 중복 체크
-                  if (p.type === 'persona') {
-                    if (!acc.find((existing: any) => existing.type === 'persona' && existing.personaId === p.personaId)) {
-                      acc.push(p);
-                    }
-                  }
-                  // 사용자의 경우 userId로 중복 체크
-                  else if (p.type === 'user') {
+                  // userId로 중복 체크
                     if (!acc.find((existing: any) => existing.type === 'user' && existing.userId === p.userId)) {
                       acc.push(p);
-                    }
                   }
                   
                   return acc;
                 }, []);
                 
-                return uniqueParticipants.map((p: any) => {
-                  if (p.type === 'persona') {
-                    return (
-                      <Link key={`persona-${p.personaId}`} href={`/chat/${p.personaId}`}>
-                        <div className="flex items-center gap-1.5 bg-muted rounded-full pl-1 pr-2 py-0.5 shrink-0 hover-elevate" data-testid={`participant-persona-${p.personaId}`}>
-                          <Avatar className="w-5 h-5">
-                            <AvatarImage src={p.personaImage} />
-                            <AvatarFallback>AI</AvatarFallback>
-                          </Avatar>
-                          <span className="text-xs">@{p.username?.split('_')?.[0] ?? '알수없음'}</span>
-                        </div>
-                      </Link>
-                    );
-                  } else {
-                    return (
+                return uniqueUsers.map((p: any) => (
                       <div key={`user-${p.userId}`} className="flex items-center gap-1.5 bg-muted rounded-full pl-1 pr-2 py-0.5 shrink-0" data-testid={`participant-user-${p.userId}`}>
                         <Avatar className="w-5 h-5">
                           <AvatarImage src={p.profileImage} />
@@ -1425,9 +1434,7 @@ export default function PersoPage() {
                         </Avatar>
                         <span className="text-xs">@{p.username?.split('_')?.[0] ?? '사용자'}</span>
                       </div>
-                    );
-                  }
-                });
+                ));
               })()}
             </div>
           </div>

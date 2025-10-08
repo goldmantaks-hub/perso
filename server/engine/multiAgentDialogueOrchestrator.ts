@@ -171,6 +171,11 @@ export async function multiAgentDialogueOrchestrator(
       });
       
       console.log(`[INITIAL] Message saved to DB with ID: ${savedMessage.id}`);
+      console.log(`[THINKING DEBUG] Saved thinking to DB:`, {
+        messageId: savedMessage.id,
+        thinking: thinking,
+        hasThinking: !!thinking && thinking !== "..."
+      });
       
     } catch (error) {
       console.error(`[INITIAL] Error saving message to DB:`, error);

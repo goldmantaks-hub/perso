@@ -111,11 +111,11 @@ export default function SystemMessage({
     >
       <Badge 
         variant="outline" 
-        className={`text-xs px-3 py-1 ${getTypeColor()} border`}
+        className={`text-xs px-3 py-1 ${getTypeColor()} border max-w-full`}
       >
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 max-w-full">
           {getIcon()}
-          <span>{getMessage()}</span>
+          <span className="break-words whitespace-pre-wrap">{getMessage()}</span>
         </div>
       </Badge>
     </motion.div>

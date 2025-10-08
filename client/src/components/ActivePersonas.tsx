@@ -242,7 +242,15 @@ export default function ActivePersonas({
           }}>
             <div className="flex gap-2" style={{ minWidth: 'max-content' }}>
             <AnimatePresence>
-              {activePersonas.map((persona, index) => {
+              {activePersonas
+                .sort((a, b) => {
+                  // 주도권을 가진 페르소나를 맨 앞에 배치
+                  if (a.id === dominantPersona) return -1;
+                  if (b.id === dominantPersona) return 1;
+                  // 나머지는 기존 순서 유지
+                  return 0;
+                })
+                .map((persona, index) => {
                 const colors = getPersonaColor(persona.id);
                 const isDominant = persona.id === dominantPersona;
                 const isJoining = recentlyJoined.has(persona.id);
@@ -301,34 +309,6 @@ export default function ActivePersonas({
           </div>
         </div>
 
-        {/* 주도권 교체 알림 */}
-        {dominantPersona && (() => {
-          // dominantPersona가 UUID인 경우와 이름인 경우 모두 처리
-          console.log('[DOMINANT PERSONA DEBUG]', {
-            dominantPersona,
-            activePersonas: activePersonas.map(p => ({ id: p.id, name: p.name }))
-          });
-          
-          const dominantPersonaData = activePersonas.find(p => 
-            p.id === dominantPersona || p.name === dominantPersona
-          );
-          
-          console.log('[DOMINANT PERSONA DEBUG] Found:', dominantPersonaData);
-          
-          const displayName = dominantPersonaData?.owner 
-            ? `${dominantPersonaData.owner.name}의 ${dominantPersonaData.name}`
-            : dominantPersonaData?.name || dominantPersona;
-          
-          return (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-2 text-xs text-muted-foreground"
-            >
-              현재 주도 페르소나: <span className="font-medium text-foreground">{displayName}</span>
-            </motion.div>
-          );
-        })()}
     </div>
     {hoveredPersona && (() => {
       const persona = activePersonas.find(p => p.id === hoveredPersona);

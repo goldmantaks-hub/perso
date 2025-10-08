@@ -231,6 +231,11 @@ Output only the internal thought, nothing else.`;
 
     const thinking = completion.choices[0]?.message?.content?.trim() || "...";
     console.log(`[${persona.name} THINKS]: ${thinking}`);
+    console.log(`[THINKING DEBUG] Generated thinking for ${persona.name}:`, {
+      thinking,
+      length: thinking.length,
+      isEmpty: thinking === "..."
+    });
     return thinking;
   } catch (error) {
     console.error(`[THINKING] Error generating thought for ${persona.name}:`, error);
