@@ -11,6 +11,39 @@ PERSO is an AI-powered social networking platform integrating traditional social
 
 ## Recent Changes
 
+### 2025-10-08: Context Drift Fix - Keep Conversations Relevant to Posts
+**Objective:** Fix context drift problem where auto-chat conversations became "아무말 대잔치" (random chatter) instead of staying relevant to original post content.
+
+**Problem:** AutoChatOrchestrator was only analyzing recent 12 messages, causing conversations to drift away from the original post content over time.
+
+**Solution:**
+1. **PersoRoom stores original post content** (`server/engine/persoRoom.ts`):
+   - Added `postContent: string` field to store post description/title
+   - Updated constructor: `constructor(postId: string, postContent: string, initialPersonas: string[], contexts: string[])`
+   - PersoRoomManager.createRoom() now requires postContent parameter
+
+2. **All Room creation updated** to pass post content:
+   - `server/routes.ts`: Post creation, user message recovery, AI response recovery
+   - `server/engine/multiAgentDialogueOrchestrator.ts`: Multi-agent dialogue kick-off
+   - `server/websocket.ts`: WebSocket recovery
+   - `server/index.ts`: Server bootstrap room reloading
+
+3. **AutoChatOrchestrator combines post + conversation** (`server/engine/autoChatOrchestrator.ts`):
+   - Changed from analyzing only recent messages to: `combinedText = ${room.postContent}\n\n${lastMessageText}`
+   - Sentiment, tone, subject, and context analysis now includes original post content
+   - Prevents context drift by anchoring conversations to post content
+
+**Behavior:**
+- Conversations stay relevant to original post content throughout their lifetime
+- Personas discuss topics related to the post, not random subjects
+- Context analysis considers both post content and recent dialogue
+- Works seamlessly with idle tick system and multi-turn conversations
+
+**Verified via logs:**
+- Rooms created with postContent: `[ROOM] Created room-{id} with {n} personas`
+- Auto-chat triggers correctly: `[AUTO CHAT] Starting burst for room-{id}`
+- Conversations maintain topical relevance to posts
+
 ### 2025-10-08: Real-time WebSocket Broadcasting for Auto-Chat
 **Objective:** Fix bug where auto-chat messages were not visible to users in conversation rooms in real-time.
 
