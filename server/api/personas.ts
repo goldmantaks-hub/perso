@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { APP_CONSTANTS, ERROR_MESSAGES, SUCCESS_MESSAGES } from '../../shared/constants.js';
 
 interface PersoOpenHistory {
   userId: string;
@@ -43,47 +44,47 @@ export async function openPerso(input: OpenPersoInput): Promise<{
   const now = Date.now();
   const contentHash = simpleHash(input.content);
 
-  if (input.sentiment.positive < 0.8) {
-    return { success: false, reason: '긍정 감성이 부족합니다 (≥0.8 필요)' };
+  if (input.sentiment.positive < APP_CONSTANTS.SENTIMENT.MIN_POSITIVE_THRESHOLD) {
+    return { success: false, reason: ERROR_MESSAGES.INSUFFICIENT_POSITIVE_SENTIMENT };
   }
 
   const similarity = input.sentiment.positive;
-  if (similarity < 0.75) {
-    return { success: false, reason: '유사도가 부족합니다 (≥0.75 필요)' };
+  if (similarity < APP_CONSTANTS.SENTIMENT.MIN_SIMILARITY_THRESHOLD) {
+    return { success: false, reason: ERROR_MESSAGES.INSUFFICIENT_SIMILARITY };
   }
 
   const recentOpens = persoOpenHistory.filter(h => 
     h.userId === input.userId && 
-    (now - h.timestamp) < 2 * 60 * 1000
+    (now - h.timestamp) < APP_CONSTANTS.TIME.COOLDOWN_PERIOD
   );
 
   if (recentOpens.length > 0) {
-    return { success: false, reason: '2분 쿨다운 중입니다' };
+    return { success: false, reason: ERROR_MESSAGES.COOLDOWN_ACTIVE };
   }
 
   const duplicateText = persoOpenHistory.find(h => 
     h.contentHash === contentHash && 
-    (now - h.timestamp) < 10 * 60 * 1000
+    (now - h.timestamp) < APP_CONSTANTS.TIME.DUPLICATE_CHECK_PERIOD
   );
 
   if (duplicateText) {
-    return { success: false, reason: '중복된 내용입니다' };
+    return { success: false, reason: ERROR_MESSAGES.DUPLICATE_CONTENT };
   }
 
-  let points = 10;
+  let points = APP_CONSTANTS.POINTS.PERSO_OPENED;
   const resonance = similarity;
   
-  if (resonance >= 0.9) {
-    points = 20;
+  if (resonance >= APP_CONSTANTS.SENTIMENT.HIGH_RESONANCE_THRESHOLD) {
+    points = APP_CONSTANTS.POINTS.PERSO_OPENED_HIGH_RESONANCE;
   }
 
   const jackpotChance = Math.random();
   let jackpot = false;
-  let growthMultiplier = 1;
+  let growthMultiplier = APP_CONSTANTS.GROWTH.DEFAULT_MULTIPLIER;
 
-  if (jackpotChance < 0.02) {
+  if (jackpotChance < APP_CONSTANTS.SENTIMENT.JACKPOT_CHANCE) {
     jackpot = true;
-    growthMultiplier = 2;
+    growthMultiplier = APP_CONSTANTS.GROWTH.JACKPOT_MULTIPLIER;
     console.log(`[JACKPOT] Triggered for ${input.personaName || 'Unknown'} - growth doubled`);
   }
 
@@ -103,7 +104,7 @@ export async function openPerso(input: OpenPersoInput): Promise<{
     timestamp: now
   });
 
-  const cutoff = now - 10 * 60 * 1000;
+  const cutoff = now - APP_CONSTANTS.TIME.ROOM_CLEANUP_PERIOD;
   while (persoOpenHistory.length > 0 && persoOpenHistory[0].timestamp < cutoff) {
     persoOpenHistory.shift();
   }

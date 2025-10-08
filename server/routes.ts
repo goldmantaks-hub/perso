@@ -11,6 +11,7 @@ import { analyzeSentiment } from "./api/analyze.js";
 import { analyzeSentimentFromContent, inferTonesFromContent, detectSubjects, inferContexts } from "./api/analyze.js";
 import { openPerso } from "./api/personas.js";
 import { runSeed } from "./seed.js";
+import { cleanupPostsWithoutConversations, listPostsWithoutConversations } from "./scripts/cleanup-posts.js";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // WebSocket 서버 참조를 위한 헬퍼 함수
@@ -1197,6 +1198,153 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/perso/:postId/persona/:personaId/join - 페르소나 강제 입장
+  app.post("/api/perso/:postId/persona/:personaId/join", authenticateToken, async (req, res) => {
+    try {
+      const { postId, personaId } = req.params;
+      
+      console.log(`[PERSONA JOIN API] Received request - postId: ${postId}, personaId: ${personaId}`);
+      
+      if (!req.userId) {
+        return res.status(401).json({ message: "로그인이 필요합니다" });
+      }
+
+      // 페르소나 정보 조회 - 먼저 ID로 시도, 실패하면 이름으로 조회
+      let persona = await storage.getPersona(personaId);
+      
+      if (!persona) {
+        // UUID가 아니라 이름일 수 있으므로 이름으로 조회 시도
+        console.log(`[PERSONA JOIN API] Persona not found by ID, trying by name: ${personaId}`);
+        const allPersonas = await storage.getAllPersonas();
+        persona = allPersonas.find(p => p.name === personaId);
+      }
+      
+      if (!persona) {
+        console.error(`[PERSONA JOIN API] Persona not found: ${personaId}`);
+        return res.status(404).json({ message: `페르소나를 찾을 수 없습니다: ${personaId}` });
+      }
+      
+      console.log(`[PERSONA JOIN API] Found persona: ${persona.name} (${persona.id})`);
+
+      // Conversation 가져오기
+      const conversation = await storage.getConversationByPost(postId);
+      if (!conversation) {
+        return res.status(404).json({ message: "대화방을 찾을 수 없습니다" });
+      }
+
+      // 1. 페르소나를 participant로 추가 (실제 persona.id를 사용)
+      try {
+        await storage.addParticipant({
+          conversationId: conversation.id,
+          participantType: 'persona',
+          participantId: persona.id,  // personaId가 아니라 persona.id (UUID) 사용!
+          role: 'member',
+        });
+        console.log(`[PERSONA JOIN] ${persona.name} (${persona.id}) added as participant to conversation ${conversation.id}`);
+      } catch (error) {
+        // Unique constraint 에러는 무시 (이미 참가자임)
+        console.log(`[PERSONA JOIN] ${persona.name} (${persona.id}) already a participant`);
+      }
+
+      // 2. AI 기반 소개 메시지 생성
+      const { generateAutoIntroduction } = await import('./engine/joinLeaveManager.js');
+      
+      // 현재 토픽 분석 (간단한 버전)
+      const messages = await storage.getMessagesByConversation(conversation.id);
+      const recentMessages = messages.slice(-10);
+      
+      const topicKeywords = ['기술', 'AI', '개발', '여행', '음식', '베이킹', '일상'];
+      const currentTopics: string[] = [];
+      
+      recentMessages.forEach(msg => {
+        topicKeywords.forEach(keyword => {
+          if (msg.content.includes(keyword) && !currentTopics.includes(keyword)) {
+            currentTopics.push(keyword);
+          }
+        });
+      });
+
+      // 토픽이 없으면 기본 토픽 사용
+      if (currentTopics.length === 0) {
+        currentTopics.push('일상', '대화');
+      }
+
+      let introMessage: string;
+      try {
+        introMessage = await generateAutoIntroduction(persona.id, currentTopics);  // persona.id (UUID) 사용
+        console.log(`[PERSONA JOIN] Generated introduction: ${introMessage}`);
+      } catch (error) {
+        console.error('[PERSONA JOIN] Failed to generate AI introduction:', error);
+        introMessage = `안녕하세요, ${persona.name}입니다!`;
+      }
+
+      // 3. 소개 메시지를 DB에 저장 (senderId도 persona.id 사용)
+      const joinMessage = await storage.createMessageInConversation({
+        conversationId: conversation.id,
+        senderType: 'system',
+        senderId: persona.id,  // personaId가 아니라 persona.id (UUID) 사용!
+        content: `🤖 ${persona.name}: ${introMessage}`,
+        messageType: 'join',
+      });
+
+      console.log(`[PERSONA JOIN] Join message saved with ID: ${joinMessage.id}`);
+
+      // 4. WebSocket으로 입장 이벤트 브로드캐스트
+      const io = getIO();
+      if (io) {
+        // 입장 메시지 브로드캐스트
+        io.to(`conversation:${conversation.id}`).emit('message:system', {
+          id: joinMessage.id,
+          conversationId: conversation.id,
+          senderType: 'system',
+          senderId: personaId,
+          messageType: 'join',
+          content: joinMessage.content,
+          createdAt: joinMessage.createdAt.toISOString(),
+          persona: {
+            id: persona.id,
+            name: persona.name,
+            image: persona.image,
+          }
+        });
+
+        // 페르소나 입장 이벤트 (persona.id 사용)
+        io.to(`conversation:${conversation.id}`).emit('persona:event', {
+          type: 'join',
+          personaId: persona.id,  // UUID 사용
+          personaName: persona.name,
+          timestamp: Date.now(),
+          autoIntroduction: introMessage,
+        });
+
+        console.log(`[PERSONA JOIN] Broadcasted join events for ${persona.name}`);
+      }
+
+      res.json({
+        success: true,
+        message: `${persona.name}이(가) 대화방에 입장했습니다`,
+        persona: {
+          id: persona.id,
+          name: persona.name,
+          image: persona.image,
+        },
+        introduction: introMessage,
+        joinMessage: {
+          id: joinMessage.id,
+          content: joinMessage.content,
+          createdAt: joinMessage.createdAt,
+        }
+      });
+
+    } catch (error) {
+      console.error('[PERSONA JOIN ERROR]', error);
+      res.status(500).json({ 
+        message: "페르소나 입장에 실패했습니다",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   // POST /api/perso/:postId/ai-response - 게시물 대화에 대한 AI 응답 생성
   app.post("/api/perso/:postId/ai-response", authenticateToken, async (req, res) => {
     try {
@@ -2079,6 +2227,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("시드 데이터 생성 실패:", error);
       res.status(500).json({ error: "시드 데이터 생성에 실패했습니다." });
+    }
+  });
+
+  // 관리자 엔드포인트: 대화방 없는 게시물 조회
+  app.get("/api/admin/posts/cleanup/preview", async (req, res) => {
+    try {
+      const result = await listPostsWithoutConversations();
+      res.json(result);
+    } catch (error) {
+      console.error("게시물 조회 실패:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "게시물 조회에 실패했습니다.",
+        message: error instanceof Error ? error.message : "알 수 없는 오류"
+      });
+    }
+  });
+
+  // 관리자 엔드포인트: 대화방 없는 게시물 삭제
+  app.post("/api/admin/posts/cleanup", async (req, res) => {
+    try {
+      const result = await cleanupPostsWithoutConversations();
+      res.json(result);
+    } catch (error) {
+      console.error("게시물 삭제 실패:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "게시물 삭제에 실패했습니다.",
+        message: error instanceof Error ? error.message : "알 수 없는 오류"
+      });
     }
   });
 

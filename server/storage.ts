@@ -396,6 +396,31 @@ export class DbStorage implements IStorage {
       conversationId: conversation.id,
     });
 
+    // 게시물 작성자의 페르소나를 자동으로 방장으로 추가
+    // 게시물 정보 조회
+    const post = await this.getPost(postId);
+    if (post) {
+      // 작성자의 페르소나 조회
+      const authorPersona = await this.getPersonaByUserId(post.userId);
+      if (authorPersona) {
+        // 페르소나를 owner 역할로 대화방에 추가
+        try {
+          await db.insert(conversationParticipants).values({
+            conversationId: conversation.id,
+            participantType: 'persona',
+            participantId: authorPersona.id,
+            role: 'owner',
+          });
+          console.log(`[CONVERSATION] Auto-added author's persona ${authorPersona.name} as owner to conversation ${conversation.id}`);
+        } catch (error) {
+          // 중복 추가 시도 시 무시
+          console.log(`[CONVERSATION] Persona ${authorPersona.name} already in conversation (duplicate prevented)`);
+        }
+      } else {
+        console.log(`[CONVERSATION] Warning: No persona found for user ${post.userId}`);
+      }
+    }
+
     return conversation;
   }
 

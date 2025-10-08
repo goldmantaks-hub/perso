@@ -5,6 +5,7 @@ import ActivePersonas from "./ActivePersonas";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PERSONA_COLORS, PERSONA_STATUS } from "../../../shared/constants";
 
 interface PersonaState {
   id: string;

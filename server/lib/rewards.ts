@@ -1,3 +1,5 @@
+import { APP_CONSTANTS } from '../../shared/constants.js';
+
 interface RewardEvent {
   type: 'post_created' | 'dialogue_participated' | 'empathy_shown' | 'growth_achieved' | 'perso_opened';
   personaId: string;
@@ -23,28 +25,28 @@ export function calculateReward(event: RewardEvent): RewardResult {
   
   switch (event.type) {
     case 'post_created':
-      points = 10;
+      points = APP_CONSTANTS.POINTS.POST_CREATED;
       break;
     case 'dialogue_participated':
-      points = 5;
+      points = APP_CONSTANTS.POINTS.DIALOGUE_PARTICIPATED;
       break;
     case 'empathy_shown':
-      points = 15;
+      points = APP_CONSTANTS.POINTS.EMPATHY_SHOWN;
       break;
     case 'growth_achieved':
-      points = 20;
+      points = APP_CONSTANTS.POINTS.GROWTH_ACHIEVED;
       break;
     case 'perso_opened':
-      points = 10;
+      points = APP_CONSTANTS.POINTS.PERSO_OPENED;
       
-      if (event.resonance && event.resonance >= 0.9) {
-        points = 20;
+      if (event.resonance && event.resonance >= APP_CONSTANTS.SENTIMENT.HIGH_RESONANCE_THRESHOLD) {
+        points = APP_CONSTANTS.POINTS.PERSO_OPENED_HIGH_RESONANCE;
       }
       
       const jackpotChance = Math.random();
-      if (jackpotChance < 0.02) {
+      if (jackpotChance < APP_CONSTANTS.SENTIMENT.JACKPOT_CHANCE) {
         jackpot = true;
-        growthMultiplier = 2;
+        growthMultiplier = APP_CONSTANTS.GROWTH.JACKPOT_MULTIPLIER;
         console.log(`[JACKPOT] Triggered for persona ${event.personaId} - growth doubled`);
       }
       break;

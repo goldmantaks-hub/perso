@@ -1221,9 +1221,62 @@ export default function PersoPage() {
           dominantPersona={dominantPersona}
           currentTopics={currentTopics}
           totalTurns={totalTurns}
-          onPersonaClick={(personaId) => {
+          onPersonaClick={async (personaId) => {
             console.log(`페르소나 클릭: ${personaId}`);
-            // 페르소나 상세 페이지로 이동하거나 특별한 동작 수행
+            
+            if (!postId) return;
+            
+            // 페르소나가 이미 활성화되어 있는지 확인
+            const existingPersona = activePersonas.find(p => p.id === personaId);
+            
+            if (existingPersona && existingPersona.status === 'active') {
+              console.log(`[PERSONA] ${personaId} is already active`);
+              return;
+            }
+            
+            // 서버 API 호출하여 페르소나 강제 입장
+            try {
+              const response = await fetch(`/api/perso/${postId}/persona/${personaId}/join`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                  'Content-Type': 'application/json',
+                },
+              });
+              
+              if (!response.ok) {
+                throw new Error('Failed to join persona');
+              }
+              
+              const result = await response.json();
+              console.log('[PERSONA JOIN] Success:', result);
+              
+              // 페르소나 상태를 즉시 업데이트 (WebSocket 이벤트도 올 것임)
+              setActivePersonas(prev => {
+                const exists = prev.find(p => p.id === personaId);
+                if (exists) {
+                  return prev.map(p => 
+                    p.id === personaId 
+                      ? { ...p, status: 'active' as const, joinedAt: Date.now() }
+                      : p
+                  );
+                } else {
+                  return [
+                    ...prev,
+                    {
+                      id: personaId,
+                      status: 'active' as const,
+                      joinedAt: Date.now(),
+                      lastSpokeAt: 0,
+                      messageCount: 0,
+                    }
+                  ];
+                }
+              });
+              
+            } catch (error) {
+              console.error('[PERSONA JOIN] Error:', error);
+            }
           }}
         />
               </div>
@@ -1236,9 +1289,62 @@ export default function PersoPage() {
             dominantPersona={dominantPersona}
             currentTopics={currentTopics}
             totalTurns={totalTurns}
-            onPersonaClick={(personaId) => {
+            onPersonaClick={async (personaId) => {
               console.log(`페르소나 클릭: ${personaId}`);
-              // 페르소나 상세 페이지로 이동하거나 특별한 동작 수행
+              
+              if (!postId) return;
+              
+              // 페르소나가 이미 활성화되어 있는지 확인
+              const existingPersona = activePersonas.find(p => p.id === personaId);
+              
+              if (existingPersona && existingPersona.status === 'active') {
+                console.log(`[PERSONA] ${personaId} is already active`);
+                return;
+              }
+              
+              // 서버 API 호출하여 페르소나 강제 입장
+              try {
+                const response = await fetch(`/api/perso/${postId}/persona/${personaId}/join`, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json',
+                  },
+                });
+                
+                if (!response.ok) {
+                  throw new Error('Failed to join persona');
+                }
+                
+                const result = await response.json();
+                console.log('[PERSONA JOIN] Success:', result);
+                
+                // 페르소나 상태를 즉시 업데이트 (WebSocket 이벤트도 올 것임)
+                setActivePersonas(prev => {
+                  const exists = prev.find(p => p.id === personaId);
+                  if (exists) {
+                    return prev.map(p => 
+                      p.id === personaId 
+                        ? { ...p, status: 'active' as const, joinedAt: Date.now() }
+                        : p
+                    );
+                  } else {
+                    return [
+                      ...prev,
+                      {
+                        id: personaId,
+                        status: 'active' as const,
+                        joinedAt: Date.now(),
+                        lastSpokeAt: 0,
+                        messageCount: 0,
+                      }
+                    ];
+                  }
+                });
+                
+              } catch (error) {
+                console.error('[PERSONA JOIN] Error:', error);
+              }
             }}
           />
                 </div>

@@ -144,6 +144,20 @@ export async function multiAgentDialogueOrchestrator(
     
     console.log(`[CHAT] ${nextSpeaker}: "${message}"`);
     
+    // 페르소나를 participant로 추가 (메시지 저장 전)
+    try {
+      await storage.addParticipant({
+        conversationId: conversation.id,
+        participantType: 'persona',
+        participantId: nextSpeaker,
+        role: 'member',
+      });
+      console.log(`[INITIAL] Persona ${nextSpeaker} added as participant`);
+    } catch (error) {
+      // Unique constraint 에러는 무시 (이미 participant임)
+      console.log(`[INITIAL] Persona ${nextSpeaker} already a participant`);
+    }
+    
     // 메시지를 데이터베이스에 저장
     try {
       const savedMessage = await storage.createMessageInConversation({
@@ -369,6 +383,20 @@ export async function continueConversation(
                if (!conversation) {
                  console.error(`[CONTINUE] No conversation found for post ${postId}`);
                  return;
+               }
+               
+               // 페르소나를 participant로 추가 (메시지 저장 전)
+               try {
+                 await storage.addParticipant({
+                   conversationId: conversation.id,
+                   participantType: 'persona',
+                   participantId: nextSpeaker,
+                   role: 'member',
+                 });
+                 console.log(`[CONTINUE] Persona ${nextSpeaker} added as participant`);
+               } catch (error) {
+                 // 이미 participant면 무시
+                 console.log(`[CONTINUE] Persona ${nextSpeaker} already a participant`);
                }
                
                const savedMessage = await storage.createMessageInConversation({

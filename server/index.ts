@@ -3,6 +3,8 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupWebSocket } from "./websocket";
 import { autoChat } from "./api/autoChat.js";
+import { config, isDevelopment, logConfigInfo } from "../shared/config.js";
+import { APP_CONSTANTS } from "../shared/constants.js";
 import "./engine/autoTick.js"; // 자동 틱 스케줄러 시작
 
 const app = express();
@@ -62,7 +64,7 @@ app.use((req, res, next) => {
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
+  if (isDevelopment) {
     await setupVite(app, server);
   } else {
     serveStatic(app);
@@ -72,15 +74,15 @@ app.use((req, res, next) => {
   // Other ports are firewalled. Default to 5000 if not specified.
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
   server.listen({
-    port,
+    port: config.PORT,
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
-    log(`serving on port ${port}`);
-    console.log(`🚀 Server started successfully on port ${port}`);
-    console.log(`📡 API endpoints available at http://localhost:${port}/api/`);
+    logConfigInfo();
+    log(`serving on port ${config.PORT}`);
+    console.log(`🚀 Server started successfully on port ${config.PORT}`);
+    console.log(`📡 API endpoints available at http://localhost:${config.PORT}/api/`);
     console.log(`🔌 WebSocket server ready for connections`);
   });
 })();
