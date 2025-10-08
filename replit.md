@@ -11,6 +11,48 @@ PERSO is an AI-powered social networking platform integrating traditional social
 
 ## Recent Changes
 
+### 2025-10-08: Feed Stability & Image Analysis Enhancement
+**Objective:** Fix feed instability (posts constantly reordering) and enable personas to discuss actual image content through OpenAI Vision API integration.
+
+**Problem:** 
+1. Feed continuously refetched on window focus and mount, causing posts to reorder constantly and affecting user experience
+2. Like button clicked caused entire feed to reload
+3. Personas could not accurately discuss image content without analyzing actual image pixels
+
+**Solution:**
+1. **Feed Stability** (`client/src/pages/feed.tsx`):
+   - Added React Query options: `refetchOnWindowFocus: false`, `refetchOnMount: false`, `staleTime: 5min`
+   - Changed like mutation to update only affected post in cache instead of invalidating entire feed query
+   - Result: Posts maintain stable order, UI responds instantly to like updates
+
+2. **OpenAI Vision API Integration** (`server/api/analyze.ts`):
+   - Modified `detectSubjects()` to be async and return `{ subjects: Subject[], imageAnalysis?: ImageAnalysis }`
+   - Integrated OpenAI GPT-4o-mini with vision capability for accurate image content analysis
+   - Returns: description (Korean), objects array, context, and extracted subjects
+   - Example: "어두운 배경에 놓인 포크들" with objects ["포크"] and context "미니멀하고 세련된 분위기"
+
+3. **Room Context Enhancement** (`server/routes.ts`, `server/engine/autoChatOrchestrator.ts`):
+   - Image analysis results now included in Room's postContent
+   - Format: `${post.description} [이미지: ${imageAnalysis.description}. 주요 요소: ${objects}]`
+   - Personas receive full image context when generating dialogue responses
+   - Updated all `detectSubjects()` calls to properly await and destructure return value
+
+**Behavior:**
+- Feed remains stable during user interaction - no unexpected reordering
+- Like updates apply instantly without full feed reload
+- Personas accurately discuss actual image content (e.g., "포크들이 놓여있네요" when forks are in image)
+- Image analysis cached in Room postContent for entire conversation lifetime
+- Works seamlessly with auto-chat, idle ticks, and multi-agent dialogue
+
+**Verified via logs:**
+```
+[IMAGE ANALYSIS] Success: {
+  description: '어두운 배경에 놓인 포크들',
+  objects: [ '포크' ],
+  context: '미니멀하고 세련된 분위기'
+}
+```
+
 ### 2025-10-08: Context Drift Fix - Keep Conversations Relevant to Posts
 **Objective:** Fix context drift problem where auto-chat conversations became "아무말 대잔치" (random chatter) instead of staying relevant to original post content.
 
