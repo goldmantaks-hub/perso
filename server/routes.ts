@@ -1665,6 +1665,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const thinking = thinkingCompletion.choices[0]?.message?.content?.trim() || "";
       console.log(`[${persona.name} THINKS]: ${thinking}`);
+      console.log(`[THINKING DEBUG] Generated thinking for ${persona.name}:`, {
+        thinking,
+        length: thinking.length,
+        isEmpty: thinking === "" || thinking === "..."
+      });
 
       // 7. OpenAI API 호출
       const completion = await openai.chat.completions.create({
