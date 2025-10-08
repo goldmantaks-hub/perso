@@ -651,85 +651,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const post = await storage.createPost(validatedData);
       
-      // 게시물 생성 후 자동으로 페르소나 대화 시작
-      console.log(`[AUTO CONVERSATION] Starting automatic persona conversation for post ${post.id}`);
+      // 게시물 생성 후 자동으로 Room 생성 및 페르소나 대화 시작
+      console.log(`[POST CREATE] Starting automatic persona conversation for post ${post.id}`);
       
-           // 백그라운드에서 대화 시작 (응답을 기다리지 않음)
-           setTimeout(async () => {
-             try {
-               const postContent = post.description || post.title;
-               console.log(`[AUTO CONVERSATION] Starting analysis for post ${post.id}`);
-               console.log(`[AUTO CONVERSATION] Post content: "${postContent}"`);
-               
-               // 게시물 분석
-               const sentiment = analyzeSentimentFromContent(postContent);
-               const tones = inferTonesFromContent(postContent, sentiment);
-               const subjects = detectSubjects(postContent, undefined);
-               const contexts = inferContexts(postContent, subjects, tones);
-               
-               const analysis = {
-                 sentiment,
-                 tones,
-                 subjects,
-                 contexts
-               };
-               
-               console.log(`[AUTO CONVERSATION] Analysis completed for post ${post.id}:`, analysis);
-               
-               // Multi-agent 대화 오케스트레이션 import
-               console.log(`[AUTO CONVERSATION] Importing multiAgentDialogueOrchestrator for post ${post.id}`);
-               const { multiAgentDialogueOrchestrator } = await import('./engine/multiAgentDialogueOrchestrator.js');
-               
-               console.log(`[AUTO CONVERSATION] Starting multiAgentDialogueOrchestrator for post ${post.id}`);
-               
-               // 자동 대화 시작
-               const result = await multiAgentDialogueOrchestrator(
-                 {
-                   id: post.id,
-                   content: postContent,
-                   userId: post.userId
-                 },
-                 analysis
-               );
-               
-               console.log(`[AUTO CONVERSATION] Generated ${result.messages.length} initial messages for post ${post.id}`);
-               
-               // 자동 대화 트리거
-               const { onPostCreated } = await import('./engine/autoTick.js');
-               onPostCreated(result.roomId);
-               console.log(`[AUTO CONVERSATION] Triggered auto-chat for room ${result.roomId}`);
-               
-               // WebSocket으로 결과 브로드캐스트 (연결된 클라이언트가 있다면)
-               const io = getIO();
-               if (io) {
-                 // 대화방 상태 업데이트 브로드캐스트
-                 io.emit('conversation:auto-started', {
-                   postId: post.id,
-                   roomId: result.roomId,
-                   messageCount: result.messages.length,
-                   eventCount: result.joinLeaveEvents.length
-                 });
-                 
-                 console.log(`[AUTO CONVERSATION] Broadcasted auto-started event for post ${post.id}`);
-               }
-               
-             } catch (error) {
-               console.error(`[AUTO CONVERSATION] Error starting conversation for post ${post.id}:`, error);
-               if (error instanceof Error) {
-                 console.error(`[AUTO CONVERSATION] Error stack:`, error.stack);
-                 console.error(`[AUTO CONVERSATION] Error details:`, {
-                   message: error.message,
-                   name: error.name,
-                   cause: error.cause
-                 });
-                 
-                 // 더 자세한 디버깅 정보
-                 if (error.message && error.message.includes('createRoom')) {
-                   console.error(`[AUTO CONVERSATION] createRoom error detected for post ${post.id}`);
-                 }
-               }
-             }
-           }, 1000); // 1초 후 시작
+      // 백그라운드에서 Room 생성 및 대화 시작 (응답을 기다리지 않음)
+      setTimeout(async () => {
+        try {
+          const { persoRoomManager } = await import('./engine/persoRoom.js');
+          const { onPostCreated } = await import('./engine/autoTick.js');
+          
+          // Room이 없으면 생성
+          let room = persoRoomManager.getRoomByPostId(post.id);
+          if (!room) {
+            console.log(`[POST CREATE] Creating new Room for post ${post.id}`);
+            
+            // DB에서 랜덤 페르소나 선택 (3-4개)
+            const allPersonas = await storage.getAllPersonas();
+            if (allPersonas.length > 0) {
+              const personaCount = Math.min(
+                Math.floor(Math.random() * 2) + 3, // 3-4개
+                allPersonas.length
+              );
+              const selectedPersonas = allPersonas
+                .sort(() => Math.random() - 0.5)
+                .slice(0, personaCount);
+              
+              const personaIds = selectedPersonas.map(p => p.id);
+              const personaNames = selectedPersonas.map(p => p.name);
+              
+              // Post 내용 분석하여 contexts 생성
+              const postContent = post.description || post.title;
+              const sentiment = analyzeSentimentFromContent(postContent);
+              const subjects = detectSubjects(postContent, undefined);
+              const contexts = inferContexts(postContent, subjects, []);
+              
+              room = persoRoomManager.createRoom(post.id, personaIds, contexts);
+              console.log(`[POST CREATE] Created Room ${room.roomId} with personas: ${personaNames.join(', ')}`);
+              
+              // 자동 대화 시작
+              onPostCreated(room.roomId);
+            } else {
+              console.error(`[POST CREATE] No personas available for room creation`);
+            }
+          } else {
+            console.log(`[POST CREATE] Room already exists for post ${post.id}, triggering conversation`);
+            onPostCreated(room.roomId);
+          }
+        } catch (error) {
+          console.error(`[POST CREATE] Error starting conversation for post ${post.id}:`, error);
+        }
+      }, 1000); // 1초 후 시작
       
       res.json(post);
     } catch (error) {

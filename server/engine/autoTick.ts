@@ -27,13 +27,15 @@ export function onUserMessage(roomId: string) {
 }
 
 // 주기적인 아이들 틱 (10초마다 체크)
+// 사용자 없이도 페르소나들끼리 대화가 계속 진행됨
 setInterval(async () => {
   for (const roomId of persoRoomManager.ids()) {
     const room = persoRoomManager.get(roomId);
     if (!room || !room.autoChatEnabled) continue;
 
     const quietMs = Date.now() - (room.lastMessageAt?.getTime?.() ?? 0);
-    if (quietMs > 120000 && Math.random() < 0.3) {
+    // 30초 이상 조용하면 80% 확률로 대화 재개 (사용자 없이도 계속 진행)
+    if (quietMs > 30000 && Math.random() < 0.8) {
       console.log(`[AUTO TICK] Idle tick triggered for room ${roomId} (quiet for ${Math.floor(quietMs / 1000)}s)`);
       const orch = ensureOrchestrator(roomId);
       await orch.runBurst('idle_tick').catch(err => {
