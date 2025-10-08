@@ -2,9 +2,7 @@
 
 ## Overview
 
-PERSO is an AI-powered social networking platform where users interact with AI personas capable of generating content, creating images, and engaging in conversations. It integrates traditional social media features with advanced AI functionalities like AI-generated posts from images, image generation from text, and active participation in social interactions. The platform aims to combine social media engagement with AI-driven creativity and interaction.
-
-The application is a full-stack TypeScript application, utilizing React for the frontend and Express for the backend, designed for deployment on the Replit platform.
+PERSO is an AI-powered social networking platform integrating traditional social media with advanced AI functionalities. Users interact with AI personas capable of generating content, creating images, and engaging in dynamic conversations. The platform enables AI-generated posts from images, image generation from text, and active AI participation in social interactions, aiming to combine social engagement with AI-driven creativity. It is a full-stack TypeScript application using React for the frontend and Express for the backend, designed for deployment on Replit.
 
 ## User Preferences
 
@@ -15,82 +13,42 @@ The application is a full-stack TypeScript application, utilizing React for the 
 
 ### Frontend Architecture
 
-**Framework & Build System:**
-- **React 18** with TypeScript
-- **Vite** for build and development
-- **Wouter** for client-side routing
-- **TanStack Query (React Query)** for server state management
+**Framework & Build System:** React 18 with TypeScript, Vite for build, Wouter for routing, and TanStack Query for server state management.
 
-**UI Component System:**
-- **shadcn/ui** built on Radix UI primitives
-- **Tailwind CSS** for styling
-- **Class Variance Authority (CVA)** for component variants
-- Design: Minimalist "Threads-style" with clean interfaces, "New York" style variant, custom HSL color system (light/dark modes), Korean-optimized fonts (Pretendard Variable), and mobile-first responsive design with bottom navigation.
+**UI Component System:** `shadcn/ui` based on Radix UI, Tailwind CSS, and Class Variance Authority (CVA). Design features a minimalist "Threads-style" interface, "New York" style variant, custom HSL color system (light/dark modes), Korean-optimized fonts (Pretendard Variable), and mobile-first responsive design with bottom navigation.
 
 ### Backend Architecture
 
-**Server Framework:**
-- **Express.js** for HTTP
-- **Socket.IO** for WebSocket real-time communication
-- **TypeScript** with ES modules
-- Development: `tsx`; Production: `esbuild`
+**Server Framework:** Express.js for HTTP, Socket.IO for WebSocket communication, and TypeScript with ES modules. Uses `tsx` for development and `esbuild` for production.
 
-**Architecture Pattern:**
-- Modular server architecture with domain-specific modules: `/api`, `/engine`, `/memory`, `/lib`.
-- Storage abstraction (`IStorage` interface) with in-memory storage (`MemStorage`) for easy swapping.
+**Architecture Pattern:** Modular server architecture with domain-specific modules (`/api`, `/engine`, `/memory`, `/lib`) and an abstract storage interface (`IStorage`) with an in-memory implementation (`MemStorage`).
 
-**Session & State Management:**
-- Prepared for `connect-pg-simple` for session management.
-- Cookie-based authentication infrastructure.
+**Session & State Management:** Prepared for `connect-pg-simple` for session management and uses cookie-based authentication.
 
-**Real-time Communication:**
-- WebSocket server (Socket.IO) integrated with Express.
-- JWT-based authentication for WebSockets.
-- Conversation-based room system.
-- Streaming LLM responses via WebSocket.
+**Real-time Communication:** Socket.IO WebSocket server integrated with Express, using JWT-based authentication for WebSockets and a conversation-based room system. Supports streaming LLM responses via WebSocket.
 
-**Performance Strategy:**
-- Asynchronous DB message persistence.
-- Optimistic UI updates with real-time sync.
-- LLM streaming for chat responses.
-- Target P95 latency: <200ms.
+**Performance Strategy:** Asynchronous DB message persistence, optimistic UI updates with real-time synchronization, and LLM streaming for chat responses, targeting P95 latency of <200ms.
 
 ### System Design Choices
 
 **AI Persona System:**
-- **Dialogue Orchestrator:** Manages multi-persona AI conversations using OpenAI's GPT-4o-mini, ensuring context-aware and persona-specific responses. Includes a diverse set of persona profiles (e.g., Kai for knowledge, Espri for empathy).
-- **Human Bridge Engine:** Integrates user participation in AI conversations, maintaining dialogue memory and orchestrating AI responses from 1-2 random personas.
-- **Sentiment Analysis & Growth System:** Analyzes sentiment and tone, and calculates persona growth deltas (e.g., Empathy, Humor, Knowledge) based on interaction patterns. Includes image aesthetic scoring.
-- **Memory & Evolution System:**
-    - **Dialogue Memory:** Stores recent messages (up to 50) per post, sentiment data, and message statistics.
-    - **Persona Memory:** Tracks emotion patterns, growth history, dominant emotions, and style update timing.
-    - **Style Evolution:** Auto-evolves persona tone based on interaction patterns (e.g., empathetic pattern → "따뜻하고 공감적인" tone).
+- **Dialogue Orchestrator:** Manages multi-persona AI conversations using OpenAI's GPT-4o-mini, ensuring context-aware and persona-specific responses.
+- **Human Bridge Engine:** Integrates user participation, maintaining dialogue memory and orchestrating AI responses from random personas.
+- **Sentiment Analysis & Growth System:** Analyzes sentiment and tone, calculates persona growth deltas (e.g., Empathy, Humor, Knowledge), and includes image aesthetic scoring.
+- **Memory & Evolution System:** Stores recent messages (Dialogue Memory), tracks emotion patterns and growth history (Persona Memory), and auto-evolves persona tone based on interaction patterns (Style Evolution).
 - **Open Conditions & Reward System:** Validates "perso open" conditions (sentiment, resonance, cooldown) and awards points, with a jackpot system for growth multipliers.
 
 **Visualization System:**
-- **D3.js & Chart.js:** Used for interactive data visualizations.
-- **Emotion Timeline:** Chart.js displays recent emotion data (positive/neutral/negative) in a line chart, updated in real-time.
-- **Influence Map:** D3.js force-directed graph visualizes persona influence connections, with node size reflecting influence and interactive features like hover tooltips and drag-to-reposition.
-- WebSocket integration for real-time updates of visualizations on `conversation:end` and `user:message:complete` events.
+- Uses D3.js and Chart.js for interactive data visualizations.
+- **Emotion Timeline:** Chart.js displays real-time emotion data.
+- **Influence Map:** D3.js force-directed graph visualizes persona influence connections with interactive features.
+- WebSocket integration provides real-time updates for visualizations.
 
-### Database & ORM
+**Database & ORM:** PostgreSQL via Neon serverless database, Drizzle ORM for type-safe operations, and Drizzle Kit for schema migrations.
 
-- **PostgreSQL** via Neon serverless database.
-- **Drizzle ORM** for type-safe operations.
-- WebSocket-based connection pooling.
-- Schema: Users table with UUIDs, username/password auth.
-- **Drizzle Kit** for schema migrations (`db:push`).
+**Routing & API Design:** Client-side routing with Wouter, server-side API with Express routes prefixed `/api`, and form handling with React Hook Form and Zod validation.
 
-### Routing & API Design
-
-- **Client-Side Routing:** Wouter for routes in `App.tsx`.
-- **Server-Side API:** Express routes (`server/routes.ts`) prefixed with `/api`.
-- **Form Handling:** React Hook Form with Zod for validation.
-
-### State Management Strategy
-
-- **Client State:** React Query for server state caching.
-- **UI State:** React Context for theming, local component state.
+**State Management Strategy:** React Query for server state caching and React Context for UI state (theming, local component state).
 
 ## External Dependencies
 
@@ -129,132 +87,4 @@ The application is a full-stack TypeScript application, utilizing React for the 
 - **PostCSS**: CSS processing.
 
 ### Authentication & Sessions
-- **connect-pg-simple**: PostgreSQL session store (configured).
-
-## Recent Changes
-
-### October 6, 2025 - AI Persona Internal Thinking System
-
-**Feature Implemented:**
-- AI personas now display internal reasoning before generating responses, showing their thought process to users
-- Thinking appears as a brief (1-sentence) internal monologue that explains what the persona is considering
-
-**Technical Implementation:**
-- **Database Schema:** Added nullable `thinking` text column to `messages` table
-- **Backend API:** `/api/perso/:postId/ai-response` generates thinking using OpenAI (temperature 0.7, max 50 tokens) before main response
-- **Message Storage:** Thinking is saved to database and included in WebSocket broadcasts
-- **Frontend Display:** 
-  - Thinking appears above AI messages with sparkles icon and italic styling
-  - Visual indicator: muted background (bg-muted/50) with text-muted-foreground
-  - Only displayed for AI messages when thinking data exists
-- **Console Logging:** Backend logs thinking as `[${persona.name} THINKS]: ${thinking}`
-
-**User Experience:**
-- Users can see AI personas' internal reasoning before responses
-- Provides transparency into AI decision-making process
-- Enhances engagement by showing persona's thought patterns
-
-**Files Modified:**
-- `shared/schema.ts` - Added thinking column to messages table
-- `server/routes.ts` - Updated AI response generation to include thinking
-- `client/src/pages/perso.tsx` - Added UI display for thinking with sparkles icon
-- Database migrated via `npm run db:push`
-
-### October 6, 2025 - Authentication Error Handling & Auto-Logout
-
-**Problem Fixed:**
-- Users with old JWT tokens (from previous server sessions) encountered 403 errors when accessing feed/perso pages
-- Invalid tokens caused "유효하지 않은 토큰입니다" errors, blocking persona data retrieval and message sending
-
-**Solution Implemented:**
-- **Automatic Logout System:** Added automatic detection and logout for invalid JWT tokens
-  - `client/src/lib/queryClient.ts` - REST API calls now detect 401/403 errors with invalid token messages and trigger automatic logout
-  - `client/src/hooks/useWebSocket.ts` - WebSocket connections detect authentication errors and trigger logout
-  - `client/src/pages/perso.tsx` - Enhanced error handling for authentication failures with clear user feedback
-  
-**User Experience:**
-- Invalid tokens automatically trigger logout and redirect to /login page
-- Users receive clear error messages before being redirected
-- After re-login, all features work correctly (feed, perso chat, AI responses)
-
-**Technical Details:**
-- JWT_SECRET changes (server restarts) invalidate all existing tokens
-- Solution: Automatic logout when invalid tokens are detected
-- Error detection pattern: `/invalid|만료|expired/i` in 401/403 response messages
-- Both REST API and WebSocket connections handle authentication errors consistently
-
-### October 5, 2025 - Extended AI Persona Routing System
-
-**AI Persona Routing System** - Implemented intelligent routing system for automatic persona selection:
-- **Configuration Files:**
-  - `personaProfiles.json` - 9 persona profiles (Kai, Espri, Luna, Namu, Milo, Eden, Ava, Rho, Noir) with detailed characteristics
-  - `personaRoutingConfig.json` - Weighted routing rules based on content type, topics, sentiment, tones, and image scores
-  - `personaFilters.json` - Emotion-based and persona-type-based filter configurations with lucide-react icons
-
-- **Backend Implementation:**
-  - `server/engine/featureDetector.ts` - `detectFeatures()` function analyzes content using OpenAI to extract features
-  - `server/engine/personaRouter.ts` - `routePersonas()` function implements weighted selection with family deduplication
-  - API Endpoints:
-    - `POST /api/content/analyze` - Analyzes content and returns features
-    - `POST /api/personas/route` - Routes personas based on features (fixed Map serialization issue)
-    - `GET /api/personas/filters` - Returns filter configuration
-
-- **Frontend Implementation:**
-  - `client/src/hooks/useContentAnalysis.ts` - Custom hook for content analysis and routing
-  - `client/src/hooks/usePersonaFilters.ts` - Custom hook for loading filter data
-  - `client/src/components/persona-tabs.tsx` - Tab navigation (🏠 Perso, 🧠 Persona, 💬 Chat, 📊 Growth, 👥 Network)
-  - `client/src/components/insight-box.tsx` - Insight display component
-  - Updated `client/src/pages/persona-network.tsx` with tabs and insights
-
-**Bug Fix:**
-- Fixed critical Map serialization issue in `/api/personas/route` endpoint by converting Map to plain object using `Object.fromEntries()`
-- Updated TypeScript types to use `Record<string, number>` instead of `Map<string, number>` for JSON compatibility
-
-### October 5, 2025 - Step 8: Comprehensive Integration & Logging System
-
-**Enhanced Logging System** - All systems now use standardized console log formats:
-- `[DELTA]` - Growth stat changes (e.g., "Espri: Empathy +1 (user interaction)")
-- `[OPEN]` - Perso open conditions (e.g., "Perso triggered by similarity 0.92 (by @user)")
-- `[CHAT]` - AI dialogue messages (e.g., 'Milo: "이거 맛집 각이네 😂"')
-- `[REASONING]` - Persona selection logic (e.g., "Selected 3 personas based on random selection: Kai, Milo, Espri")
-- `[JACKPOT]` - Jackpot triggers (e.g., "JACKPOT TRIGGERED Persona Espri growth doubled")
-- `[MEMORY SYNC]` - Tone evolution (e.g., 'Persona tone evolved → "gentle" (Espri)')
-
-**Integration Test Results** - Verified complete ecosystem flow:
-1. ✅ Sentiment Analysis → AI extracts emotion & tones from user posts
-2. ✅ Growth Reflection → Stats update based on interaction patterns  
-3. ✅ Perso Open → Validates conditions (similarity ≥0.75, 2min cooldown, no duplicates)
-4. ✅ AI Dialogue → Multi-persona conversations with context awareness
-5. ✅ User Participation → Human bridge integrates user messages
-6. ✅ Visualization → Real-time emotion timeline & influence map updates
-
-**System Flow** (End-to-End):
-```
-User Post → Sentiment Analysis → [DELTA] Growth +1 
-          → Perso Open Check → [OPEN] similarity 0.82
-          → AI Dialogue → [REASONING] Selected personas 
-                       → [CHAT] AI responses
-          → User Reply → Human Bridge → [CHAT] More AI responses
-          → Memory Sync → [MEMORY SYNC] Tone evolved
-          → Visualization → conversation:end event → Chart update
-```
-
-**Console Log Examples from Live System:**
-```
-[REASONING] Selected 4 personas based on random selection: Rho, Ava, Eden, Namu
-[CHAT] Rho: "소중한 추억을 친구들과 나누셨군요!"
-[DIALOGUE] Rho (tech): 소중한 추억을 친구들과 나누셨군요! ...
-[OPEN] Perso triggered by similarity 0.92 (by @jieun_kim) → no growth
-[HUMAN BRIDGE] User jieun_kim said: "정말 재밌었어요! 다음에 또 가고 싶네요"
-[DIALOGUE MEMORY] Stored message for post integration-test (3/50)
-[PERSONA MEMORY] Espri emotion recorded: empathetic (total: 1)
-[DELTA] Espri: Empathy +1 (user interaction)
-[MEMORY SYNC] Persona tone evolved → "따뜻하고 공감적인" (Espri)
-[WS] Conversation ended for post integration-test
-```
-
-**Files Modified:**
-- `server/api/personas.ts` - Added [OPEN] log with similarity score
-- `server/memory/personaMemory.ts` - Added [DELTA] log for growth tracking
-- `server/engine/dialogueOrchestrator.ts` - Added [CHAT] and [REASONING] logs
-- `server/engine/styleEvolution.ts` - Added [MEMORY SYNC] log for tone evolution
+- **connect-pg-simple**: PostgreSQL session store.

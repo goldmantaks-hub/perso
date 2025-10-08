@@ -46,7 +46,8 @@ export class PersoRoom {
   constructor(postId: string, initialPersonas: string[], contexts: string[]) {
     const now = Date.now();
     
-    this.roomId = `room-${postId}-${now}`;
+    // postId를 기반으로 고정된 roomId 생성 (timestamp 제거)
+    this.roomId = `room-${postId}`;
     this.postId = postId;
     this.activePersonas = initialPersonas.map(id => ({
       id,
@@ -262,6 +263,14 @@ export class PersoRoomManager {
   private cleanupInterval: NodeJS.Timeout | null = null;
 
   createRoom(postId: string, initialPersonas: string[], contexts: string[]): PersoRoom {
+    // 같은 postId에 대한 기존 Room이 있는지 확인
+    const existingRoom = this.getRoomByPostId(postId);
+    if (existingRoom) {
+      console.log(`[ROOM] Reusing existing room ${existingRoom.roomId} for post ${postId}`);
+      return existingRoom;
+    }
+    
+    // 새 Room 생성
     const room = new PersoRoom(postId, initialPersonas, contexts);
     this.rooms.set(room.roomId, room);
     return room;

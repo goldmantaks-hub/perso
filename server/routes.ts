@@ -1233,18 +1233,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             let room = persoRoomManager.getRoomByPostId(postId);
             if (!room) {
-              console.log(`[USER MESSAGE] Room not found for post ${postId}, creating new room for auto-chat`);
+              console.log(`[USER MESSAGE] Room not found for post ${postId}, restoring from conversation`);
               
-              // 초기 페르소나 선택 (랜덤 3-4개)
-              const allPersonas = ['Espri', 'Kai', 'Milo', 'Luna', 'Namu', 'Eden', 'Ava', 'Rho', 'Noir'];
-              const personaCount = Math.floor(Math.random() * 2) + 3; // 3-4개
-              const initialPersonas = allPersonas
-                .sort(() => Math.random() - 0.5)
-                .slice(0, personaCount);
+              // Conversation에서 페르소나 참가자 추출
+              const participants = await storage.getParticipants(conversation.id);
+              const personaParticipants = participants.filter(p => p.participantType === 'persona');
               
-              const contexts: string[] = [];
-              room = persoRoomManager.createRoom(postId, initialPersonas, contexts);
-              console.log(`[USER MESSAGE] Created room ${room.roomId} with personas: ${initialPersonas.join(', ')}`);
+              if (personaParticipants.length > 0) {
+                // 기존 참가자로 Room 복원 (participantId 사용, 이름이 아님!)
+                const personaIds = personaParticipants.map(p => p.participantId);
+                
+                // 로그용으로 이름 조회
+                const personaNames = await Promise.all(
+                  personaIds.map(async (id) => {
+                    const persona = await storage.getPersona(id);
+                    return persona?.name || id;
+                  })
+                );
+                
+                const contexts: string[] = [];
+                room = persoRoomManager.createRoom(postId, personaIds, contexts);
+                console.log(`[USER MESSAGE] Restored room ${room.roomId} with existing personas: ${personaNames.join(', ')} (IDs: ${personaIds.join(', ')})`);
+              } else {
+                // 참가자가 없으면 DB에서 랜덤 페르소나 선택 (ID 사용!)
+                const allPersonas = await storage.getAllPersonas();
+                if (allPersonas.length > 0) {
+                  const personaCount = Math.min(
+                    Math.floor(Math.random() * 2) + 3, // 3-4개
+                    allPersonas.length
+                  );
+                  const selectedPersonas = allPersonas
+                    .sort(() => Math.random() - 0.5)
+                    .slice(0, personaCount);
+                  
+                  const personaIds = selectedPersonas.map(p => p.id);
+                  const personaNames = selectedPersonas.map(p => p.name);
+                  
+                  const contexts: string[] = [];
+                  room = persoRoomManager.createRoom(postId, personaIds, contexts);
+                  console.log(`[USER MESSAGE] Created new room ${room.roomId} with random personas: ${personaNames.join(', ')} (IDs: ${personaIds.join(', ')})`);
+                } else {
+                  console.error(`[USER MESSAGE] No personas available in database for room creation`);
+                }
+              }
+            } else {
+              console.log(`[USER MESSAGE] Using existing room ${room.roomId} for post ${postId}`);
             }
             
             const { onUserMessage } = await import('./engine/autoTick.js');
@@ -1741,23 +1774,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           let room = persoRoomManager.getRoomByPostId(postId);
           if (!room) {
-            console.log(`[AI RESPONSE] Room not found for post ${postId}, creating new room for auto-chat`);
+            console.log(`[AI RESPONSE] Room not found for post ${postId}, restoring from conversation`);
             
-            // 초기 페르소나 선택 (랜덤 3-4개)
-            const allPersonas = ['Espri', 'Kai', 'Milo', 'Luna', 'Namu', 'Eden', 'Ava', 'Rho', 'Noir'];
-            const personaCount = Math.floor(Math.random() * 2) + 3; // 3-4개
-            const initialPersonas = allPersonas
-              .sort(() => Math.random() - 0.5)
-              .slice(0, personaCount);
-            
-            const contexts: string[] = [];
-            room = persoRoomManager.createRoom(postId, initialPersonas, contexts);
-            console.log(`[AI RESPONSE] Created room ${room.roomId} with personas: ${initialPersonas.join(', ')}`);
+            // Conversation 조회
+            const conversation = await storage.getConversationByPost(postId);
+            if (conversation) {
+              // Conversation에서 페르소나 참가자 추출
+              const participants = await storage.getParticipants(conversation.id);
+              const personaParticipants = participants.filter(p => p.participantType === 'persona');
+              
+              if (personaParticipants.length > 0) {
+                // 기존 참가자로 Room 복원 (participantId 사용, 이름이 아님!)
+                const personaIds = personaParticipants.map(p => p.participantId);
+                
+                // 로그용으로 이름 조회
+                const personaNames = await Promise.all(
+                  personaIds.map(async (id) => {
+                    const persona = await storage.getPersona(id);
+                    return persona?.name || id;
+                  })
+                );
+                
+                const contexts: string[] = [];
+                room = persoRoomManager.createRoom(postId, personaIds, contexts);
+                console.log(`[AI RESPONSE] Restored room ${room.roomId} with existing personas: ${personaNames.join(', ')} (IDs: ${personaIds.join(', ')})`);
+              } else {
+                // 참가자가 없으면 DB에서 랜덤 페르소나 선택 (ID 사용!)
+                const allPersonas = await storage.getAllPersonas();
+                if (allPersonas.length > 0) {
+                  const personaCount = Math.min(
+                    Math.floor(Math.random() * 2) + 3, // 3-4개
+                    allPersonas.length
+                  );
+                  const selectedPersonas = allPersonas
+                    .sort(() => Math.random() - 0.5)
+                    .slice(0, personaCount);
+                  
+                  const personaIds = selectedPersonas.map(p => p.id);
+                  const personaNames = selectedPersonas.map(p => p.name);
+                  
+                  const contexts: string[] = [];
+                  room = persoRoomManager.createRoom(postId, personaIds, contexts);
+                  console.log(`[AI RESPONSE] Created new room ${room.roomId} with random personas: ${personaNames.join(', ')} (IDs: ${personaIds.join(', ')})`);
+                } else {
+                  console.error(`[AI RESPONSE] No personas available in database for room creation`);
+                }
+              }
+            }
+          } else {
+            console.log(`[AI RESPONSE] Using existing room ${room.roomId} for post ${postId}`);
           }
           
-          const { onUserMessage } = await import('./engine/autoTick.js');
-          onUserMessage(room.roomId);
-          console.log(`[AI RESPONSE] Triggered auto-chat for room ${room.roomId} after AI response`);
+          if (room) {
+            const { onUserMessage } = await import('./engine/autoTick.js');
+            onUserMessage(room.roomId);
+            console.log(`[AI RESPONSE] Triggered auto-chat for room ${room.roomId} after AI response`);
+          }
         } catch (autoError) {
           console.error('[AI RESPONSE] Auto-chat trigger error:', autoError);
         }
@@ -1954,6 +2026,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       }
+
+      // 내부 추론(thinking) 생성
+      console.log(`[THINKING GENERATION] Starting thinking generation for ${targetPersona.name}`);
+      const thinkingPrompt = `당신은 "${targetPersona.name}"입니다. "${userPersona.name}"가 방금 "${content}"라고 말했습니다. 이에 응답하기 전에 내부적으로 무엇을 생각하고 있는지 1문장으로 표현하세요.`;
+      
+      const thinkingCompletion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: `당신은 ${targetPersona.name}입니다. ${targetPersona.description || ''}` },
+          { role: "user", content: thinkingPrompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 50,
+      });
+
+      const thinking = thinkingCompletion.choices[0]?.message?.content?.trim() || "";
+      console.log(`[${targetPersona.name} THINKS]: ${thinking}`);
 
       // OpenAI 스트리밍 API 호출
       const startTime = Date.now();
