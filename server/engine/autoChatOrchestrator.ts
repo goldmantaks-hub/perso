@@ -89,10 +89,10 @@ export class AutoChatOrchestrator {
 
       console.log(`[AUTO CHAT] ${speaker.personaId} (${speaker.intent}): ${text}`);
       
-      // DB에 메시지 저장
+      // DB에 메시지 저장 및 WebSocket 브로드캐스트
       if (room.conversationId) {
         try {
-          await storage.createMessageInConversation({
+          const savedMessage = await storage.createMessageInConversation({
             conversationId: room.conversationId,
             senderType: 'persona',
             senderId: speaker.personaId,
@@ -101,6 +101,42 @@ export class AutoChatOrchestrator {
             thinking: null,
           });
           console.log(`[AUTO CHAT] Message saved to DB for conversation ${room.conversationId}`);
+          
+          // WebSocket을 통해 실시간 브로드캐스트
+          const io = (global as any).ioInstance;
+          if (io) {
+            // Persona 정보 조회
+            const persona = await storage.getPersona(speaker.personaId);
+            if (persona) {
+              const personaOwner = await storage.getUser(persona.userId);
+              
+              io.to(`conversation:${room.conversationId}`).emit('message:new', {
+                id: savedMessage.id,
+                conversationId: savedMessage.conversationId,
+                senderType: savedMessage.senderType,
+                senderId: savedMessage.senderId,
+                content: savedMessage.content,
+                messageType: savedMessage.messageType,
+                thinking: savedMessage.thinking,
+                createdAt: savedMessage.createdAt.toISOString(),
+                isAI: true,
+                personaId: speaker.personaId,
+                persona: {
+                  name: persona.name,
+                  image: persona.image,
+                  owner: personaOwner ? {
+                    name: personaOwner.name,
+                    username: personaOwner.username
+                  } : undefined
+                }
+              });
+              console.log(`[AUTO CHAT] Message broadcasted via WebSocket to conversation:${room.conversationId}`);
+            } else {
+              console.warn(`[AUTO CHAT] Persona ${speaker.personaId} not found in DB, skipping broadcast`);
+            }
+          } else {
+            console.warn(`[AUTO CHAT] WebSocket instance not available for broadcasting`);
+          }
         } catch (error) {
           console.error(`[AUTO CHAT] Failed to save message to DB:`, error);
         }

@@ -11,6 +11,28 @@ PERSO is an AI-powered social networking platform integrating traditional social
 
 ## Recent Changes
 
+### 2025-10-08: Real-time WebSocket Broadcasting for Auto-Chat
+**Objective:** Fix bug where auto-chat messages were not visible to users in conversation rooms in real-time.
+
+**Problem:** Auto-chat messages were being saved to the database but not broadcasted via WebSocket to connected users, causing conversations to appear frozen when users were viewing them.
+
+**Solution** (`server/engine/autoChatOrchestrator.ts`):
+- Added WebSocket broadcasting after saving auto-chat messages to DB
+- Broadcasts to `conversation:${conversationId}` room using `message:new` event
+- Includes full persona metadata (name, image, owner) for proper frontend rendering
+- Handles edge cases: missing IO instance, missing persona data
+- Logs broadcast success/failure for production monitoring
+
+**Behavior:**
+- Auto-chat messages now appear immediately in user's conversation view
+- No polling required - real-time updates via WebSocket
+- Works seamlessly with idle tick system and user message triggers
+- Maintains conversation continuity regardless of user presence
+
+**Verified via logs:**
+- `[AUTO CHAT] Message saved to DB` → DB persistence confirmed
+- `[AUTO CHAT] Message broadcasted via WebSocket` → Real-time delivery confirmed
+
 ### 2025-10-08: Fully Autonomous Persona Conversations
 **Objective:** Enable persona-to-persona conversations that proceed without any user input.
 
