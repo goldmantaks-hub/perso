@@ -25,13 +25,15 @@ import {
 function PostCard({ post }: { post: any }) {
   const { toast } = useToast();
   const [analyzed, setAnalyzed] = useState(false);
+  const [hasTriedAnalysis, setHasTriedAnalysis] = useState(false);
 
   useEffect(() => {
-    // 카드 로드시 자동으로 분석
-    if (!analyzed && post.id && post.persona?.id) {
+    // 카드 로드시 자동으로 분석 (한 번만)
+    if (!hasTriedAnalysis && !analyzed && post.id && post.persona?.id) {
+      setHasTriedAnalysis(true);
       analyzeAndApplyStats();
     }
-  }, [post.id, analyzed]);
+  }, [post.id]);
 
   const analyzeAndApplyStats = async () => {
     try {
@@ -229,7 +231,15 @@ function PostActions({ post }: { post: any }) {
       return await apiRequest("POST", "/api/likes", { postId });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
+      // 좋아요 후 전체 피드를 다시 로드하지 않고 캐시만 업데이트
+      queryClient.setQueryData(["/api/posts"], (oldData: any[] | undefined) => {
+        if (!oldData) return oldData;
+        return oldData.map((p: any) => 
+          p.id === post.id 
+            ? { ...p, isLiked: !p.isLiked, likesCount: p.isLiked ? p.likesCount - 1 : p.likesCount + 1 }
+            : p
+        );
+      });
     },
   });
 
@@ -356,6 +366,9 @@ export default function FeedPage() {
   // 게시물 가져오기
   const { data: posts = [], isLoading, isError, error } = useQuery<any[]>({
     queryKey: ["/api/posts"],
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    staleTime: 5 * 60 * 1000, // 5분간 fresh 상태 유지
   });
 
   // 사용자의 페르소나 가져오기 (로그인된 경우에만)

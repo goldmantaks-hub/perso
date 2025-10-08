@@ -1,19 +1,111 @@
 import { Request, Response } from 'express';
 import { computePersonaDeltas } from '../engine/computePersonaDeltas.js';
+import OpenAI from 'openai';
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 interface Subject {
   kind: 'person' | 'food' | 'place' | 'object' | 'activity';
   confidence: number;
 }
 
-export function detectSubjects(content: string, media?: string): Subject[] {
+interface ImageAnalysis {
+  description: string;
+  objects: string[];
+  subjects: Subject[];
+  context: string;
+}
+
+// OpenAI Vision API를 사용하여 이미지 분석
+async function analyzeImageWithVision(imageUrl: string): Promise<ImageAnalysis | null> {
+  try {
+    console.log(`[IMAGE ANALYSIS] Analyzing image: ${imageUrl}`);
+    
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "이 이미지를 분석하고 다음 정보를 JSON 형식으로 제공해주세요:\n1. description: 이미지에 대한 간단한 설명 (한국어, 1-2문장)\n2. objects: 이미지에서 보이는 주요 객체들의 배열 (한국어)\n3. context: 이미지의 전체적인 맥락이나 분위기 (한국어, 1문장)\n\n예시: {\"description\": \"맛있어 보이는 파스타 요리\", \"objects\": [\"파스타\", \"접시\", \"포크\"], \"context\": \"레스토랑에서 식사하는 분위기\"}"
+            },
+            {
+              type: "image_url",
+              image_url: { url: imageUrl }
+            }
+          ]
+        }
+      ],
+      max_tokens: 500,
+      temperature: 0.3
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      console.log('[IMAGE ANALYSIS] No content returned from OpenAI');
+      return null;
+    }
+
+    // JSON 파싱
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.log('[IMAGE ANALYSIS] Could not extract JSON from response');
+      return null;
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]);
+    console.log('[IMAGE ANALYSIS] Success:', parsed);
+
+    // 객체 기반으로 subjects 추론
+    const subjects: Subject[] = [];
+    const objectsLower = parsed.objects.map((o: string) => o.toLowerCase()).join(' ');
+    
+    if (objectsLower.includes('음식') || objectsLower.includes('요리') || objectsLower.includes('커피') || objectsLower.includes('빵')) {
+      subjects.push({ kind: 'food', confidence: 0.9 });
+    }
+    if (objectsLower.includes('사람') || objectsLower.includes('얼굴')) {
+      subjects.push({ kind: 'person', confidence: 0.9 });
+    }
+    if (objectsLower.includes('건물') || objectsLower.includes('공원') || objectsLower.includes('바다') || objectsLower.includes('산')) {
+      subjects.push({ kind: 'place', confidence: 0.9 });
+    }
+    if (subjects.length === 0) {
+      subjects.push({ kind: 'object', confidence: 0.8 });
+    }
+
+    return {
+      description: parsed.description,
+      objects: parsed.objects,
+      context: parsed.context,
+      subjects
+    };
+  } catch (error) {
+    console.error('[IMAGE ANALYSIS] Error:', error);
+    return null;
+  }
+}
+
+export async function detectSubjects(content: string, media?: string): Promise<{ subjects: Subject[]; imageAnalysis?: ImageAnalysis }> {
   const subjects: Subject[] = [];
   const contentLower = content.toLowerCase();
   
+  let imageAnalysis: ImageAnalysis | undefined;
+  
+  // 이미지가 있으면 Vision API로 분석
   if (media) {
-    subjects.push({ kind: 'object', confidence: 0.8 });
+    const analysis = await analyzeImageWithVision(media);
+    if (analysis) {
+      imageAnalysis = analysis;
+      subjects.push(...analysis.subjects);
+    } else {
+      // Vision API 실패 시 기본값
+      subjects.push({ kind: 'object', confidence: 0.8 });
+    }
   }
   
+  // 텍스트 기반 키워드 분석
   const keywords = {
     person: ['친구', '가족', '사람', '우리', '저', '나', '엄마', '아빠', '동생', '언니', '오빠', '형', 'friend', 'family', 'people', 'person', 'mom', 'dad'],
     food: ['음식', '먹', '맛', '요리', '밥', '빵', '커피', '차', '맥주', '술', '디저트', '케이크', 'food', 'eat', 'taste', 'delicious', 'meal', 'restaurant', 'coffee', 'bread', 'cake'],
@@ -25,10 +117,14 @@ export function detectSubjects(content: string, media?: string): Subject[] {
     const matchCount = words.filter(word => contentLower.includes(word)).length;
     if (matchCount > 0) {
       const confidence = Math.min(0.95, 0.6 + (matchCount * 0.1));
-      subjects.push({
-        kind: kind as Subject['kind'],
-        confidence
-      });
+      // 이미지 분석에서 이미 추가된 경우 중복 방지
+      const existingKind = subjects.find(s => s.kind === kind);
+      if (!existingKind) {
+        subjects.push({
+          kind: kind as Subject['kind'],
+          confidence
+        });
+      }
     }
   }
   
@@ -36,7 +132,7 @@ export function detectSubjects(content: string, media?: string): Subject[] {
     subjects.push({ kind: 'object', confidence: 0.5 });
   }
   
-  return subjects;
+  return { subjects, imageAnalysis };
 }
 
 export function inferContexts(content: string, subjects: Subject[], tones: string[]): string[] {
@@ -144,7 +240,8 @@ export function inferTonesFromContent(content: string, sentiment: { positive: nu
 
 export async function analyzeSentiment(req: Request, res: Response) {
   try {
-    const { content, media } = req.body;
+    const { content, media, imageUrl } = req.body;
+    const actualMediaUrl = imageUrl || media;
     
     if (!content || typeof content !== 'string' || content.trim().length === 0) {
       return res.status(400).json({ error: '콘텐츠가 필요합니다' });
@@ -153,10 +250,10 @@ export async function analyzeSentiment(req: Request, res: Response) {
     const sentiment = analyzeSentimentFromContent(content);
     const tones = inferTonesFromContent(content, sentiment);
     
-    const subjects = detectSubjects(content, media);
+    const { subjects, imageAnalysis } = await detectSubjects(content, actualMediaUrl);
     const contexts = inferContexts(content, subjects, tones);
     
-    const imageScores = media ? {
+    const imageScores = actualMediaUrl ? {
       aesthetics: 0.7,
       quality: 0.75,
     } : undefined;
@@ -177,6 +274,10 @@ export async function analyzeSentiment(req: Request, res: Response) {
     }
     
     console.log(`[ANALYZE] Detected ${subjects.length} subjects, ${contexts.length} contexts: ${contexts.join(', ')}`);
+    if (imageAnalysis) {
+      console.log(`[IMAGE ANALYSIS] Description: ${imageAnalysis.description}`);
+      console.log(`[IMAGE ANALYSIS] Objects: ${imageAnalysis.objects.join(', ')}`);
+    }
     
     res.json({
       sentiment,
@@ -185,7 +286,8 @@ export async function analyzeSentiment(req: Request, res: Response) {
       contexts,
       imageScores,
       deltas,
-      deltaLog: deltaLog || 'No growth'
+      deltaLog: deltaLog || 'No growth',
+      imageAnalysis
     });
   } catch (error) {
     console.error('Analyze sentiment error:', error);

@@ -679,13 +679,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const personaIds = selectedPersonas.map(p => p.id);
               const personaNames = selectedPersonas.map(p => p.name);
               
-              // Post 내용 분석하여 contexts 생성
+              // Post 내용 및 이미지 분석하여 contexts 생성
               const postContent = post.description || post.title;
               const sentiment = analyzeSentimentFromContent(postContent);
-              const subjects = detectSubjects(postContent, undefined);
+              const { subjects, imageAnalysis } = await detectSubjects(postContent, post.image || undefined);
               const contexts = inferContexts(postContent, subjects, []);
               
-              room = persoRoomManager.createRoom(post.id, postContent, personaIds, contexts);
+              // 이미지 분석 결과를 postContent에 추가하여 대화 context에 포함
+              const enrichedPostContent = imageAnalysis
+                ? `${postContent}\n\n[이미지: ${imageAnalysis.description}]`
+                : postContent;
+              
+              if (imageAnalysis) {
+                console.log(`[POST CREATE] Image analysis: ${imageAnalysis.description}`);
+                console.log(`[POST CREATE] Objects detected: ${imageAnalysis.objects.join(', ')}`);
+              }
+              
+              room = persoRoomManager.createRoom(post.id, enrichedPostContent, personaIds, contexts);
               console.log(`[POST CREATE] Created Room ${room.roomId} with personas: ${personaNames.join(', ')}`);
               
               // Conversation 생성 및 페르소나 참가자 추가
