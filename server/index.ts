@@ -6,6 +6,8 @@ import { autoChat } from "./api/autoChat.js";
 import { config, isDevelopment, logConfigInfo } from "../shared/config.js";
 import { APP_CONSTANTS } from "../shared/constants.js";
 import "./engine/autoTick.js"; // 자동 틱 스케줄러 시작
+import { storage } from "./storage.js";
+import { persoRoomManager } from "./engine/persoRoom.js";
 
 const app = express();
 app.use(express.json());
@@ -44,6 +46,44 @@ app.use((req, res, next) => {
   next();
 });
 
+// 서버 시작 시 기존 Conversation의 Room 재생성
+async function reloadActiveRooms() {
+  try {
+    console.log('[INIT] Loading active conversations...');
+    
+    // DB에서 모든 post-scoped conversation 조회
+    const allPosts = await storage.getPosts();
+    let loadedCount = 0;
+    
+    for (const post of allPosts) {
+      const conversation = await storage.getConversationByPost(post.id);
+      if (!conversation) continue;
+      
+      // 이미 Room이 있으면 스킵
+      const roomId = `room-${post.id}`;
+      if (persoRoomManager.get(roomId)) continue;
+      
+      // 참가자 조회
+      const participants = await storage.getParticipants(conversation.id);
+      const personaParticipants = participants.filter(p => p.participantType === 'persona');
+      
+      if (personaParticipants.length === 0) continue;
+      
+      // Room 재생성
+      const personaIds = personaParticipants.map(p => p.participantId);
+      const room = persoRoomManager.createRoom(post.id, personaIds, []);
+      room.setConversationId(conversation.id);
+      
+      loadedCount++;
+      console.log(`[INIT] Reloaded room ${roomId} with ${personaIds.length} personas`);
+    }
+    
+    console.log(`[INIT] Successfully reloaded ${loadedCount} active rooms`);
+  } catch (error) {
+    console.error('[INIT] Error reloading active rooms:', error);
+  }
+}
+
 (async () => {
   const server = await registerRoutes(app);
   
@@ -78,11 +118,14 @@ app.use((req, res, next) => {
     port: config.PORT,
     host: "0.0.0.0",
     reusePort: true,
-  }, () => {
+  }, async () => {
     logConfigInfo();
     log(`serving on port ${config.PORT}`);
     console.log(`🚀 Server started successfully on port ${config.PORT}`);
     console.log(`📡 API endpoints available at http://localhost:${config.PORT}/api/`);
     console.log(`🔌 WebSocket server ready for connections`);
+    
+    // 서버 시작 후 기존 Room 재생성
+    await reloadActiveRooms();
   });
 })();
