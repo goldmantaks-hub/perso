@@ -1224,6 +1224,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       res.json(tempMessage);
+      
+      // 자동 대화 트리거 (사용자 메시지인 경우에만)
+      if (!isAI) {
+        (async () => {
+          try {
+            const { persoRoomManager } = await import('./engine/persoRoom.js');
+            
+            let room = persoRoomManager.getRoomByPostId(postId);
+            if (!room) {
+              console.log(`[USER MESSAGE] Room not found for post ${postId}, creating new room for auto-chat`);
+              
+              // 초기 페르소나 선택 (랜덤 3-4개)
+              const allPersonas = ['Espri', 'Kai', 'Milo', 'Luna', 'Namu', 'Eden', 'Ava', 'Rho', 'Noir'];
+              const personaCount = Math.floor(Math.random() * 2) + 3; // 3-4개
+              const initialPersonas = allPersonas
+                .sort(() => Math.random() - 0.5)
+                .slice(0, personaCount);
+              
+              const contexts: string[] = [];
+              room = persoRoomManager.createRoom(postId, initialPersonas, contexts);
+              console.log(`[USER MESSAGE] Created room ${room.roomId} with personas: ${initialPersonas.join(', ')}`);
+            }
+            
+            const { onUserMessage } = await import('./engine/autoTick.js');
+            onUserMessage(room.roomId);
+            console.log(`[USER MESSAGE] Triggered auto-chat for room ${room.roomId} after user message`);
+          } catch (autoError) {
+            console.error('[USER MESSAGE] Auto-chat trigger error:', autoError);
+          }
+        })();
+      }
     } catch (error) {
       console.error('메시지 작성 에러:', error);
       res.status(400).json({ message: "메시지 작성에 실패했습니다" });
