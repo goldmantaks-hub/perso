@@ -9,6 +9,10 @@ interface UseWebSocketOptions {
   onStreamStart?: (data: { id: string; personaId: string }) => void;
   onStreamChunk?: (data: { id: string; chunk: string; content: string }) => void;
   onStreamEnd?: (message: any) => void;
+  onPersonaStatusUpdate?: (statusData: any) => void;
+  onPersonaEvent?: (eventData: any) => void;
+  onPersonaHandover?: (handoverData: any) => void;
+  onPersonaAutoIntroduction?: (introData: any) => void;
   enabled?: boolean;
 }
 
@@ -19,6 +23,10 @@ export function useWebSocket({
   onStreamStart,
   onStreamChunk,
   onStreamEnd,
+  onPersonaStatusUpdate,
+  onPersonaEvent,
+  onPersonaHandover,
+  onPersonaAutoIntroduction,
   enabled = true 
 }: UseWebSocketOptions) {
   const socketRef = useRef<Socket | null>(null);
@@ -44,13 +52,35 @@ export function useWebSocket({
 
     socketRef.current = socket;
 
+    // 페이지 언로드 시 퇴장 처리 (명시적 퇴장 아님)
+    const handleBeforeUnload = () => {
+      if (socket && socket.connected && conversationId) {
+        console.log('[WS] Page unloading, sending leave:conversation (disconnect)');
+        socket.emit('leave:conversation', conversationId, 'disconnect');
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     socket.on('connect', () => {
       console.log('[WS] Connected');
       
-      // 대화방 참여
+      // 대화방 참여 (항상 join으로 보내서 입장 메시지 생성)
       if (conversationId) {
-        console.log('[WS] Emitting join:conversation for', conversationId);
-        socket.emit('join:conversation', conversationId);
+        console.log('[WS] Emitting join:conversation for', conversationId, '(join)');
+        // 강제로 join으로 전송 (캐시 문제 방지)
+        setTimeout(() => {
+          console.log('[WS] About to emit join:conversation with action: join, conversationId:', conversationId);
+          socket.emit('join:conversation', conversationId, 'join');
+          console.log('[WS] Forced join:conversation sent with action: join');
+        }, 100);
+        
+        // 추가로 한 번 더 전송 (브라우저 캐시 문제 해결)
+        setTimeout(() => {
+          console.log('[WS] About to emit second join:conversation with action: join, conversationId:', conversationId);
+          socket.emit('join:conversation', conversationId, 'join');
+          console.log('[WS] Second join:conversation sent with action: join');
+        }, 500);
       }
     });
 
@@ -99,14 +129,43 @@ export function useWebSocket({
       socket.on('message:stream:end', onStreamEnd);
     }
 
+    // 페르소나 상태 관련 이벤트
+    if (onPersonaStatusUpdate) {
+      socket.on('persona:status:update', (statusData) => {
+        console.log('[WS] Received persona status update:', statusData);
+        onPersonaStatusUpdate(statusData);
+      });
+    }
+    if (onPersonaEvent) {
+      socket.on('persona:event', (eventData) => {
+        console.log('[WS] Received persona event:', eventData);
+        onPersonaEvent(eventData);
+      });
+    }
+    if (onPersonaHandover) {
+      socket.on('persona:handover', (handoverData) => {
+        console.log('[WS] Received persona handover:', handoverData);
+        onPersonaHandover(handoverData);
+      });
+    }
+    if (onPersonaAutoIntroduction) {
+      socket.on('persona:auto-introduction', (introData) => {
+        console.log('[WS] Received persona auto introduction:', introData);
+        onPersonaAutoIntroduction(introData);
+      });
+    }
+
     // cleanup
     return () => {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
       
+      // beforeunload 이벤트 리스너 제거
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      
       if (conversationId) {
-        socket.emit('leave:conversation', conversationId);
+        socket.emit('leave:conversation', conversationId, 'disconnect');
       }
       
       socket.off('message:new');
@@ -114,6 +173,10 @@ export function useWebSocket({
       socket.off('message:stream:start');
       socket.off('message:stream:chunk');
       socket.off('message:stream:end');
+      socket.off('persona:status:update');
+      socket.off('persona:event');
+      socket.off('persona:handover');
+      socket.off('persona:auto-introduction');
       socket.disconnect();
       socketRef.current = null;
     };
@@ -130,6 +193,10 @@ export function useWebSocket({
     socket.off('message:stream:start');
     socket.off('message:stream:chunk');
     socket.off('message:stream:end');
+    socket.off('persona:status:update');
+    socket.off('persona:event');
+    socket.off('persona:handover');
+    socket.off('persona:auto-introduction');
     
     // 새 핸들러 등록
     if (onMessage) socket.on('message:new', onMessage);
@@ -142,6 +209,30 @@ export function useWebSocket({
     if (onStreamStart) socket.on('message:stream:start', onStreamStart);
     if (onStreamChunk) socket.on('message:stream:chunk', onStreamChunk);
     if (onStreamEnd) socket.on('message:stream:end', onStreamEnd);
+    if (onPersonaStatusUpdate) {
+      socket.on('persona:status:update', (statusData) => {
+        console.log('[WS] Received persona status update:', statusData);
+        onPersonaStatusUpdate(statusData);
+      });
+    }
+    if (onPersonaEvent) {
+      socket.on('persona:event', (eventData) => {
+        console.log('[WS] Received persona event:', eventData);
+        onPersonaEvent(eventData);
+      });
+    }
+    if (onPersonaHandover) {
+      socket.on('persona:handover', (handoverData) => {
+        console.log('[WS] Received persona handover:', handoverData);
+        onPersonaHandover(handoverData);
+      });
+    }
+    if (onPersonaAutoIntroduction) {
+      socket.on('persona:auto-introduction', (introData) => {
+        console.log('[WS] Received persona auto introduction:', introData);
+        onPersonaAutoIntroduction(introData);
+      });
+    }
 
     return () => {
       socket.off('message:new');
@@ -149,8 +240,12 @@ export function useWebSocket({
       socket.off('message:stream:start');
       socket.off('message:stream:chunk');
       socket.off('message:stream:end');
+      socket.off('persona:status:update');
+      socket.off('persona:event');
+      socket.off('persona:handover');
+      socket.off('persona:auto-introduction');
     };
-  }, [onMessage, onSystemMessage, onStreamStart, onStreamChunk, onStreamEnd]);
+  }, [onMessage, onSystemMessage, onStreamStart, onStreamChunk, onStreamEnd, onPersonaStatusUpdate, onPersonaEvent, onPersonaHandover, onPersonaAutoIntroduction]);
 
   // 대화방 변경 시 join/leave
   useEffect(() => {
@@ -159,7 +254,8 @@ export function useWebSocket({
 
     // 이전 대화방 나가기는 cleanup에서 처리됨
     if (conversationId) {
-      socket.emit('join:conversation', conversationId);
+      console.log('[WS] About to emit join:conversation on conversationId change, action: join, conversationId:', conversationId);
+      socket.emit('join:conversation', conversationId, 'join');
       console.log('[WS] Joined conversation:', conversationId);
     }
   }, [conversationId]);
@@ -173,8 +269,16 @@ export function useWebSocket({
   const leaveConversation = useCallback(() => {
     const socket = socketRef.current;
     if (socket && socket.connected && conversationId) {
-      console.log('[WS] Emitting leave:conversation for', conversationId);
-      socket.emit('leave:conversation', conversationId);
+      console.log('[WS] Emitting leave:conversation for', conversationId, '(back button)');
+      socket.emit('leave:conversation', conversationId, 'back');
+    }
+  }, [conversationId]);
+
+  const joinConversation = useCallback(() => {
+    const socket = socketRef.current;
+    if (socket && socket.connected && conversationId) {
+      console.log('[WS] Emitting join:conversation for', conversationId, '(real join)');
+      socket.emit('join:conversation', conversationId, 'join');
     }
   }, [conversationId]);
 
@@ -182,5 +286,6 @@ export function useWebSocket({
     socket: socketRef.current,
     disconnect,
     leaveConversation,
+    joinConversation,
   };
 }

@@ -6,7 +6,7 @@ interface Subject {
   confidence: number;
 }
 
-function detectSubjects(content: string, media?: string): Subject[] {
+export function detectSubjects(content: string, media?: string): Subject[] {
   const subjects: Subject[] = [];
   const contentLower = content.toLowerCase();
   
@@ -39,7 +39,7 @@ function detectSubjects(content: string, media?: string): Subject[] {
   return subjects;
 }
 
-function inferContexts(content: string, subjects: Subject[], tones: string[]): string[] {
+export function inferContexts(content: string, subjects: Subject[], tones: string[]): string[] {
   const contexts: string[] = [];
   const contentLower = content.toLowerCase();
   

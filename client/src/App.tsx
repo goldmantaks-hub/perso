@@ -16,6 +16,7 @@ import PersonaChatPage from "@/pages/persona-chat";
 import PersonaStatePage from "@/pages/persona-state";
 import PersonaNetworkPage from "@/pages/persona-network";
 import VisualizationPage from "@/pages/visualization";
+import UITest from "@/pages/UITest";
 import { useEffect, useState } from "react";
 import { isAuthenticated, setToken, setUser } from "./lib/auth";
 
@@ -35,6 +36,7 @@ function Router() {
       <Route path="/persona-state" component={PersonaStatePage} />
       <Route path="/persona-network" component={PersonaNetworkPage} />
       <Route path="/visualization" component={VisualizationPage} />
+      <Route path="/ui-test" component={UITest} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -75,7 +77,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
+      <TooltipProvider delayDuration={150}>
         <Toaster />
         <Router />
       </TooltipProvider>

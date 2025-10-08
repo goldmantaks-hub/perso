@@ -32,6 +32,16 @@ export class PersoRoom {
   createdAt: number;
   lastActivity: number;
   dialogueHistory: DialogueMessage[];
+  
+  // 지속적인 대화를 위한 필드들
+  lastMessage: string;
+  lastSpeaker: string;
+  conversationHistory: Array<{ persona: string; message: string; thinking?: string }>;
+  isContinuousMode: boolean;
+  
+  // 자동 대화를 위한 필드들
+  autoChatEnabled: boolean;
+  lastMessageAt: Date;
 
   constructor(postId: string, initialPersonas: string[], contexts: string[]) {
     const now = Date.now();
@@ -53,6 +63,16 @@ export class PersoRoom {
     this.createdAt = now;
     this.lastActivity = now;
     this.dialogueHistory = [];
+    
+    // 지속적인 대화를 위한 필드 초기화
+    this.lastMessage = "";
+    this.lastSpeaker = "";
+    this.conversationHistory = [];
+    this.isContinuousMode = false;
+    
+    // 자동 대화를 위한 필드 초기화
+    this.autoChatEnabled = true;
+    this.lastMessageAt = new Date();
 
     console.log(`[ROOM] Created ${this.roomId} with ${initialPersonas.length} personas, ${contexts.length} topics`);
   }
@@ -137,16 +157,6 @@ export class PersoRoom {
     this.lastActivity = Date.now();
   }
 
-  addMessage(message: DialogueMessage): void {
-    this.dialogueHistory.push(message);
-    this.lastActivity = Date.now();
-    
-    const maxHistory = 100;
-    if (this.dialogueHistory.length > maxHistory) {
-      this.dialogueHistory = this.dialogueHistory.slice(-maxHistory);
-    }
-  }
-
   getRecentMessages(count: number = 10): DialogueMessage[] {
     return this.dialogueHistory.slice(-count);
   }
@@ -182,6 +192,40 @@ export class PersoRoom {
 
   isActive(): boolean {
     return this.getActivePersonas().length > 0;
+  }
+
+  getLastMessages(n: number): Array<{ personaId?: string; userId?: string; text: string }> {
+    return this.dialogueHistory
+      .slice(-n)
+      .map(msg => ({
+        personaId: msg.personaId,
+        userId: msg.userId,
+        text: msg.content
+      }));
+  }
+
+  addMessage(message: { personaId?: string; userId?: string; text: string; createdAt: Date }): void {
+    const dialogueMsg: DialogueMessage = {
+      id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      personaId: message.personaId,
+      userId: message.userId,
+      content: message.text,
+      timestamp: message.createdAt.getTime(),
+      isAI: !!message.personaId
+    };
+
+    this.dialogueHistory.push(dialogueMsg);
+    this.lastMessageAt = message.createdAt;
+    this.lastActivity = message.createdAt.getTime();
+
+    // 페르소나 상태 업데이트
+    if (message.personaId) {
+      const persona = this.activePersonas.find(p => p.id === message.personaId);
+      if (persona) {
+        persona.lastSpokeAt = message.createdAt.getTime();
+        persona.messageCount++;
+      }
+    }
   }
 
   private reassignDominantPersona(leavingPersonaId: string): void {
@@ -223,18 +267,22 @@ export class PersoRoomManager {
     return room;
   }
   
-  getRoom(roomId: string): PersoRoom | undefined {
-    return this.rooms.get(roomId);
-  }
-  
   getRoomByPostId(postId: string): PersoRoom | undefined {
     return Array.from(this.rooms.values()).find(room => room.postId === postId);
   }
 
   deleteRoom(roomId: string): boolean {
+    const room = this.rooms.get(roomId);
+    if (!room) {
+      console.warn(`[ROOM] Cannot delete room ${roomId} - room not found`);
+      return false;
+    }
+    
     const deleted = this.rooms.delete(roomId);
     if (deleted) {
-      console.log(`[ROOM] Deleted room ${roomId}`);
+      console.log(`[ROOM] Successfully deleted room ${roomId}`);
+    } else {
+      console.error(`[ROOM] Failed to delete room ${roomId} - unknown error`);
     }
     return deleted;
   }
@@ -250,17 +298,47 @@ export class PersoRoomManager {
   getRoomCount(): number {
     return this.rooms.size;
   }
+
+  ids(): string[] {
+    return Array.from(this.rooms.keys());
+  }
+
+  get(roomId: string): PersoRoom | undefined {
+    return this.rooms.get(roomId);
+  }
   
-  cleanup(): void {
+  cleanup(): { cleaned: number; failed: number } {
     const now = Date.now();
     const cutoff = now - this.CLEANUP_TIMEOUT;
     
-    Array.from(this.rooms.entries()).forEach(([roomId, room]) => {
-      if (room.lastActivity < cutoff) {
-        this.rooms.delete(roomId);
-        console.log(`[ROOM] Cleaned up inactive room ${roomId}`);
+    let cleaned = 0;
+    let failed = 0;
+    
+    const roomsToCleanup = Array.from(this.rooms.entries()).filter(([roomId, room]) => {
+      return room.lastActivity < cutoff;
+    });
+    
+    roomsToCleanup.forEach(([roomId, room]) => {
+      try {
+        const deleted = this.rooms.delete(roomId);
+        if (deleted) {
+          cleaned++;
+          console.log(`[ROOM] Cleaned up inactive room ${roomId}`);
+        } else {
+          failed++;
+          console.error(`[ROOM] Failed to cleanup room ${roomId}`);
+        }
+      } catch (error) {
+        failed++;
+        console.error(`[ROOM] Exception during cleanup of room ${roomId}:`, error);
       }
     });
+    
+    if (cleaned > 0 || failed > 0) {
+      console.log(`[ROOM] Cleanup completed: ${cleaned} cleaned, ${failed} failed`);
+    }
+    
+    return { cleaned, failed };
   }
 
   startCleanupInterval(): void {
@@ -276,6 +354,115 @@ export class PersoRoomManager {
       clearInterval(this.cleanupInterval);
       this.cleanupInterval = null;
     }
+  }
+
+  addPersona(roomId: string, personaId: string): boolean {
+    const room = this.rooms.get(roomId);
+    if (!room) {
+      console.log(`[ROOM] Cannot add ${personaId} - room ${roomId} not found`);
+      return false;
+    }
+    
+    room.addPersona(personaId);
+    return true;
+  }
+
+  removePersona(roomId: string, personaId: string): boolean {
+    const room = this.rooms.get(roomId);
+    if (!room) {
+      console.log(`[ROOM] Cannot remove ${personaId} - room ${roomId} not found`);
+      return false;
+    }
+    
+    room.removePersona(personaId);
+    return true;
+  }
+
+  removeRoom(roomId: string): boolean {
+    try {
+      const result = this.deleteRoom(roomId);
+      if (!result) {
+        console.error(`[ROOM] Failed to remove room ${roomId}`);
+      }
+      return result;
+    } catch (error) {
+      console.error(`[ROOM] Exception while removing room ${roomId}:`, error);
+      return false;
+    }
+  }
+
+  setDominantPersona(roomId: string, personaId: string): boolean {
+    const room = this.rooms.get(roomId);
+    if (!room) {
+      console.log(`[ROOM] Cannot set dominant persona - room ${roomId} not found`);
+      return false;
+    }
+    
+    room.setDominantPersona(personaId);
+    return true;
+  }
+
+  recordPersonaTurn(roomId: string, personaId: string): boolean {
+    const room = this.rooms.get(roomId);
+    if (!room) {
+      console.log(`[ROOM] Cannot record turn - room ${roomId} not found`);
+      return false;
+    }
+    
+    room.recordPersonaTurn(personaId);
+    return true;
+  }
+
+  // 강제로 모든 룸 정리 (테스트용)
+  forceCleanupAllRooms(): { cleaned: number; failed: number } {
+    console.log(`[ROOM] Force cleanup requested - ${this.rooms.size} rooms to clean`);
+    
+    let cleaned = 0;
+    let failed = 0;
+    
+    const roomIds = Array.from(this.rooms.keys());
+    
+    roomIds.forEach(roomId => {
+      try {
+        const deleted = this.rooms.delete(roomId);
+        if (deleted) {
+          cleaned++;
+          console.log(`[ROOM] Force cleaned room ${roomId}`);
+        } else {
+          failed++;
+          console.error(`[ROOM] Failed to force clean room ${roomId}`);
+        }
+      } catch (error) {
+        failed++;
+        console.error(`[ROOM] Exception during force cleanup of room ${roomId}:`, error);
+      }
+    });
+    
+    console.log(`[ROOM] Force cleanup completed: ${cleaned} cleaned, ${failed} failed`);
+    return { cleaned, failed };
+  }
+
+  // 메모리 상태 확인
+  getMemoryStatus(): {
+    totalRooms: number;
+    activeRooms: number;
+    inactiveRooms: number;
+    oldestRoom?: string;
+    newestRoom?: string;
+  } {
+    const rooms = Array.from(this.rooms.values());
+    const activeRooms = rooms.filter(room => room.isActive());
+    const inactiveRooms = rooms.filter(room => !room.isActive());
+    
+    const sortedByAge = rooms.sort((a, b) => a.createdAt - b.createdAt);
+    
+    return {
+      totalRooms: rooms.length,
+      activeRooms: activeRooms.length,
+      inactiveRooms: inactiveRooms.length,
+      oldestRoom: sortedByAge[0]?.roomId,
+      newestRoom: sortedByAge[sortedByAge.length - 1]?.roomId
+    };
   }
 }
 

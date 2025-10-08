@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { getExpandedInfoForPersona, ExpandedInfo } from './infoExpansion.js';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -111,6 +112,38 @@ export async function personaTalk(
         .join('\n')
     : '';
 
+  // 확장 정보 가져오기
+  const topics = (analysis as any).subjects || [];
+  const lastMessage = context.previousMessages?.[context.previousMessages.length - 1]?.message || '';
+  const expandedInfo = await getExpandedInfoForPersona(
+    profile.type,
+    topics,
+    lastMessage,
+    post.userId
+  );
+
+  // 확장 정보를 시스템 프롬프트에 통합
+  let expandedInfoText = '';
+  if (expandedInfo) {
+    switch (expandedInfo.type) {
+      case 'knowledge':
+        expandedInfoText = `[전문 지식 정보]\n${expandedInfo.data.facts.join('\n')}\n출처: ${expandedInfo.data.sources.join(', ')}\n`;
+        break;
+      case 'analyst':
+        expandedInfoText = `[분석 데이터]\n${expandedInfo.data.patterns.join('\n')}\n통계: 게시물 ${expandedInfo.data.stats.totalPosts}개, 평균 참여도 ${expandedInfo.data.stats.avgEngagement}\n`;
+        break;
+      case 'empath':
+        expandedInfoText = `[감정 분석]\n주요 감정: ${expandedInfo.data.dominantEmotion} (강도: ${expandedInfo.data.intensity.toFixed(2)})\n감지된 감정들: ${expandedInfo.data.emotions.map((e: any) => `${e.type}(${e.intensity.toFixed(1)})`).join(', ')}\n`;
+        break;
+      case 'creative':
+        expandedInfoText = `[창의적 영감]\n비유: ${expandedInfo.data.metaphors.join(', ')}\n은유: ${expandedInfo.data.analogies.join(', ')}\n`;
+        break;
+      case 'humor':
+        expandedInfoText = `[유머 소재]\n재미있는 이야기: ${expandedInfo.data.jokes.join(', ')}\n참고사항: ${expandedInfo.data.references.join(', ')}\n`;
+        break;
+    }
+  }
+
   const systemPrompt = `당신은 ${personaName}입니다.
 
 [당신의 특성]
@@ -127,15 +160,18 @@ export async function personaTalk(
 - 부정: ${(analysis.sentiment.negative * 100).toFixed(0)}%
 ${analysis.tones ? `- 감지된 톤: ${analysis.tones.join(', ')}` : ''}
 
+${expandedInfoText}
+
 ${previousConversation ? `[이전 대화]\n${previousConversation}\n` : ''}
 
 [지침]
 1. 당신의 역할과 성격에 맞게 자연스럽게 반응하세요
 2. 게시물의 감성과 내용을 고려하여 대화하세요
-3. 이전 대화가 있다면 맥락을 이어가되, 반복하지 마세요
-4. 1-2문장으로 간결하게 답하세요
-5. 자연스러운 한국어로 대화하세요
-6. 페르소나의 이름을 언급하지 마세요`;
+3. ${expandedInfoText ? '위의 확장 정보를 활용하여 더 풍부한 답변을 제공하세요' : ''}
+4. 이전 대화가 있다면 맥락을 이어가되, 반복하지 마세요
+5. 1-2문장으로 간결하게 답하세요
+6. 자연스러운 한국어로 대화하세요
+7. 페르소나의 이름을 언급하지 마세요`;
 
   try {
     const completion = await openai.chat.completions.create({

@@ -5,20 +5,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-export const TOPIC_WEIGHTS: Record<string, Record<string, number>> = {
-  'emotion': { Espri: 0.9, Luna: 0.6, Milo: 0.4, Eden: 0.5 },
-  'tech': { Rho: 0.9, Kai: 0.7, Namu: 0.5 },
-  'humor': { Milo: 0.9, Ava: 0.7 },
-  'philosophy': { Eden: 0.9, Noir: 0.7, Luna: 0.5 },
-  'analysis': { Namu: 0.9, Kai: 0.7, Rho: 0.5 },
-  'creativity': { Luna: 0.9, Noir: 0.6, Espri: 0.4 },
-  'trend': { Ava: 0.9, Milo: 0.6 },
-  'travel': { Kai: 0.7, Ava: 0.6, Luna: 0.5 },
-  'cuisine': { Milo: 0.7, Ava: 0.6, Espri: 0.5 },
-  'art': { Luna: 0.9, Noir: 0.7, Eden: 0.5 },
-  'mystery': { Noir: 0.9, Eden: 0.6 },
-  'social': { Ava: 0.8, Espri: 0.7, Milo: 0.6 },
-};
+// TOPIC_WEIGHTS 제거됨 - 향후 DB에 페르소나 관심사 필드 추가 시 동적으로 계산
 
 interface ConversationMessage {
   id?: string;
@@ -37,11 +24,21 @@ export function selectNextSpeaker(
   dominantPersona: string | null,
   turnsSinceDominantChange: number
 ): string {
+  console.log(`[SELECT SPEAKER] Starting speaker selection`);
+  console.log(`[SELECT SPEAKER] Active personas: ${activePersonas.length}`);
+  console.log(`[SELECT SPEAKER] Last speaker: ${lastSpeaker}`);
+  console.log(`[SELECT SPEAKER] Last message: "${lastMessage}"`);
+  console.log(`[SELECT SPEAKER] Conversation history length: ${conversationHistory.length}`);
+
   const eligiblePersonas = activePersonas.filter(p => p.status === 'active');
+  console.log(`[SELECT SPEAKER] Eligible personas: ${eligiblePersonas.length}`);
+
   if (eligiblePersonas.length === 0) {
+    console.log(`[SELECT SPEAKER] No eligible personas, returning last speaker: ${lastSpeaker}`);
     return lastSpeaker;
   }
   if (eligiblePersonas.length === 1) {
+    console.log(`[SELECT SPEAKER] Only one eligible persona: ${eligiblePersonas[0].id}`);
     return eligiblePersonas[0].id;
   }
   
@@ -53,7 +50,8 @@ export function selectNextSpeaker(
     let score = 0;
     
     for (const {topic, weight} of currentTopics) {
-      const affinity = TOPIC_WEIGHTS[topic]?.[persona.id] || 0.3;
+      // 향후 DB에 페르소나 관심사 필드 추가 시 여기서 계산
+      const affinity = Math.random(); // 임시 랜덤 점수
       score += affinity * weight * 0.4;
     }
     
@@ -193,17 +191,10 @@ function weightedRandomSelection(scores: Map<string, number>, temperature: numbe
   return normalizedScores[normalizedScores.length - 1].id;
 }
 
-export interface PersonaProfile {
-  id: string;
-  name: string;
-  role: string;
-  type: string;
-  tone: string;
-  style: string;
-}
+// PersonaProfile 인터페이스 제거됨 - DB 페르소나 스키마 사용
 
 export async function generateThinking(
-  persona: PersonaProfile,
+  persona: any, // DB 페르소나 객체
   currentTopics: TopicWeight[],
   lastMessage: string,
   conversationContext: string

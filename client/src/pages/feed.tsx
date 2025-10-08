@@ -291,7 +291,13 @@ function PersoSection({ post }: { post: any }) {
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-muted-foreground truncate">
-                        <span className="font-medium">{msg.isAI ? msg.persona?.name : msg.user?.name}</span>: {displayContent}
+                        <span className="font-medium">
+                          {msg.isAI && msg.persona?.owner 
+                            ? `${msg.persona.owner.name}의 ${msg.persona.name}`
+                            : msg.isAI 
+                              ? msg.persona?.name 
+                              : msg.user?.name}
+                        </span>: {displayContent}
                       </p>
                     </div>
                   </div>
@@ -302,15 +308,17 @@ function PersoSection({ post }: { post: any }) {
         })()}
       </div>
       <div className="p-4 pt-0">
-        <Link href={`/perso/${post.id}`}>
-          <Button 
-            className="w-full bg-primary/10 text-primary hover:bg-primary/20 font-bold"
-            variant="secondary"
-            data-testid={`button-enter-perso-${post.id}`}
-          >
-            페르소 입장
-          </Button>
-        </Link>
+        <Button 
+          className="w-full bg-primary/10 text-primary hover:bg-primary/20 font-bold"
+          variant="secondary"
+          data-testid={`button-enter-perso-${post.id}`}
+          onClick={() => {
+            // 명시적인 입장을 위해 URL 파라미터 추가
+            window.location.href = `/perso/${post.id}?explicitJoin=true`;
+          }}
+        >
+          페르소 입장
+        </Button>
       </div>
     </div>
   );

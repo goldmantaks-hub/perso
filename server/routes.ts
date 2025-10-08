@@ -8,7 +8,9 @@ import { db } from "./db";
 import { eq } from "drizzle-orm";
 import type { SocketServer } from "./websocket";
 import { analyzeSentiment } from "./api/analyze.js";
+import { analyzeSentimentFromContent, inferTonesFromContent, detectSubjects, inferContexts } from "./api/analyze.js";
 import { openPerso } from "./api/personas.js";
+import { runSeed } from "./seed.js";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // WebSocket 서버 참조를 위한 헬퍼 함수
@@ -17,6 +19,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // OpenAI 클라이언트 초기화
   const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
+  });
+
+  // 헬스체크 엔드포인트
+  app.get("/api/health", async (req, res) => {
+    res.json({ 
+      status: "ok", 
+      timestamp: new Date().toISOString(),
+      server: "running"
+    });
   });
 
   // Mock 로그인 엔드포인트
@@ -582,9 +593,174 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const post = await storage.createPost(validatedData);
+      
+      // 게시물 생성 후 자동으로 페르소나 대화 시작
+      console.log(`[AUTO CONVERSATION] Starting automatic persona conversation for post ${post.id}`);
+      
+           // 백그라운드에서 대화 시작 (응답을 기다리지 않음)
+           setTimeout(async () => {
+             try {
+               const postContent = post.description || post.title;
+               console.log(`[AUTO CONVERSATION] Starting analysis for post ${post.id}`);
+               console.log(`[AUTO CONVERSATION] Post content: "${postContent}"`);
+               
+               // 게시물 분석
+               const sentiment = analyzeSentimentFromContent(postContent);
+               const tones = inferTonesFromContent(postContent, sentiment);
+               const subjects = detectSubjects(postContent, undefined);
+               const contexts = inferContexts(postContent, subjects, tones);
+               
+               const analysis = {
+                 sentiment,
+                 tones,
+                 subjects,
+                 contexts
+               };
+               
+               console.log(`[AUTO CONVERSATION] Analysis completed for post ${post.id}:`, analysis);
+               
+               // Multi-agent 대화 오케스트레이션 import
+               console.log(`[AUTO CONVERSATION] Importing multiAgentDialogueOrchestrator for post ${post.id}`);
+               const { multiAgentDialogueOrchestrator } = await import('./engine/multiAgentDialogueOrchestrator.js');
+               
+               console.log(`[AUTO CONVERSATION] Starting multiAgentDialogueOrchestrator for post ${post.id}`);
+               
+               // 자동 대화 시작
+               const result = await multiAgentDialogueOrchestrator(
+                 {
+                   id: post.id,
+                   content: postContent,
+                   userId: post.userId
+                 },
+                 analysis
+               );
+               
+               console.log(`[AUTO CONVERSATION] Generated ${result.messages.length} initial messages for post ${post.id}`);
+               
+               // 자동 대화 트리거
+               const { onPostCreated } = await import('./engine/autoTick.js');
+               onPostCreated(result.roomId);
+               console.log(`[AUTO CONVERSATION] Triggered auto-chat for room ${result.roomId}`);
+               
+               // WebSocket으로 결과 브로드캐스트 (연결된 클라이언트가 있다면)
+               const io = getIO();
+               if (io) {
+                 // 대화방 상태 업데이트 브로드캐스트
+                 io.emit('conversation:auto-started', {
+                   postId: post.id,
+                   roomId: result.roomId,
+                   messageCount: result.messages.length,
+                   eventCount: result.joinLeaveEvents.length
+                 });
+                 
+                 console.log(`[AUTO CONVERSATION] Broadcasted auto-started event for post ${post.id}`);
+               }
+               
+             } catch (error) {
+               console.error(`[AUTO CONVERSATION] Error starting conversation for post ${post.id}:`, error);
+               if (error instanceof Error) {
+                 console.error(`[AUTO CONVERSATION] Error stack:`, error.stack);
+                 console.error(`[AUTO CONVERSATION] Error details:`, {
+                   message: error.message,
+                   name: error.name,
+                   cause: error.cause
+                 });
+                 
+                 // 더 자세한 디버깅 정보
+                 if (error.message && error.message.includes('createRoom')) {
+                   console.error(`[AUTO CONVERSATION] createRoom error detected for post ${post.id}`);
+                 }
+               }
+             }
+           }, 1000); // 1초 후 시작
+      
       res.json(post);
     } catch (error) {
       res.status(400).json({ message: "게시물 생성에 실패했습니다" });
+    }
+  });
+
+  // POST /api/posts/:postId/start-conversation - 기존 게시물에 대해 자동 대화 시작
+  app.post("/api/posts/:postId/start-conversation", authenticateToken, async (req, res) => {
+    try {
+      const { postId } = req.params;
+      
+      if (!req.userId) {
+        return res.status(401).json({ message: "인증되지 않은 사용자입니다" });
+      }
+      
+      // 게시물 가져오기
+      const post = await storage.getPost(postId);
+      if (!post) {
+        return res.status(404).json({ message: "게시물을 찾을 수 없습니다" });
+      }
+      
+      console.log(`[MANUAL CONVERSATION] Starting manual persona conversation for post ${postId}`);
+      
+      // 백그라운드에서 대화 시작
+      setTimeout(async () => {
+        try {
+          const postContent = post.description || post.title;
+          
+          // 게시물 분석
+          const sentiment = analyzeSentimentFromContent(postContent);
+          const tones = inferTonesFromContent(postContent, sentiment);
+          const subjects = detectSubjects(postContent, undefined);
+          const contexts = inferContexts(postContent, subjects, tones);
+          
+          const analysis = {
+            sentiment,
+            tones,
+            subjects,
+            contexts
+          };
+          
+          // Multi-agent 대화 오케스트레이션 import
+          const { multiAgentDialogueOrchestrator } = await import('./engine/multiAgentDialogueOrchestrator.js');
+          
+          // 자동 대화 시작
+          const result = await multiAgentDialogueOrchestrator(
+            {
+              id: post.id,
+              content: postContent,
+              userId: post.userId
+            },
+            analysis
+          );
+          
+          console.log(`[MANUAL CONVERSATION] Generated ${result.messages.length} initial messages for post ${post.id}`);
+          
+          // 자동 대화 트리거
+          const { onPostCreated } = await import('./engine/autoTick.js');
+          onPostCreated(result.roomId);
+          console.log(`[MANUAL CONVERSATION] Triggered auto-chat for room ${result.roomId}`);
+          
+          // WebSocket으로 결과 브로드캐스트
+          const io = getIO();
+          if (io) {
+            io.emit('conversation:auto-started', {
+              postId: post.id,
+              roomId: result.roomId,
+              messageCount: result.messages.length,
+              eventCount: result.joinLeaveEvents.length
+            });
+            
+            console.log(`[MANUAL CONVERSATION] Broadcasted auto-started event for post ${post.id}`);
+          }
+          
+        } catch (error) {
+          console.error(`[MANUAL CONVERSATION] Error starting conversation for post ${postId}:`, error);
+        }
+      }, 1000);
+      
+      res.json({ 
+        message: "대화 시작 요청이 처리되었습니다",
+        postId: postId
+      });
+      
+    } catch (error) {
+      console.error('[MANUAL CONVERSATION ERROR]', error);
+      res.status(500).json({ message: "대화 시작에 실패했습니다" });
     }
   });
 
@@ -642,6 +818,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // GET /api/perso/:postId/messages - 페르소 메시지 가져오기 (새 스키마)
   app.get("/api/perso/:postId/messages", async (req, res) => {
+    console.log(`[API REQUEST] GET /api/perso/:postId/messages - postId: ${req.params.postId}`);
     try {
       const postId = req.params.postId;
       const post = await storage.getPost(postId);
@@ -651,9 +828,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       let conversation = await storage.getConversationByPost(postId);
+      console.log(`[API] Existing conversation for post ${postId}:`, conversation ? conversation.id : 'None');
       
       // Conversation이 없으면 자동 생성 및 AI 매칭
       if (!conversation) {
+        console.log(`[API] Creating new conversation for post ${postId}`);
         // 게시물 작성자의 페르소나 가져오기
         const authorPersona = await storage.getPersonaByUserId(post.userId);
 
@@ -663,151 +842,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
           'persona',
           authorPersona?.id || 'system'
         );
+        console.log(`[API] Created conversation: ${conversation.id} for post: ${postId}`);
 
-        // 2. 작성자 페르소나를 participant로 추가 (사용자는 WebSocket join 시 추가됨)
-        if (authorPersona) {
-          try {
-            await storage.addParticipant({
-              conversationId: conversation.id,
-              participantType: 'persona',
-              participantId: authorPersona.id,
-              role: 'member',
-            });
-            
-            const authorUser = await storage.getUser(authorPersona.userId);
-            const username = authorUser?.username?.split('_')?.[0] ?? '알수없음';
-            await storage.createMessageInConversation({
-              conversationId: conversation.id,
-              senderType: 'system',
-              senderId: 'system',
-              content: `@${username}의 페르소나가 입장했습니다.`,
-              messageType: 'join',
-            });
-          } catch (error) {
-            // Unique constraint 에러 무시
-          }
-        }
+        // 2. 작성자 페르소나는 자동으로 추가하지 않음 (페르소나들은 독립적으로 입장/퇴장)
+        // 사용자는 WebSocket join 시 추가됨
 
-        // 3. AI 페르소나 매칭 (2-3개, 작성자 페르소나 제외)
-        const allPersonas = await storage.getAllPersonas();
-        const excludeIds = authorPersona ? [authorPersona.id] : [];
-        const availablePersonas = allPersonas.filter(p => !excludeIds.includes(p.id));
-        
-        if (availablePersonas.length > 0) {
-          const count = Math.min(Math.floor(Math.random() * 2) + 2, availablePersonas.length); // 2-3개
-          const shuffled = availablePersonas.sort(() => 0.5 - Math.random());
-          const selectedPersonas = shuffled.slice(0, count);
+        // 3. 페르소나들은 자동으로 참가자로 추가하지 않음 (독립적으로 입장/퇴장)
+        // 페르소나들은 joinLeaveManager에 의해 확률적으로 입장/퇴장함
 
-          // 4. 참여자 추가
-          for (const persona of selectedPersonas) {
-            try {
-              await storage.addParticipant({
-                conversationId: conversation.id,
-                participantType: 'persona',
-                participantId: persona.id,
-                role: 'member',
-              });
-              
-              const personaUser = await storage.getUser(persona.userId);
-              const username = personaUser?.username?.split('_')?.[0] ?? '알수없음';
-              await storage.createMessageInConversation({
-                conversationId: conversation.id,
-                senderType: 'system',
-                senderId: 'system',
-                content: `@${username}의 페르소나가 입장했습니다.`,
-                messageType: 'join',
-              });
-            } catch (error) {
-              // Unique constraint 에러 무시
-            }
-          }
-
-          // 5. 초기 대화 생성 (OpenAI) - 작성자 페르소나 제외, AI들만 반응 생성
-          if (process.env.OPENAI_API_KEY) {
-            try {
-              // 선택된 AI 페르소나들만 초기 메시지 생성 (작성자 페르소나 제외)
-              for (let i = 0; i < selectedPersonas.length; i++) {
-                const persona = selectedPersonas[i];
-                const stats = {
-                  empathy: persona.empathy ?? 5,
-                  humor: persona.humor ?? 5,
-                  sociability: persona.sociability ?? 5,
-                  creativity: persona.creativity ?? 5,
-                  knowledge: persona.knowledge ?? 5,
-                };
-
-                let systemPrompt = `당신은 "${persona.name}"라는 이름의 AI 페르소나입니다.\n`;
-                if (persona.description) {
-                  systemPrompt += `${persona.description}\n\n`;
-                }
-
-                systemPrompt += `**게시물 컨텍스트:**\n`;
-                systemPrompt += `- 제목: ${post.title}\n`;
-                if (post.description) {
-                  systemPrompt += `- 설명: ${post.description}\n`;
-                }
-
-                systemPrompt += `\n**당신의 성격 특성:**\n`;
-                if (stats.empathy >= 8) systemPrompt += `- 공감력이 매우 뛰어납니다.\n`;
-                if (stats.humor >= 8) systemPrompt += `- 유머 감각이 뛰어납니다.\n`;
-                if (stats.sociability >= 8) systemPrompt += `- 사교성이 매우 높습니다.\n`;
-                if (stats.creativity >= 8) systemPrompt += `- 창의성이 뛰어납니다.\n`;
-                if (stats.knowledge >= 8) systemPrompt += `- 지식이 풍부합니다.\n`;
-
-                systemPrompt += `\n**응답 가이드라인:**\n`;
-                systemPrompt += `- 게시물에 대한 자연스러운 첫 반응을 1-2 문장으로 작성하세요.\n`;
-                systemPrompt += `- 다른 AI 페르소나들과 대화하는 것처럼 작성하세요.\n`;
-
-                const completion = await openai.chat.completions.create({
-                  model: "gpt-4o-mini",
-                  messages: [
-                    { role: "system", content: systemPrompt },
-                    { role: "user", content: "게시물에 대한 당신의 첫 반응을 작성하세요." }
-                  ],
-                  temperature: 0.8,
-                  max_tokens: 200,
-                });
-
-                const response = completion.choices[0]?.message?.content?.trim() || "";
-                
-                // 빈 응답 체크
-                if (!response || response.length === 0) {
-                  console.warn(`[INIT AI] Empty response for persona ${persona.id}, skipping`);
-                  continue;
-                }
-
-                // 점진적 타이밍: 각 페르소나마다 5-15초 간격으로 메시지가 표시되도록 설정
-                const baseDelay = 5;
-                const randomDelay = Math.floor(Math.random() * 10);
-                const delaySeconds = baseDelay + randomDelay + (i * 8);
-                const visibleAt = new Date(Date.now() + delaySeconds * 1000);
-
-                // 메시지 저장 (visibleAt 설정)
-                await storage.createMessageInConversation({
-                  conversationId: conversation.id,
-                  senderType: 'persona',
-                  senderId: persona.id,
-                  content: response,
-                  messageType: 'text',
-                  visibleAt,
-                });
-              }
-            } catch (error) {
-              console.error('[AUTO CONVERSE ERROR]', error);
-              // 초기 대화 생성 실패해도 계속 진행
-            }
-          }
-        }
+        // 4. 초기 대화 생성은 생략 (페르소나들이 독립적으로 입장할 때 생성됨)
+        // 페르소나들은 joinLeaveManager에 의해 확률적으로 입장하고 대화를 시작함
       }
       
       const messages = await storage.getMessagesByConversation(conversation.id, req.userId);
       const participants = await storage.getParticipantsByConversation(conversation.id);
+      
+      console.log(`[API] Conversation ${conversation.id} participants:`, participants.length);
+      console.log(`[API] Participants details:`, participants);
       
       // 각 메시지에 사용자/페르소나 정보 추가
       const messagesWithInfo = await Promise.all(
         messages.map(async (msg) => {
           if (msg.senderType === 'persona') {
             const persona = await storage.getPersona(msg.senderId);
+            let ownerInfo = null;
+            
+            if (persona) {
+              // 페르소나 소유자 정보 가져오기
+              const owner = await storage.getUser(persona.userId);
+              if (owner) {
+                ownerInfo = {
+                  name: owner.name,
+                  username: owner.username
+                };
+              }
+            }
+            
             return {
               ...msg,
               isAI: true,
@@ -815,6 +885,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               persona: persona ? {
                 name: persona.name,
                 image: persona.image,
+                owner: ownerInfo
               } : null,
             };
           } else if (msg.senderType === 'user') {
@@ -830,11 +901,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
               } : null,
             };
           } else {
-            // 시스템 메시지 또는 알 수 없는 타입
+            // 시스템 메시지 처리 - 발신자 정보 추가
+            let senderInfo = null;
+            
+            if (msg.senderType === 'system' && msg.senderId && msg.senderId !== 'system') {
+              // senderId가 실제 사용자나 페르소나 ID인 경우
+              try {
+                const user = await storage.getUser(msg.senderId);
+                if (user) {
+                  senderInfo = {
+                    user: {
+                      id: user.id,
+                      name: user.name,
+                      username: user.username,
+                      profileImage: user.profileImage,
+                    }
+                  };
+                  console.log(`[API] System message sender: user ${user.name} (${user.id})`);
+                } else {
+                  const persona = await storage.getPersona(msg.senderId);
+                  if (persona) {
+                    senderInfo = {
+                      persona: {
+                        id: persona.id,
+                        name: persona.name,
+                        image: persona.image,
+                      }
+                    };
+                    console.log(`[API] System message sender: persona ${persona.name} (${persona.id})`);
+                  } else {
+                    console.warn(`[API] Unknown senderId for system message: ${msg.senderId}`);
+                  }
+                }
+              } catch (error) {
+                console.warn(`[API] Failed to get sender info for ${msg.senderId}:`, error);
+              }
+            } else {
+              console.log(`[API] System message with senderId: ${msg.senderId}, content: ${msg.content}`);
+            }
+            
             return {
               ...msg,
               isAI: false,
-              userId: null,
+              userId: null, // 시스템 메시지는 userId 설정하지 않음
+              ...senderInfo,
               content: msg.content,
             };
           }
@@ -873,6 +983,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       );
       
+      // 주도 페르소나 결정 (가장 최근에 메시지를 보낸 페르소나)
+      const recentPersonaMessage = messagesWithInfo
+        .filter(msg => msg.senderType === 'persona')
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+      
+      const dominantPersonaId = recentPersonaMessage?.senderId || participantsWithInfo
+        .filter(p => p?.type === 'persona')[0]?.personaId;
+
+      // 토픽 분석 (메시지 내용에서 토픽 추출)
+      const personaMessages = messagesWithInfo.filter(msg => msg.senderType === 'persona');
+      
+      // 간단한 토픽 분석 함수
+      const analyzeTopics = (messages: any[]) => {
+        try {
+          const topicKeywords = {
+            '기술': ['개발', 'AI', '기술', '컨퍼런스', '프로그래밍', '코딩'],
+            '여행': ['여행', '휴가', '여행지', '관광', '바다', '산'],
+            '음식': ['음식', '요리', '맛집', '레스토랑', '베이킹', '케이크'],
+            '패션': ['패션', '스타일', '옷', '트렌드', '뷰티', '메이크업'],
+            '일상': ['일상', '생활', '하루', '친구', '가족', '취미']
+          };
+          
+          const topicCounts: Record<string, number> = {};
+          
+          messages.forEach(msg => {
+            const content = msg.content?.toLowerCase() || '';
+            Object.entries(topicKeywords).forEach(([topic, keywords]) => {
+              keywords.forEach(keyword => {
+                if (content.includes(keyword.toLowerCase())) {
+                  topicCounts[topic] = (topicCounts[topic] || 0) + 1;
+                }
+              });
+            });
+          });
+          
+          const totalMentions = Object.values(topicCounts).reduce((sum, count) => sum + count, 0);
+          
+          return Object.entries(topicCounts)
+            .map(([topic, count]) => ({
+              topic,
+              weight: totalMentions > 0 ? count / totalMentions : 0
+            }))
+            .sort((a, b) => b.weight - a.weight)
+            .slice(0, 3); // 상위 3개 토픽만
+        } catch (error) {
+          console.error('토픽 분석 에러:', error);
+          return [];
+        }
+      };
+      
+      const currentTopics = analyzeTopics(personaMessages);
+      
+      // 총 턴 수 계산
+      const totalTurns = personaMessages.length;
+
       res.json({
         messages: messagesWithInfo,
         participants: participantsWithInfo.filter((p): p is NonNullable<typeof p> => p !== null),
@@ -886,9 +1051,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         conversation: {
           id: conversation.id,
         },
+        dominantPersona: dominantPersonaId,
+        currentTopics: currentTopics,
+        totalTurns: totalTurns,
       });
     } catch (error) {
-      res.status(500).json({ message: "메시지를 가져오는데 실패했습니다" });
+      console.error("Get perso messages error:", error);
+      console.error("Error details:", {
+        postId: req.params.postId,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      res.status(500).json({ 
+        message: "메시지를 가져오는데 실패했습니다",
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 
@@ -1186,6 +1363,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
           image: persona.image,
         },
       });
+
+      // 9. 자동 대화 트리거 (응답 후 비동기로 실행)
+      (async () => {
+        try {
+          const { persoRoomManager } = await import('./engine/persoRoom.js');
+          
+          let room = persoRoomManager.getRoomByPostId(postId);
+          if (!room) {
+            console.log(`[AI RESPONSE] Room not found for post ${postId}, creating new room for auto-chat`);
+            
+            // 초기 페르소나 선택 (랜덤 3-4개)
+            const allPersonas = ['Espri', 'Kai', 'Milo', 'Luna', 'Namu', 'Eden', 'Ava', 'Rho', 'Noir'];
+            const personaCount = Math.floor(Math.random() * 2) + 3; // 3-4개
+            const initialPersonas = allPersonas
+              .sort(() => Math.random() - 0.5)
+              .slice(0, personaCount);
+            
+            const contexts: string[] = [];
+            room = persoRoomManager.createRoom(postId, initialPersonas, contexts);
+            console.log(`[AI RESPONSE] Created room ${room.roomId} with personas: ${initialPersonas.join(', ')}`);
+          }
+          
+          const { onUserMessage } = await import('./engine/autoTick.js');
+          onUserMessage(room.roomId);
+          console.log(`[AI RESPONSE] Triggered auto-chat for room ${room.roomId} after AI response`);
+        } catch (autoError) {
+          console.error('[AI RESPONSE] Auto-chat trigger error:', autoError);
+        }
+      })();
     } catch (error) {
       console.error('[PERSO AI RESPONSE ERROR]', error);
       res.status(500).json({ message: "AI 응답 생성에 실패했습니다" });
@@ -1862,6 +2068,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "시드 데이터 생성 실패",
         error: error instanceof Error ? error.message : "알 수 없는 오류"
       });
+    }
+  });
+
+  // 시드 데이터 생성 엔드포인트
+  app.post("/api/seed", async (req, res) => {
+    try {
+      await runSeed();
+      res.json({ message: "시드 데이터가 성공적으로 생성되었습니다." });
+    } catch (error) {
+      console.error("시드 데이터 생성 실패:", error);
+      res.status(500).json({ error: "시드 데이터 생성에 실패했습니다." });
     }
   });
 

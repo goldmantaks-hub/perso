@@ -400,6 +400,24 @@ export class DbStorage implements IStorage {
   }
 
   async addParticipant(insertParticipant: InsertConversationParticipant): Promise<ConversationParticipant> {
+    // 중복 체크: 이미 존재하는 참가자인지 확인
+    const existingParticipant = await db
+      .select()
+      .from(conversationParticipants)
+      .where(
+        and(
+          eq(conversationParticipants.conversationId, insertParticipant.conversationId),
+          eq(conversationParticipants.participantType, insertParticipant.participantType),
+          eq(conversationParticipants.participantId, insertParticipant.participantId)
+        )
+      )
+      .limit(1);
+
+    if (existingParticipant.length > 0) {
+      console.log(`[STORAGE] 참가자 이미 존재함: ${insertParticipant.participantType}:${insertParticipant.participantId}`);
+      return existingParticipant[0];
+    }
+
     const [participant] = await db
       .insert(conversationParticipants)
       .values(insertParticipant)

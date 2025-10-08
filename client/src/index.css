@@ -335,4 +335,27 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* Custom scrollbar for persona list */
+  .persona-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground)) transparent;
+  }
+  
+  .persona-scroll::-webkit-scrollbar {
+    height: 6px;
+  }
+  
+  .persona-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .persona-scroll::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground));
+    border-radius: 3px;
+  }
+  
+  .persona-scroll::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--foreground));
+  }
 }

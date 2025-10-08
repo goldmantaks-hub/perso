@@ -1,5 +1,5 @@
 import { PersonaState, TopicWeight } from './persoRoom.js';
-import { TOPIC_WEIGHTS } from './multiAgentOrchestrator.js';
+// TOPIC_WEIGHTS import 제거됨
 
 interface ConversationMessage {
   persona?: string;
@@ -107,7 +107,8 @@ export function findBestPersonaForTopics(
   for (const persona of eligiblePersonas) {
     let score = 0;
     for (const { topic, weight } of topics) {
-      const affinity = TOPIC_WEIGHTS[topic]?.[persona.id] || 0.3;
+      // 향후 DB에 페르소나 관심사 필드 추가 시 여기서 계산
+      const affinity = Math.random(); // 임시 랜덤 점수
       score += affinity * weight;
     }
     

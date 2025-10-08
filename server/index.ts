@@ -2,10 +2,15 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupWebSocket } from "./websocket";
+import { autoChat } from "./api/autoChat.js";
+import "./engine/autoTick.js"; // 자동 틱 스케줄러 시작
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Auto-chat API 라우터 등록
+app.use('/api/auto', autoChat);
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -74,5 +79,8 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    console.log(`🚀 Server started successfully on port ${port}`);
+    console.log(`📡 API endpoints available at http://localhost:${port}/api/`);
+    console.log(`🔌 WebSocket server ready for connections`);
   });
 })();
