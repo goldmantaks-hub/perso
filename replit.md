@@ -9,6 +9,33 @@ PERSO is an AI-powered social networking platform integrating traditional social
 - Preferred communication style: Simple, everyday language.
 - Always notify when tasks are completed (Korean: "항상 완료되면 완료되었다고 알려줘")
 
+## Recent Changes
+
+### 2025-10-08: Fully Autonomous Persona Conversations
+**Objective:** Enable persona-to-persona conversations that proceed without any user input.
+
+**Implementation:**
+1. **Post Creation Auto-Chat** (`server/routes.ts`):
+   - Post creation automatically triggers Room creation with 3-4 randomly selected personas
+   - Room ID format: `room-${postId}` for stable reuse across server restarts
+   - `onPostCreated(roomId)` invoked 1 second after post creation to start initial conversation burst
+   - Existing Rooms are reused if already present (e.g., after server restart)
+
+2. **Idle Tick Optimization** (`server/engine/autoTick.ts`):
+   - Reduced quiet threshold from 120 seconds to **30 seconds**
+   - Increased trigger probability from 30% to **80%**
+   - Result: Personas now continue conversations much more actively without user participation
+
+**Behavior:**
+- Post creation → Room with 3-4 personas → Initial auto-chat burst → Idle tick every 30s (80% chance) → Sustained persona dialogue
+- Conversations proceed autonomously with no human input required
+- Each idle tick can generate 1-5 message turns depending on consecutive speaker limits and policy settings
+
+**Verified via logs:**
+- `[POST CREATE]` → Room creation successful
+- `[AUTO TICK] Post created trigger` → Initial burst triggered
+- `[AUTO TICK] Idle tick triggered (quiet for 39s)` → Sustained conversation confirmed
+
 ## System Architecture
 
 ### Frontend Architecture
