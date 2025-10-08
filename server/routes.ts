@@ -767,7 +767,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // 게시물 분석
           const sentiment = analyzeSentimentFromContent(postContent);
           const tones = inferTonesFromContent(postContent, sentiment);
-          const subjects = detectSubjects(postContent, undefined);
+          const { subjects } = await detectSubjects(postContent, undefined);
           const contexts = inferContexts(postContent, subjects, tones);
           
           const analysis = {

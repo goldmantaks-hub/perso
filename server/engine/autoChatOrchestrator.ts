@@ -39,7 +39,7 @@ export class AutoChatOrchestrator {
     // 컨텍스트 분석
     const sentiment = analyzeSentimentFromContent(combinedText);
     const tones = inferTonesFromContent(combinedText, sentiment);
-    const subjects = detectSubjects(combinedText, undefined);
+    const { subjects } = await detectSubjects(combinedText, undefined);
     const contexts = inferContexts(combinedText, subjects, tones);
 
     const ctx = {
