@@ -303,7 +303,10 @@ export default function ActivePersonas({
 
         {/* 주도권 교체 알림 */}
         {dominantPersona && (() => {
-          const dominantPersonaData = activePersonas.find(p => p.id === dominantPersona);
+          // dominantPersona가 UUID인 경우와 이름인 경우 모두 처리
+          const dominantPersonaData = activePersonas.find(p => 
+            p.id === dominantPersona || p.name === dominantPersona
+          );
           const displayName = dominantPersonaData?.owner 
             ? `${dominantPersonaData.owner.name}의 ${dominantPersonaData.name}`
             : dominantPersonaData?.name || dominantPersona;
