@@ -5,12 +5,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Sparkles } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useWebSocket } from "@/hooks/useWebSocket";
-import { isAuthenticated } from "@/lib/auth";
+import { getUser, isAuthenticated } from "@/lib/auth";
 import EnhancedChatPanel from "@/components/EnhancedChatPanel";
 import ActivePersonas from "@/components/ActivePersonas";
 
@@ -38,6 +40,20 @@ export default function PersoPage() {
   const [dominantPersona, setDominantPersona] = useState<string | null>(null);
   const [currentTopics, setCurrentTopics] = useState<Array<{ topic: string; weight: number }>>([]);
   const [totalTurns, setTotalTurns] = useState(0);
+  
+  // 애니메이션 상태 관리
+  const [recentlyJoined, setRecentlyJoined] = useState<Set<string>>(new Set());
+  const [recentlyLeft, setRecentlyLeft] = useState<Set<string>>(new Set());
+  
+  // 페르소나 초대/강퇴 상태 관리
+  const [showPersonaList, setShowPersonaList] = useState(false);
+  const [showKickDialog, setShowKickDialog] = useState(false);
+  const [selectedPersona, setSelectedPersona] = useState<any>(null);
+  
+  // 권한 관리
+  const [isPostOwner, setIsPostOwner] = useState(false);
+  const [postOwnerId, setPostOwnerId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   // 페르소나 상태 초기화
   // 초기 데이터는 WebSocket을 통해 서버에서 받아옵니다
@@ -442,6 +458,53 @@ export default function PersoPage() {
     });
   }, [postId, queryClient]);
 
+  // 페르소나 목록 가져오기 (현재 사용자의 페르소나만)
+  const { data: personasData } = useQuery<any>({
+    queryKey: ["/api/personas"],
+    queryFn: async () => {
+      try {
+        const response = await apiRequest('/api/personas');
+        // 현재 사용자 정보 가져오기
+        const currentUser = getUser();
+        if (!currentUser) {
+          console.error('[API] 현재 사용자 정보가 없습니다');
+          return [];
+        }
+        
+        // 현재 사용자의 페르소나만 필터링
+        const userPersonas = response.filter((persona: any) => 
+          persona.user && persona.user.id === currentUser.id
+        );
+        
+        console.log('[DEBUG] 현재 사용자:', currentUser);
+        console.log('[DEBUG] 필터링된 페르소나:', userPersonas);
+        
+        return userPersonas;
+      } catch (error) {
+        console.error('[API] 페르소나 목록 가져오기 실패:', error);
+        return [];
+      }
+    },
+  });
+
+  // 게시물 소유자 확인
+  useEffect(() => {
+    if (data?.post && data?.post?.authorId) {
+      const currentUser = getUser();
+      if (currentUser) {
+        const isOwner = data.post.authorId === currentUser.id;
+        setIsPostOwner(isOwner);
+        setPostOwnerId(data.post.authorId);
+        setCurrentUserId(currentUser.id);
+        console.log('[PERMISSION] 게시물 소유자 확인:', {
+          postAuthorId: data.post.authorId,
+          currentUserId: currentUser.id,
+          isOwner
+        });
+      }
+    }
+  }, [data]);
+
   // 페르소나 상태 업데이트 핸들러
   const handlePersonaStatusUpdate = useCallback((statusData: any) => {
     setActivePersonas(statusData.activePersonas || []);
@@ -667,165 +730,329 @@ export default function PersoPage() {
     console.log(`[PERSONA AUTO INTRODUCTION] ${personaId}의 소개 메시지 추가: "${introduction}"`);
   }, [postId, activePersonas, queryClient]);
 
-  // 테스트용 페르소나 상태 변경 함수 - 모든 경우의 수 처리
-  const togglePersonaStatus = (personaId: string) => {
-    console.log(`[TOGGLE] ${personaId} 상태 토글 시작`);
+  // 페르소나 초대 함수
+  const invitePersona = async (personaId: string) => {
+    console.log(`[INVITE PERSONA] ${personaId} 초대 시작`);
     
-    setActivePersonas(prevPersonas => {
-      const existingPersona = prevPersonas.find(p => p.id === personaId);
-      const timestamp = Date.now();
-      const uniqueId = `toggle-${personaId}-${timestamp}-${Math.random().toString(36).substr(2, 9)}`;
+    // 권한 체크
+    if (!isPostOwner) {
+      console.error('[INVITE PERSONA] 권한 없음 - 게시물 소유자가 아닙니다');
+      toast({
+        title: "권한 없음",
+        description: "게시물 소유자만 페르소나를 초대할 수 있습니다",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!postId) {
+      console.error('[INVITE PERSONA] postId가 없습니다');
+      toast({
+        title: "오류",
+        description: "게시물 ID가 없습니다",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const existingPersona = activePersonas.find(p => p.id === personaId || p.name === personaId);
+    
+    try {
+      if (!existingPersona || existingPersona.status !== 'active') {
+        // 페르소나가 없거나 비활성 상태 → 초대
+        console.log(`[LUNA TOGGLE] ${personaId} 초대 시도`);
+        
+        // 직접 fetch 사용
+        const token = localStorage.getItem('auth_token');
+        console.log(`[LUNA TOGGLE] Token: ${token ? 'exists' : 'missing'}`);
+        
+        if (!token) {
+          throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+        }
+        
+        console.log(`[LUNA TOGGLE] Making request to: /api/perso/${postId}/persona/${personaId}/join`);
+        
+        const response = await fetch(`/api/perso/${postId}/persona/${personaId}/join`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        
+        console.log(`[LUNA TOGGLE] Response status: ${response.status}`);
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          console.log(`[LUNA TOGGLE] ${personaId} 초대 성공:`, data.persona);
+          console.log(`[LUNA TOGGLE] Owner info:`, data.persona.owner);
+          
+          // 성공 토스트
+          toast({
+            title: "페르소나 초대 성공",
+            description: `${data.persona.name}이(가) 대화방에 입장했습니다`,
+          });
+          
+          // 활성 페르소나 목록에 추가
+          setActivePersonas(prev => {
+            const exists = prev.find(p => p.id === data.persona.id);
+            if (exists) {
+              return prev.map(p =>
+                p.id === data.persona.id
+                  ? { ...p, status: 'active' as const, joinedAt: Date.now() }
+                  : p
+              );
+            } else {
+              return [
+                ...prev,
+                {
+                  id: data.persona.id,
+                  name: data.persona.name,
+                  image: data.persona.image,
+                  owner: data.persona.owner,
+                  status: 'active' as const,
+                  joinedAt: Date.now(),
+                  lastSpokeAt: 0,
+                  messageCount: 0,
+                }
+              ];
+            }
+          });
+          
+          // 입장 애니메이션 트리거
+          setRecentlyJoined(prev => new Set([...prev, data.persona.id]));
+          setTimeout(() => {
+            setRecentlyJoined(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(data.persona.id);
+              return newSet;
+            });
+          }, 1000);
+        } else {
+          console.error(`[LUNA TOGGLE] ${personaId} 초대 실패:`, data.message);
+          toast({
+            title: "초대 실패",
+            description: data.message || "페르소나 초대에 실패했습니다",
+            variant: "destructive",
+          });
+        }
+      } else {
+        // 페르소나가 활성 상태 → 강퇴
+        console.log(`[LUNA TOGGLE] ${personaId} 강퇴 시도`);
+        console.log(`[LUNA TOGGLE] Existing persona:`, existingPersona);
+        
+        // 실제 페르소나 ID 사용 (UUID일 수 있음)
+        const actualPersonaId = existingPersona.id;
+        console.log(`[LUNA TOGGLE] Using actual persona ID: ${actualPersonaId}`);
+        
+        // 직접 fetch 사용
+        const token = localStorage.getItem('auth_token');
+        console.log(`[LUNA TOGGLE] Token: ${token ? 'exists' : 'missing'}`);
+        
+        if (!token) {
+          throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+        }
+        
+        console.log(`[LUNA TOGGLE] Making request to: /api/perso/${postId}/persona/${actualPersonaId}/leave`);
+        
+        const response = await fetch(`/api/perso/${postId}/persona/${actualPersonaId}/leave`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        
+        console.log(`[LUNA TOGGLE] Response status: ${response.status}`);
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          console.log(`[LUNA TOGGLE] ${personaId} 강퇴 성공`);
+          
+          // 성공 토스트
+          toast({
+            title: "페르소나 강퇴 성공",
+            description: `${data.persona.name}이(가) 대화방에서 퇴장했습니다`,
+          });
+          
+          // 퇴장 애니메이션 트리거
+          setRecentlyLeft(prev => new Set([...prev, actualPersonaId]));
+          
+          // 1초 후 실제로 제거
+          setTimeout(() => {
+            setActivePersonas(prev => prev.filter(p => p.id !== actualPersonaId));
+            setRecentlyLeft(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(actualPersonaId);
+              return newSet;
+            });
+          }, 1000);
+        } else {
+          console.error(`[LUNA TOGGLE] ${personaId} 강퇴 실패:`, data.message);
+          toast({
+            title: "강퇴 실패",
+            description: data.message || "페르소나 강퇴에 실패했습니다",
+            variant: "destructive",
+          });
+        }
+      }
+    } catch (error) {
+      console.error(`[LUNA TOGGLE] ${personaId} 처리 중 오류:`, error);
+      toast({
+        title: "오류 발생",
+        description: error instanceof Error ? error.message : "페르소나 초대/강퇴 중 오류가 발생했습니다",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // 페르소나 강퇴 함수
+  const kickPersona = async (personaId: string) => {
+    console.log(`[KICK PERSONA] ${personaId} 강퇴 시작`);
+    
+    // 권한 체크
+    if (!isPostOwner) {
+      console.error('[KICK PERSONA] 권한 없음 - 게시물 소유자가 아닙니다');
+      toast({
+        title: "권한 없음",
+        description: "게시물 소유자만 페르소나를 강퇴할 수 있습니다",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!postId) {
+      console.error('[KICK PERSONA] postId가 없습니다');
+      toast({
+        title: "오류",
+        description: "게시물 ID가 없습니다",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const existingPersona = activePersonas.find(p => p.id === personaId || p.name === personaId);
+    
+    if (!existingPersona) {
+      console.error('[KICK PERSONA] 페르소나를 찾을 수 없습니다');
+      toast({
+        title: "오류",
+        description: "페르소나를 찾을 수 없습니다",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // 게시물 소유자의 페르소나 강퇴 방지
+    if (existingPersona.owner && existingPersona.owner.id === postOwnerId) {
+      console.error('[KICK PERSONA] 게시물 소유자의 페르소나는 강퇴할 수 없습니다');
+      toast({
+        title: "강퇴 불가",
+        description: "게시물 소유자의 페르소나는 강퇴할 수 없습니다",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // 본인 강퇴 방지 (현재 사용자와 동일한 페르소나)
+    if (existingPersona.owner && existingPersona.owner.id === currentUserId) {
+      console.error('[KICK PERSONA] 본인의 페르소나는 강퇴할 수 없습니다');
+      toast({
+        title: "강퇴 불가",
+        description: "본인의 페르소나는 강퇴할 수 없습니다",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const actualPersonaId = existingPersona.id;
+      console.log(`[KICK PERSONA] Using actual persona ID: ${actualPersonaId}`);
       
-      // 시스템 메시지 생성 함수
-      const createSystemMessage = (type: 'join' | 'leave', content: string) => ({
-        id: uniqueId,
-        postId: postId,
-        senderType: 'system',
-        senderId: personaId,
-        messageType: type,
-        content: content,
-        createdAt: new Date(timestamp).toISOString(),
-        timestamp: timestamp
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+      }
+      
+      const response = await fetch(`/api/perso/${postId}/persona/${actualPersonaId}/leave`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
       });
       
-      if (!existingPersona) {
-        // 경우 1: 페르소나가 없는 경우 - 새로 입장
-        console.log(`[TOGGLE] ${personaId} 새 페르소나 입장`);
-        
-        const newPersona = {
-          id: personaId,
-          status: 'joining' as const,
-          joinedAt: timestamp,
-          lastSpokeAt: 0,
-          messageCount: 0
-        };
-        
-        // 1초 후 입장 완료 처리 (메시지 추가)
-        setTimeout(() => {
-          setActivePersonas(currentPersonas => {
-            const updatedPersonas = currentPersonas.map(p => 
-              p.id === personaId 
-                ? { ...p, status: 'active' as const }
-                : p
-            );
-            
-            // 입장 완료 메시지 추가
-            const joinedMessage = createSystemMessage('join', `${personaId}님이 대화에 참여했습니다`);
-            queryClient.setQueryData(["/api/perso", postId, "messages"], (old: any) => {
-              if (!old) return old;
-              return {
-                ...old,
-                messages: [...(old.messages || []), joinedMessage],
-              };
-            });
-            
-            console.log(`[TOGGLE] ${personaId} 입장 완료`);
-            return updatedPersonas;
-          });
-        }, 1000);
-        
-        return [...prevPersonas, newPersona];
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP ${response.status}`);
       }
       
-      // 경우 2: 페르소나가 있는 경우 - 상태에 따라 토글
-      if (existingPersona.status === 'active') {
-        // active → leaving (퇴장)
-        console.log(`[TOGGLE] ${personaId} 활성 → 퇴장`);
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log(`[KICK PERSONA] ${personaId} 강퇴 성공`);
         
-        const updatedPersonas = prevPersonas.map(p => 
-          p.id === personaId 
-            ? { ...p, status: 'leaving' as const }
-            : p
-        );
+        // 주도권 이전 로직
+        const wasDominant = dominantPersona === actualPersonaId;
+        if (wasDominant) {
+          console.log('[DOMINANCE] 주도권 페르소나가 강퇴됨, 다음 페르소나로 이전');
+          // 남은 페르소나 중에서 다음 주도권자 선택
+          const remainingPersonas = activePersonas.filter(p => p.id !== actualPersonaId);
+          if (remainingPersonas.length > 0) {
+            const nextDominant = remainingPersonas[0];
+            setDominantPersona(nextDominant.id);
+            console.log('[DOMINANCE] 새로운 주도권자:', nextDominant.name);
+          } else {
+            setDominantPersona(null);
+            console.log('[DOMINANCE] 주도권자 없음 - 모든 페르소나가 퇴장');
+          }
+        }
         
-        // 퇴장 메시지 추가
-        const leaveMessage = createSystemMessage('leave', `${personaId} 페르소나가 대화를 떠났습니다`);
-        queryClient.setQueryData(["/api/perso", postId, "messages"], (old: any) => {
-          if (!old) return old;
-          return {
-            ...old,
-            messages: [...(old.messages || []), leaveMessage],
-          };
+        toast({
+          title: "페르소나 강퇴 성공",
+          description: `${data.persona.name}이(가) 대화방에서 퇴장했습니다${wasDominant ? ' (주도권 이전됨)' : ''}`,
         });
         
-        // 3초 후 완전 제거
+        // 퇴장 애니메이션 트리거
+        setRecentlyLeft(prev => new Set([...prev, actualPersonaId]));
+        
+        // 1초 후 실제로 제거
         setTimeout(() => {
-          setActivePersonas(currentPersonas => {
-            const filteredPersonas = currentPersonas.filter(p => p.id !== personaId);
-            console.log(`[TOGGLE] ${personaId} 완전 제거 완료`);
-            return filteredPersonas;
+          setActivePersonas(prev => prev.filter(p => p.id !== actualPersonaId));
+          setRecentlyLeft(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(actualPersonaId);
+            return newSet;
           });
-        }, 3000);
-        
-        return updatedPersonas;
-        
-      } else if (existingPersona.status === 'joining') {
-        // joining → active (입장 완료)
-        console.log(`[TOGGLE] ${personaId} 입장중 → 활성`);
-        
-        const updatedPersonas = prevPersonas.map(p => 
-          p.id === personaId 
-            ? { ...p, status: 'active' as const }
-            : p
-        );
-        
-        // 입장 완료 메시지 추가
-        const joinedMessage = createSystemMessage('join', `${personaId}님이 대화에 참여했습니다`);
-        queryClient.setQueryData(["/api/perso", postId, "messages"], (old: any) => {
-          if (!old) return old;
-          return {
-            ...old,
-            messages: [...(old.messages || []), joinedMessage],
-          };
-        });
-        
-        return updatedPersonas;
-        
-      } else if (existingPersona.status === 'leaving') {
-        // leaving → active (재입장)
-        console.log(`[TOGGLE] ${personaId} 퇴장중 → 재입장`);
-        
-        const updatedPersonas = prevPersonas.map(p => 
-          p.id === personaId 
-            ? { ...p, status: 'active' as const, joinedAt: timestamp }
-            : p
-        );
-        
-        // 재입장 메시지 추가
-        const rejoinMessage = createSystemMessage('join', `${personaId} 페르소나가 다시 참여했습니다`);
-        queryClient.setQueryData(["/api/perso", postId, "messages"], (old: any) => {
-          if (!old) return old;
-          return {
-            ...old,
-            messages: [...(old.messages || []), rejoinMessage],
-          };
-        });
-        
-        return updatedPersonas;
-        
+        }, 1000);
       } else {
-        // 기타 상태 (idle 등) → active
-        console.log(`[TOGGLE] ${personaId} ${existingPersona.status} → 활성`);
-        
-        const updatedPersonas = prevPersonas.map(p => 
-          p.id === personaId 
-            ? { ...p, status: 'active' as const, joinedAt: timestamp }
-            : p
-        );
-        
-        // 활성화 메시지 추가
-        const activateMessage = createSystemMessage('join', `${personaId} 페르소나가 활성화되었습니다`);
-        queryClient.setQueryData(["/api/perso", postId, "messages"], (old: any) => {
-          if (!old) return old;
-          return {
-            ...old,
-            messages: [...(old.messages || []), activateMessage],
-          };
+        console.error(`[KICK PERSONA] ${personaId} 강퇴 실패:`, data.message);
+        toast({
+          title: "강퇴 실패",
+          description: data.message || "페르소나 강퇴에 실패했습니다",
+          variant: "destructive",
         });
-        
-        return updatedPersonas;
       }
-    });
+    } catch (error) {
+      console.error(`[KICK PERSONA] ${personaId} 처리 중 오류:`, error);
+      toast({
+        title: "오류 발생",
+        description: error instanceof Error ? error.message : "페르소나 강퇴 중 오류가 발생했습니다",
+        variant: "destructive",
+      });
+    }
   };
 
   const { leaveConversation, joinConversation } = useWebSocket({
@@ -1080,7 +1307,7 @@ export default function PersoPage() {
     <div className="h-screen bg-background flex flex-col">
       {/* 헤더 - 고정 */}
       <header className="sticky top-0 z-50 flex-shrink-0 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="flex items-center gap-3 p-4">
+        <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-2">
             <button className="text-foreground" onClick={handleBack} data-testid="button-back">
               <ArrowLeft className="w-6 h-6" />
@@ -1093,14 +1320,6 @@ export default function PersoPage() {
               data-testid="button-clear-chat"
             >
               <Trash2 className="w-5 h-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => togglePersonaStatus('Luna')}
-              className="text-xs"
-            >
-              Luna 토글
             </Button>
           </div>
           <div className="flex-1">
@@ -1125,6 +1344,16 @@ export default function PersoPage() {
               })()}
             </p>
           </div>
+          {isPostOwner && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowPersonaList(true)}
+              className="text-xs"
+            >
+              초대하기
+            </Button>
+          )}
         </div>
         
         {/* 참여자 리스트 */}
@@ -1261,10 +1490,14 @@ export default function PersoPage() {
                       : p
                   );
                 } else {
+                  // 서버 응답에서 페르소나 정보 사용
                   return [
                     ...prev,
                     {
-                      id: personaId,
+                      id: result.persona.id,
+                      name: result.persona.name,
+                      image: result.persona.image,
+                      owner: result.persona.owner, // ✅ owner 정보 추가!
                       status: 'active' as const,
                       joinedAt: Date.now(),
                       lastSpokeAt: 0,
@@ -1289,16 +1522,46 @@ export default function PersoPage() {
             dominantPersona={dominantPersona}
             currentTopics={currentTopics}
             totalTurns={totalTurns}
+            recentlyJoined={recentlyJoined}
+            recentlyLeft={recentlyLeft}
             onPersonaClick={async (personaId) => {
               console.log(`페르소나 클릭: ${personaId}`);
               
-              if (!postId) return;
+              // 권한 체크
+              if (!isPostOwner) {
+                toast({
+                  title: "권한 없음",
+                  description: "게시물 소유자만 페르소나를 관리할 수 있습니다",
+                  variant: "destructive",
+                });
+                return;
+              }
               
-              // 페르소나가 이미 활성화되어 있는지 확인
+              // 활성 페르소나 클릭 시 강퇴 확인 다이얼로그 표시
               const existingPersona = activePersonas.find(p => p.id === personaId);
-              
               if (existingPersona && existingPersona.status === 'active') {
-                console.log(`[PERSONA] ${personaId} is already active`);
+                // 게시물 소유자의 페르소나인지 확인
+                if (existingPersona.owner && existingPersona.owner.id === postOwnerId) {
+                  toast({
+                    title: "강퇴 불가",
+                    description: "게시물 소유자의 페르소나는 강퇴할 수 없습니다",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                
+                // 본인의 페르소나인지 확인
+                if (existingPersona.owner && existingPersona.owner.id === currentUserId) {
+                  toast({
+                    title: "강퇴 불가",
+                    description: "본인의 페르소나는 강퇴할 수 없습니다",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                
+                setSelectedPersona(existingPersona);
+                setShowKickDialog(true);
                 return;
               }
               
@@ -1329,10 +1592,14 @@ export default function PersoPage() {
                         : p
                     );
                   } else {
+                    // 서버 응답에서 페르소나 정보 사용
                     return [
                       ...prev,
                       {
-                        id: personaId,
+                        id: result.persona.id,
+                        name: result.persona.name,
+                        image: result.persona.image,
+                        owner: result.persona.owner, // ✅ owner 정보 추가!
                         status: 'active' as const,
                         joinedAt: Date.now(),
                         lastSpokeAt: 0,
@@ -1378,6 +1645,119 @@ export default function PersoPage() {
           </Button>
         </div>
       </div>
+
+      {/* 페르소나 목록 다이얼로그 */}
+      <Dialog open={showPersonaList} onOpenChange={setShowPersonaList}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>페르소나 초대</DialogTitle>
+            <DialogDescription>
+              {isPostOwner 
+                ? "대화방에 초대할 페르소나를 선택하세요."
+                : "게시물 소유자만 페르소나를 초대할 수 있습니다."
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {console.log('[DEBUG] 페르소나 목록 데이터:', personasData)}
+            {personasData && personasData.length > 0 ? (
+              personasData.map((persona: any) => {
+              const isActive = activePersonas.find(p => p.id === persona.id && p.status === 'active');
+              return (
+                <div
+                  key={persona.id}
+                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    isActive 
+                      ? 'bg-gray-100 cursor-not-allowed opacity-50' 
+                      : 'hover:bg-gray-50'
+                  }`}
+                  onClick={() => {
+                    if (!isActive) {
+                      invitePersona(persona.id);
+                      setShowPersonaList(false);
+                    }
+                  }}
+                >
+                  <Avatar className="w-8 h-8">
+                    <AvatarImage src={persona.image} />
+                    <AvatarFallback>{persona.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="font-medium">{persona.name}</div>
+                    <div className="text-sm text-gray-500">{persona.description}</div>
+                    {persona.user && (
+                      <div className="text-xs text-gray-400">{persona.user.username}의 페르소나</div>
+                    )}
+                  </div>
+                  {isActive && (
+                    <Badge variant="default" className="text-xs">활성</Badge>
+                  )}
+                </div>
+              );
+              })
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p>사용 가능한 페르소나가 없습니다.</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 강퇴 확인 다이얼로그 */}
+      <AlertDialog open={showKickDialog} onOpenChange={setShowKickDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>페르소나 강퇴</AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedPersona && (
+                <>
+                  <strong>{selectedPersona.owner ? `${selectedPersona.owner.name}의 ` : ''}{selectedPersona.name}</strong>을(를) 
+                  대화방에서 퇴장시키시겠습니까?
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (selectedPersona) {
+                  // 최종 체크: 게시물 소유자나 본인의 페르소나인지 확인
+                  if (selectedPersona.owner && selectedPersona.owner.id === postOwnerId) {
+                    toast({
+                      title: "강퇴 불가",
+                      description: "게시물 소유자의 페르소나는 강퇴할 수 없습니다",
+                      variant: "destructive",
+                    });
+                    setShowKickDialog(false);
+                    setSelectedPersona(null);
+                    return;
+                  }
+                  
+                  if (selectedPersona.owner && selectedPersona.owner.id === currentUserId) {
+                    toast({
+                      title: "강퇴 불가",
+                      description: "본인의 페르소나는 강퇴할 수 없습니다",
+                      variant: "destructive",
+                    });
+                    setShowKickDialog(false);
+                    setSelectedPersona(null);
+                    return;
+                  }
+                  
+                  kickPersona(selectedPersona.id);
+                  setShowKickDialog(false);
+                  setSelectedPersona(null);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              강퇴
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

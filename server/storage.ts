@@ -450,6 +450,20 @@ export class DbStorage implements IStorage {
     return participant;
   }
 
+  async removeParticipant(participantInfo: { conversationId: string; participantType: string; participantId: string }): Promise<void> {
+    await db
+      .delete(conversationParticipants)
+      .where(
+        and(
+          eq(conversationParticipants.conversationId, participantInfo.conversationId),
+          eq(conversationParticipants.participantType, participantInfo.participantType),
+          eq(conversationParticipants.participantId, participantInfo.participantId)
+        )
+      );
+    
+    console.log(`[STORAGE] 참가자 제거됨: ${participantInfo.participantType}:${participantInfo.participantId}`);
+  }
+
   async createMessageInConversation(insertMessage: InsertMessage): Promise<Message> {
     const [message] = await db
       .insert(messages)

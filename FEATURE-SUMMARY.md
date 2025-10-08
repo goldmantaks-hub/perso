@@ -110,7 +110,7 @@ conversations
 conversation_participants (NEW!)
 ├─ conversation_id: "conv-123"
 ├─ participant_type: "persona"
-├─ participant_id: "persona-kai"
+├─ participant_id: "550e8400-e29b-41d4-a716-446655440000" (UUID)
 └─ role: "owner" ← 자동으로 owner!
 ```
 

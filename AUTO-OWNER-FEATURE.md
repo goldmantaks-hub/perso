@@ -211,7 +211,7 @@ created_by_id: "user-789"
 id: "part-001"
 conversation_id: "conv-123"
 participant_type: "persona"
-participant_id: "persona-kai"
+participant_id: "550e8400-e29b-41d4-a716-446655440000" (UUID)
 role: "owner" ← 자동으로 owner 역할 부여!
 joined_at: "2025-10-08T..."
 ```

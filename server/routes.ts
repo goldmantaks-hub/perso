@@ -1226,6 +1226,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`[PERSONA JOIN API] Found persona: ${persona.name} (${persona.id})`);
 
+      // 페르소나 소유주 정보 가져오기
+      const owner = await storage.getUser(persona.userId);
+      const ownerInfo = owner ? {
+        name: owner.name,
+        username: owner.username
+      } : null;
+
+      console.log(`[PERSONA JOIN API] Owner info:`, ownerInfo);
+
       // Conversation 가져오기
       const conversation = await storage.getConversationByPost(postId);
       if (!conversation) {
@@ -1279,11 +1288,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // 3. 소개 메시지를 DB에 저장 (senderId도 persona.id 사용)
+      const ownerName = ownerInfo ? ownerInfo.name : '사용자';
       const joinMessage = await storage.createMessageInConversation({
         conversationId: conversation.id,
         senderType: 'system',
         senderId: persona.id,  // personaId가 아니라 persona.id (UUID) 사용!
-        content: `🤖 ${persona.name}: ${introMessage}`,
+        content: `🤖 ${ownerName}의 ${persona.name}: ${introMessage}`,
         messageType: 'join',
       });
 
@@ -1305,6 +1315,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             id: persona.id,
             name: persona.name,
             image: persona.image,
+            owner: ownerInfo, // ✅ 소유주 정보 추가!
           }
         });
 
@@ -1327,6 +1338,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: persona.id,
           name: persona.name,
           image: persona.image,
+          owner: ownerInfo, // ✅ 소유주 정보 추가!
         },
         introduction: introMessage,
         joinMessage: {
@@ -1340,6 +1352,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[PERSONA JOIN ERROR]', error);
       res.status(500).json({ 
         message: "페르소나 입장에 실패했습니다",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // POST /api/perso/:postId/persona/:personaId/leave - 페르소나 강퇴
+  app.post("/api/perso/:postId/persona/:personaId/leave", authenticateToken, async (req, res) => {
+    try {
+      const { postId, personaId } = req.params;
+      
+      console.log(`[PERSONA LEAVE API] Received request - postId: ${postId}, personaId: ${personaId}`);
+      
+      if (!req.userId) {
+        return res.status(401).json({ message: "로그인이 필요합니다" });
+      }
+
+      // 페르소나 정보 조회 - 먼저 ID로 시도, 실패하면 이름으로 조회
+      let persona = await storage.getPersona(personaId);
+      
+      if (!persona) {
+        // UUID가 아니라 이름일 수 있으므로 이름으로 조회 시도
+        console.log(`[PERSONA LEAVE API] Persona not found by ID, trying by name: ${personaId}`);
+        const allPersonas = await storage.getAllPersonas();
+        persona = allPersonas.find(p => p.name === personaId);
+      }
+      
+      if (!persona) {
+        console.error(`[PERSONA LEAVE API] Persona not found: ${personaId}`);
+        return res.status(404).json({ message: `페르소나를 찾을 수 없습니다: ${personaId}` });
+      }
+      
+      console.log(`[PERSONA LEAVE API] Found persona: ${persona.name} (${persona.id})`);
+
+      // Conversation 가져오기
+      const conversation = await storage.getConversationByPost(postId);
+      if (!conversation) {
+        return res.status(404).json({ message: "대화방을 찾을 수 없습니다" });
+      }
+
+      // 1. 페르소나를 participant에서 제거
+      try {
+        await storage.removeParticipant({
+          conversationId: conversation.id,
+          participantType: 'persona',
+          participantId: persona.id,
+        });
+        console.log(`[PERSONA LEAVE] ${persona.name} (${persona.id}) removed from conversation ${conversation.id}`);
+      } catch (error) {
+        console.log(`[PERSONA LEAVE] ${persona.name} (${persona.id}) was not a participant`);
+      }
+
+      // 2. 퇴장 메시지를 DB에 저장
+      const owner = await storage.getUser(persona.userId);
+      const ownerName = owner ? owner.name : '사용자';
+      const leaveMessage = await storage.createMessageInConversation({
+        conversationId: conversation.id,
+        senderType: 'system',
+        senderId: persona.id,
+        content: `👋 ${ownerName}의 ${persona.name}이(가) 대화방을 떠났습니다`,
+        messageType: 'leave',
+      });
+
+      console.log(`[PERSONA LEAVE] Leave message saved with ID: ${leaveMessage.id}`);
+
+      // 3. WebSocket으로 퇴장 이벤트 브로드캐스트
+      const io = getIO();
+      if (io) {
+        // 퇴장 메시지 브로드캐스트
+        io.to(`conversation:${conversation.id}`).emit('message:system', {
+          id: leaveMessage.id,
+          conversationId: conversation.id,
+          senderType: 'system',
+          senderId: persona.id,
+          messageType: 'leave',
+          content: leaveMessage.content,
+          createdAt: leaveMessage.createdAt.toISOString(),
+          persona: {
+            id: persona.id,
+            name: persona.name,
+            image: persona.image,
+          }
+        });
+
+        // 페르소나 퇴장 이벤트
+        io.to(`conversation:${conversation.id}`).emit('persona:event', {
+          type: 'leave',
+          personaId: persona.id,
+          personaName: persona.name,
+          timestamp: Date.now(),
+        });
+
+        console.log(`[PERSONA LEAVE] Broadcasted leave events for ${persona.name}`);
+      }
+
+      res.json({
+        success: true,
+        message: `${persona.name}이(가) 대화방에서 퇴장했습니다`,
+        persona: {
+          id: persona.id,
+          name: persona.name,
+          image: persona.image,
+        },
+        leaveMessage: {
+          id: leaveMessage.id,
+          content: leaveMessage.content,
+          createdAt: leaveMessage.createdAt,
+        }
+      });
+
+    } catch (error) {
+      console.error('[PERSONA LEAVE ERROR]', error);
+      res.status(500).json({ 
+        message: "페르소나 퇴장에 실패했습니다",
         error: error instanceof Error ? error.message : String(error)
       });
     }

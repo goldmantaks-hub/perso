@@ -24,6 +24,8 @@ interface ActivePersonasProps {
   currentTopics: Array<{ topic: string; weight: number }>;
   totalTurns: number;
   onPersonaClick?: (personaId: string) => void;
+  recentlyJoined?: Set<string>;
+  recentlyLeft?: Set<string>;
 }
 
 // 페르소나별 고유 색상 정의
@@ -126,7 +128,9 @@ export default function ActivePersonas({
   dominantPersona, 
   currentTopics, 
   totalTurns, 
-  onPersonaClick 
+  onPersonaClick,
+  recentlyJoined = new Set(),
+  recentlyLeft = new Set()
 }: ActivePersonasProps) {
   console.log('[ActivePersonas] Props received:', { 
     activePersonas, 
@@ -145,8 +149,7 @@ export default function ActivePersonas({
     });
   });
   
-  const [recentlyJoined, setRecentlyJoined] = useState<Set<string>>(new Set());
-  const [recentlyLeft, setRecentlyLeft] = useState<Set<string>>(new Set());
+  // 애니메이션 상태는 이제 props로 받음
   const [hoveredPersona, setHoveredPersona] = useState<string | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
