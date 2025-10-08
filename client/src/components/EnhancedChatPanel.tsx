@@ -309,6 +309,11 @@ export default function EnhancedChatPanel({
 
             const colors = msg.senderType === 'ai' ? getPersonaColor(msg.sender) : null;
             const isThinkingVisible = showThinking.has(`${msg.id}-${idx}`);
+            console.log(`[THINKING VISIBILITY] Message ${msg.id}:`, {
+              messageId: `${msg.id}-${idx}`,
+              isThinkingVisible,
+              showThinkingSet: Array.from(showThinking)
+            });
 
             return (
               <motion.div
@@ -346,12 +351,14 @@ export default function EnhancedChatPanel({
                   
                   {/* 내부 추론 표시 */}
                   {(() => {
-                    const hasThinking = msg.senderType === 'ai' && msg.thinking;
+                    const hasThinking = msg.senderType === 'ai' && msg.thinking && msg.thinking !== "...";
                     console.log(`[THINKING DEBUG] EnhancedChatPanel - Message ${msg.id}:`, {
                       senderType: msg.senderType,
                       hasThinking: !!msg.thinking,
                       thinking: msg.thinking,
-                      willShow: hasThinking
+                      thinkingLength: msg.thinking?.length || 0,
+                      willShow: hasThinking,
+                      messageKeys: Object.keys(msg)
                     });
                     return hasThinking;
                   })() && (

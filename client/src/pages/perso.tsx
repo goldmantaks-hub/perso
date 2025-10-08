@@ -119,6 +119,7 @@ export default function PersoPage() {
         
         const result = await response.json();
         console.log('[API] API 응답 성공:', result);
+        
         return result;
       } catch (error) {
         console.error('[API] API 호출 실패:', error);
@@ -1318,7 +1319,8 @@ export default function PersoPage() {
           hasThinking: !!msg.thinking,
           thinking: msg.thinking,
           thinkingLength: msg.thinking?.length || 0,
-          isThinkingEmpty: msg.thinking === "..." || msg.thinking === ""
+          isThinkingEmpty: msg.thinking === "..." || msg.thinking === "",
+          originalMsg: msg
         });
       }
       

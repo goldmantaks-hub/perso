@@ -1528,9 +1528,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // POST /api/perso/:postId/ai-response - 게시물 대화에 대한 AI 응답 생성
   app.post("/api/perso/:postId/ai-response", authenticateToken, async (req, res) => {
+    console.log(`[AI RESPONSE] Received request for post ${req.params.postId}`);
     try {
       const postId = req.params.postId;
       const { personaId, recentMessages } = req.body;
+      console.log(`[AI RESPONSE] Request body:`, { personaId, recentMessagesCount: recentMessages?.length });
 
       if (!personaId) {
         return res.status(400).json({ message: "페르소나 ID가 필요합니다" });
@@ -1647,11 +1649,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // 6. 내부 추론 생성
+      console.log(`[THINKING GENERATION] Starting thinking generation for ${persona.name}`);
       const thinkingPrompt = `당신은 "${persona.name}"입니다. 다음 대화에 응답하기 전에 내부적으로 무엇을 생각하고 있는지 1문장으로 표현하세요.
 
 대화 맥락: ${recentMessages && recentMessages.length > 0 ? recentMessages[recentMessages.length - 1]?.content : post.title}
 
 이 상황에 대해 당신이 생각하는 것은? (1문장으로)`;
+      
+      console.log(`[THINKING GENERATION] Thinking prompt:`, thinkingPrompt);
 
       const thinkingCompletion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
