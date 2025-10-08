@@ -23,6 +23,7 @@ export interface DialogueMessage {
 export class PersoRoom {
   roomId: string;
   postId: string;
+  conversationId: string | null;
   activePersonas: PersonaState[];
   currentTopics: TopicWeight[];
   previousTopics: TopicWeight[];
@@ -49,6 +50,7 @@ export class PersoRoom {
     // postId를 기반으로 고정된 roomId 생성 (timestamp 제거)
     this.roomId = `room-${postId}`;
     this.postId = postId;
+    this.conversationId = null;
     this.activePersonas = initialPersonas.map(id => ({
       id,
       status: 'active' as const,
@@ -76,6 +78,11 @@ export class PersoRoom {
     this.lastMessageAt = new Date();
 
     console.log(`[ROOM] Created ${this.roomId} with ${initialPersonas.length} personas, ${contexts.length} topics`);
+  }
+  
+  setConversationId(conversationId: string): void {
+    this.conversationId = conversationId;
+    console.log(`[ROOM] Set conversationId for ${this.roomId}: ${conversationId}`);
   }
 
   addPersona(personaId: string): void {

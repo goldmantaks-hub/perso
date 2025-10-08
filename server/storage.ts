@@ -326,6 +326,18 @@ export class DbStorage implements IStorage {
 
   // Conversation methods (new)
   async getConversationByPost(postId: string): Promise<Conversation | undefined> {
+    // 먼저 새로운 방식 (scope_id) 시도
+    const [conversation] = await db
+      .select()
+      .from(conversations)
+      .where(and(
+        eq(conversations.scopeType, 'post'),
+        eq(conversations.scopeId, postId)
+      ));
+    
+    if (conversation) return conversation;
+    
+    // 레거시 방식 (postConversations 테이블) 시도
     const [postConv] = await db
       .select()
       .from(postConversations)
@@ -333,12 +345,12 @@ export class DbStorage implements IStorage {
     
     if (!postConv) return undefined;
     
-    const [conversation] = await db
+    const [legacyConversation] = await db
       .select()
       .from(conversations)
       .where(eq(conversations.id, postConv.conversationId));
     
-    return conversation;
+    return legacyConversation;
   }
 
   async getMessagesByConversation(conversationId: string, userId?: string): Promise<Message[]> {

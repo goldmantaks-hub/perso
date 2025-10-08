@@ -688,6 +688,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
               room = persoRoomManager.createRoom(post.id, personaIds, contexts);
               console.log(`[POST CREATE] Created Room ${room.roomId} with personas: ${personaNames.join(', ')}`);
               
+              // Conversation 생성 및 페르소나 참가자 추가
+              const conversation = await storage.createConversation({
+                scopeType: 'post',
+                scopeId: post.id,
+                title: null,
+                createdByType: 'system',
+                createdById: 'auto-chat',
+              });
+              
+              // Room에 conversationId 설정
+              room.setConversationId(conversation.id);
+              
+              // 페르소나를 conversation participants에 추가
+              for (const personaId of personaIds) {
+                await storage.addParticipant({
+                  conversationId: conversation.id,
+                  participantType: 'persona',
+                  participantId: personaId,
+                  role: 'member',
+                });
+              }
+              
+              console.log(`[POST CREATE] Created conversation ${conversation.id} with ${personaIds.length} personas`);
+              
               // 자동 대화 시작
               onPostCreated(room.roomId);
             } else {

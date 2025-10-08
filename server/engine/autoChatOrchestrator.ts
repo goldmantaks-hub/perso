@@ -4,6 +4,7 @@ import { similarity } from './textSim.js';
 import { DEFAULT_AUTO_CHAT_POLICY } from './policies.js';
 import { PersonaPlan } from './types.js';
 import { persoRoomManager } from './persoRoom.js';
+import { storage } from '../storage.js';
 
 export class AutoChatOrchestrator {
   private roomId: string;
@@ -79,6 +80,7 @@ export class AutoChatOrchestrator {
         continue;
       }
 
+      // In-memory Room에 메시지 추가
       room.addMessage({
         personaId: speaker.personaId,
         text,
@@ -86,6 +88,25 @@ export class AutoChatOrchestrator {
       });
 
       console.log(`[AUTO CHAT] ${speaker.personaId} (${speaker.intent}): ${text}`);
+      
+      // DB에 메시지 저장
+      if (room.conversationId) {
+        try {
+          await storage.createMessageInConversation({
+            conversationId: room.conversationId,
+            senderType: 'persona',
+            senderId: speaker.personaId,
+            content: text,
+            messageType: 'text',
+            thinking: null,
+          });
+          console.log(`[AUTO CHAT] Message saved to DB for conversation ${room.conversationId}`);
+        } catch (error) {
+          console.error(`[AUTO CHAT] Failed to save message to DB:`, error);
+        }
+      } else {
+        console.warn(`[AUTO CHAT] Room ${this.roomId} has no conversationId, message not saved to DB`);
+      }
 
       this.setCooldown(speaker.personaId);
       lastSpeaker = speaker.personaId;
