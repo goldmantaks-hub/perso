@@ -67,6 +67,7 @@ export class AutoChatOrchestrator {
         break;
       }
 
+      console.log(`[AUTO CHAT] Calling generatePersonaLine for ${speaker.personaId}`);
       const result = await generatePersonaLine({
         personaId: speaker.personaId,
         context: ctx,
@@ -77,6 +78,8 @@ export class AutoChatOrchestrator {
 
       const text = result.message;
       const thinking = result.thinking;
+      console.log(`[AUTO CHAT] Generated message: "${text}"`);
+      console.log(`[AUTO CHAT] Generated thinking: "${thinking}"`);
 
       const prev = room.getLastMessages(6).map(m => m.text).join('\n');
       const sim = similarity(prev, text);
@@ -107,6 +110,11 @@ export class AutoChatOrchestrator {
             thinking: thinking,
           });
           console.log(`[AUTO CHAT] Message saved to DB for conversation ${room.conversationId}`);
+          console.log(`[AUTO CHAT] Saved message thinking field:`, {
+            hasThinking: !!savedMessage.thinking,
+            thinking: savedMessage.thinking,
+            thinkingLength: savedMessage.thinking?.length || 0
+          });
           
           // WebSocket을 통해 실시간 브로드캐스트
           const io = (global as any).ioInstance;
@@ -116,7 +124,7 @@ export class AutoChatOrchestrator {
             if (persona) {
               const personaOwner = await storage.getUser(persona.userId);
               
-              io.to(`conversation:${room.conversationId}`).emit('message:new', {
+              const websocketMessage = {
                 id: savedMessage.id,
                 conversationId: savedMessage.conversationId,
                 senderType: savedMessage.senderType,
@@ -135,7 +143,15 @@ export class AutoChatOrchestrator {
                     username: personaOwner.username
                   } : undefined
                 }
+              };
+              
+              console.log(`[AUTO CHAT] WebSocket message thinking field:`, {
+                hasThinking: !!websocketMessage.thinking,
+                thinking: websocketMessage.thinking,
+                thinkingLength: websocketMessage.thinking?.length || 0
               });
+              
+              io.to(`conversation:${room.conversationId}`).emit('message:new', websocketMessage);
               console.log(`[AUTO CHAT] Message broadcasted via WebSocket to conversation:${room.conversationId}`);
             } else {
               console.warn(`[AUTO CHAT] Persona ${speaker.personaId} not found in DB, skipping broadcast`);

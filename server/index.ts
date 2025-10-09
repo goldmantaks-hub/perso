@@ -8,6 +8,7 @@ import { APP_CONSTANTS } from "../shared/constants.js";
 import "./engine/autoTick.js"; // 자동 틱 스케줄러 시작
 import { storage } from "./storage.js";
 import { persoRoomManager } from "./engine/persoRoom.js";
+import { checkDatabaseConnection } from "./db.js";
 
 const app = express();
 app.use(express.json());
@@ -125,6 +126,15 @@ async function reloadActiveRooms() {
     console.log(`🚀 Server started successfully on port ${config.PORT}`);
     console.log(`📡 API endpoints available at http://localhost:${config.PORT}/api/`);
     console.log(`🔌 WebSocket server ready for connections`);
+    
+    // 데이터베이스 연결 확인
+    console.log(`🔍 Checking database connection...`);
+    const dbConnected = await checkDatabaseConnection();
+    if (!dbConnected) {
+      console.error(`❌ Database connection failed!`);
+    } else {
+      console.log(`✅ Database connection successful!`);
+    }
     
     // 서버 시작 후 기존 Room 재생성
     await reloadActiveRooms();

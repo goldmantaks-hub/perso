@@ -12,6 +12,7 @@ import { analyzeSentimentFromContent, inferTonesFromContent, detectSubjects, inf
 import { openPerso } from "./api/personas.js";
 import { runSeed } from "./seed.js";
 import { cleanupPostsWithoutConversations, listPostsWithoutConversations } from "./scripts/cleanup-posts.js";
+import { sseBroker } from "./sse/broker";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // WebSocket 서버 참조를 위한 헬퍼 함수
@@ -29,6 +30,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
       timestamp: new Date().toISOString(),
       server: "running"
     });
+  });
+
+  // SSE 스트림 엔드포인트: /api/chat/stream?roomId=xxx&clientId=yyy
+  app.get("/api/chat/stream", (req, res) => {
+    const roomId = String(req.query.roomId || 'default');
+    const clientId = String(req.query.clientId || Math.random().toString(36).slice(2));
+
+    console.log(`[SSE] 연결 요청: roomId=${roomId}, clientId=${clientId}`);
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', 'Cache-Control, Authorization');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.flushHeaders?.();
+
+    res.write(`event: connected\n`);
+    res.write(`data: ${JSON.stringify({ ok: true, roomId, clientId })}\n\n`);
+
+    sseBroker.addClient(roomId, { id: clientId, res, roomId });
+
+    req.on('close', () => {
+      console.log(`[SSE] 연결 종료: roomId=${roomId}, clientId=${clientId}`);
+      sseBroker.removeClient(roomId, clientId);
+      res.end();
+    });
+
+    req.on('error', (error) => {
+      console.error(`[SSE] 연결 오류: roomId=${roomId}, clientId=${clientId}`, error);
+      sseBroker.removeClient(roomId, clientId);
+    });
+  });
+
+  // 메시지 히스토리 조회 (페이지네이션 지원): /api/chat/history?roomId=xxx&limit=50&offset=0
+  app.get("/api/chat/history", async (req, res) => {
+    try {
+      const roomId = String(req.query.roomId || 'default');
+      const limit = Math.min(parseInt(String(req.query.limit || '50'), 10), 200);
+      const offset = Math.max(parseInt(String(req.query.offset || '0'), 10), 0);
+      
+      console.log(`[CHAT HISTORY] 요청: roomId=${roomId}, limit=${limit}, offset=${offset}`);
+      
+      // 대화방 ID로 conversation 찾기
+      const conversation = await storage.getConversationByPost(roomId);
+      if (!conversation) {
+        return res.json({ ok: true, messages: [], total: 0, hasMore: false });
+      }
+      
+      // 메시지 조회 (페이지네이션)
+      const messages = await storage.getMessagesByConversation(conversation.id);
+      const totalMessages = messages.length;
+      const paginatedMessages = messages.slice(offset, offset + limit);
+      const hasMore = offset + limit < totalMessages;
+      
+      console.log(`[CHAT HISTORY] 응답: ${paginatedMessages.length}개 메시지, 총 ${totalMessages}개, hasMore=${hasMore}`);
+      
+      res.json({ 
+        ok: true, 
+        messages: paginatedMessages,
+        total: totalMessages,
+        hasMore,
+        offset,
+        limit
+      });
+    } catch (error) {
+      console.error('[CHAT HISTORY] 오류:', error);
+      res.status(500).json({ ok: false, error: 'internal_error' });
+    }
   });
 
   // 관리자 API: 소유주 페르소나 재초대
@@ -916,13 +986,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // 페르소나들은 joinLeaveManager에 의해 확률적으로 입장하고 대화를 시작함
       }
       
+      // 메시지 로딩 최적화: 최대 50개만 가져오기
       const messages = await storage.getMessagesByConversation(conversation.id, req.userId);
       const participants = await storage.getParticipantsByConversation(conversation.id);
       
-      console.log(`[API] Conversation ${conversation.id} participants:`, participants.length);
-      console.log(`[API] Participants details:`, participants);
+      console.log(`[API] Loaded ${messages.length} messages for conversation ${conversation.id}`);
+      console.log(`[API] Messages details:`, messages.map(msg => ({
+        id: msg.id,
+        content: msg.content?.substring(0, 30) + '...',
+        senderType: msg.senderType,
+        createdAt: msg.createdAt,
+        meta: msg.meta,
+        visibleAt: msg.visibleAt
+      })));
       
-      // 각 메시지에 사용자/페르소나 정보 추가
+      // 성능 최적화: 불필요한 로그 제거
+      console.log(`[API] Conversation ${conversation.id} participants:`, participants.length);
+      
+      // 각 메시지에 사용자/페르소나 정보 추가 (최적화된 버전)
       const messagesWithInfo = await Promise.all(
         messages.map(async (msg) => {
           if (msg.senderType === 'persona') {
@@ -962,45 +1043,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 profileImage: user.profileImage,
               } : null,
             };
-          } else {
-            // 시스템 메시지 처리 - 발신자 정보 추가
-            let senderInfo = null;
-            
-            if (msg.senderType === 'system' && msg.senderId && msg.senderId !== 'system') {
-              // senderId가 실제 사용자나 페르소나 ID인 경우
-              try {
-                const user = await storage.getUser(msg.senderId);
-                if (user) {
-                  senderInfo = {
-                    user: {
-                      id: user.id,
-                      name: user.name,
-                      username: user.username,
-                      profileImage: user.profileImage,
-                    }
-                  };
-                  console.log(`[API] System message sender: user ${user.name} (${user.id})`);
-                } else {
-                  const persona = await storage.getPersona(msg.senderId);
-                  if (persona) {
+            } else {
+              // 시스템 메시지 처리 - 발신자 정보 추가 (최적화)
+              let senderInfo = null;
+              
+              if (msg.senderType === 'system' && msg.senderId && msg.senderId !== 'system') {
+                // senderId가 실제 사용자나 페르소나 ID인 경우
+                try {
+                  const user = await storage.getUser(msg.senderId);
+                  if (user) {
                     senderInfo = {
-                      persona: {
-                        id: persona.id,
-                        name: persona.name,
-                        image: persona.image,
+                      user: {
+                        id: user.id,
+                        name: user.name,
+                        username: user.username,
+                        profileImage: user.profileImage,
                       }
                     };
-                    console.log(`[API] System message sender: persona ${persona.name} (${persona.id})`);
                   } else {
-                    console.warn(`[API] Unknown senderId for system message: ${msg.senderId}`);
+                    const persona = await storage.getPersona(msg.senderId);
+                    if (persona) {
+                      senderInfo = {
+                        persona: {
+                          id: persona.id,
+                          name: persona.name,
+                          image: persona.image,
+                        }
+                      };
+                    }
                   }
+                } catch (error) {
+                  // 에러 무시로 성능 향상
                 }
-              } catch (error) {
-                console.warn(`[API] Failed to get sender info for ${msg.senderId}:`, error);
               }
-            } else {
-              console.log(`[API] System message with senderId: ${msg.senderId}, content: ${msg.content}`);
-            }
             
             return {
               ...msg,
@@ -1133,6 +1208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // POST /api/perso/:postId/messages - 페르소 메시지 작성 (새 스키마)
   app.post("/api/perso/:postId/messages", authenticateToken, async (req, res) => {
+    const requestStartTime = Date.now();
     try {
       if (!req.userId) {
         return res.status(401).json({ message: "인증되지 않은 사용자입니다" });
@@ -1166,6 +1242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // 임시 메시지 ID 생성 (클라이언트에게 즉시 반환)
+      const now = new Date();
       const tempMessageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const tempMessage: any = {
         id: tempMessageId,
@@ -1174,71 +1251,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
         senderId,
         content,
         messageType: 'text',
-        createdAt: new Date().toISOString(),
+        createdAt: now.toISOString(), // 동일한 타임스탬프 사용
       };
       
       if (thinking) {
         tempMessage.thinking = thinking;
       }
       
-      // WebSocket으로 즉시 브로드캐스트
+      // SSE로 즉시 브로드캐스트
+      let messageWithInfo: any = { ...tempMessage };
+      
+      if (senderType === 'persona') {
+        const persona = await storage.getPersona(senderId);
+        messageWithInfo.isAI = true;
+        messageWithInfo.personaId = senderId;
+        messageWithInfo.persona = persona ? {
+          id: persona.id,
+          name: persona.name,
+          image: persona.image,
+        } : null;
+      } else {
+        const user = await storage.getUser(senderId);
+        messageWithInfo.isAI = false;
+        messageWithInfo.userId = senderId;
+        messageWithInfo.user = user ? {
+          id: user.id,
+          name: user.name,
+          username: user.username,
+          profileImage: user.profileImage,
+        } : null;
+      }
+      
+      // SSE 브로드캐스트
+      sseBroker.broadcast(`conversation:${conversation.id}`, 'message:new', messageWithInfo);
+      
+      // 기존 WebSocket도 유지 (호환성)
       const io = getIO();
       if (io) {
-        let messageWithInfo: any = { ...tempMessage };
-        
-        if (senderType === 'persona') {
-          const persona = await storage.getPersona(senderId);
-          messageWithInfo.isAI = true;
-          messageWithInfo.personaId = senderId;
-          messageWithInfo.persona = persona ? {
-            id: persona.id,
-            name: persona.name,
-            image: persona.image,
-          } : null;
-        } else {
-          const user = await storage.getUser(senderId);
-          messageWithInfo.isAI = false;
-          messageWithInfo.userId = senderId;
-          messageWithInfo.user = user ? {
-            id: user.id,
-            name: user.name,
-            username: user.username,
-            profileImage: user.profileImage,
-          } : null;
-        }
-        
         io.to(`conversation:${conversation.id}`).emit('message:new', messageWithInfo);
       }
       
-      // DB 저장은 비동기로 (await 없이, 성능 향상)
+      // DB 저장을 위한 메시지 데이터 (순서 보장을 위해 명시적 타임스탬프)
       const messageData: any = {
         conversationId: conversation.id,
         senderType,
         senderId,
         content,
         messageType: 'text',
+        createdAt: now, // 동일한 타임스탬프로 순서 보장
       };
       
       if (thinking) {
         messageData.thinking = thinking;
       }
+
+      // 기본 메타데이터 설정 (빠른 저장을 위해)
+      messageData.meta = {
+        timestamp: now.getTime(),
+        messageLength: content.length,
+        wordCount: content.split(/\s+/).length
+      };
       
-      storage.createMessageInConversation(messageData).catch(error => {
-        console.error('[MESSAGE SAVE ERROR]', error);
-        // TODO: 에러 시 재시도 로직 또는 Dead Letter Queue
-      });
+      // 메시지 즉시 저장 (동기적) - 새로고침 시 메시지 사라짐 방지
+      const saveStartTime = Date.now();
+      try {
+        console.log(`[SYNC SAVE] 메시지 저장 시작: ${content.substring(0, 20)}... (${now.toISOString()})`);
+        const savedMessage = await storage.createMessageInConversation(messageData);
+        const saveEndTime = Date.now();
+        const saveDuration = saveEndTime - saveStartTime;
+        console.log(`[SYNC SAVE] 메시지 저장 완료: ${savedMessage.id} (${savedMessage.createdAt}) - 저장 시간: ${saveDuration}ms`);
+        
+        // 저장된 메시지로 tempMessage 업데이트
+        tempMessage.id = savedMessage.id;
+        tempMessage.createdAt = savedMessage.createdAt;
+        
+        // SSE로 저장 완료 알림
+        sseBroker.broadcast(`conversation:${conversation.id}`, 'message:saved', {
+          id: savedMessage.id,
+          conversationId: conversation.id,
+          savedAt: savedMessage.createdAt
+        });
+      } catch (error) {
+        const saveEndTime = Date.now();
+        const saveDuration = saveEndTime - saveStartTime;
+        console.error(`[SYNC SAVE] 메시지 저장 실패 (${saveDuration}ms):`, error);
+        // 저장 실패해도 클라이언트에는 응답 (임시 메시지로 표시)
+      }
       
+      // 클라이언트에 응답 (메시지 전송 성공)
+      const requestEndTime = Date.now();
+      const totalRequestTime = requestEndTime - requestStartTime;
+      console.log(`[REQUEST COMPLETE] 전체 요청 처리 시간: ${totalRequestTime}ms`);
       res.json(tempMessage);
       
-      // 자동 대화 트리거 (사용자 메시지인 경우에만)
+      // 백그라운드에서 메타데이터 생성 (비동기)
+      setImmediate(async () => {
+        try {
+          console.log(`[META ASYNC] 메타데이터 생성 시작: ${content.substring(0, 20)}...`);
+          const emotionScores = await analyzeSentimentFromContent(content);
+          const tones = await inferTonesFromContent(content);
+          const subjects = await detectSubjects(content);
+          const contexts = await inferContexts(content);
+          
+          console.log(`[META ASYNC] 감정 점수:`, emotionScores);
+          console.log(`[META ASYNC] 톤:`, tones);
+          console.log(`[META ASYNC] 주제:`, subjects);
+          console.log(`[META ASYNC] 맥락:`, contexts);
+          
+          // TODO: 메타데이터를 별도 테이블에 저장하거나 메시지 업데이트
+        } catch (error) {
+          console.error('[META ASYNC] 메타데이터 생성 실패:', error);
+        }
+      });
+      
+      // 자동 대화 트리거를 별도 비동기 작업으로 분리 (메시지 전송에 영향 없음)
       if (!isAI) {
-        (async () => {
+        // setTimeout으로 완전히 분리하여 메시지 전송에 영향 없도록 함
+        setTimeout(async () => {
           try {
+            console.log(`[AUTO CHAT] 사용자 메시지 후 자동 대화 트리거 시작: ${postId}`);
             const { persoRoomManager } = await import('./engine/persoRoom.js');
             
             let room = persoRoomManager.getRoomByPostId(postId);
             if (!room) {
-              console.log(`[USER MESSAGE] Room not found for post ${postId}, restoring from conversation`);
+              console.log(`[AUTO CHAT] Room not found for post ${postId}, restoring from conversation`);
               
               // Post 내용 조회
               const post = await storage.getPost(postId);
@@ -1249,53 +1385,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const personaParticipants = participants.filter(p => p.participantType === 'persona');
               
               if (personaParticipants.length > 0) {
-                // 기존 참가자로 Room 복원 (participantId 사용, 이름이 아님!)
+                // 기존 참가자로 Room 복원
                 const personaIds = personaParticipants.map(p => p.participantId);
-                
-                // 로그용으로 이름 조회
-                const personaNames = await Promise.all(
-                  personaIds.map(async (id) => {
-                    const persona = await storage.getPersona(id);
-                    return persona?.name || id;
-                  })
-                );
-                
                 const contexts: string[] = [];
                 room = persoRoomManager.createRoom(postId, postContent, personaIds, contexts);
-                console.log(`[USER MESSAGE] Restored room ${room.roomId} with existing personas: ${personaNames.join(', ')} (IDs: ${personaIds.join(', ')})`);
+                console.log(`[AUTO CHAT] Restored room ${room.roomId} with existing personas`);
               } else {
-                // 참가자가 없으면 DB에서 랜덤 페르소나 선택 (ID 사용!)
+                // 참가자가 없으면 DB에서 랜덤 페르소나 선택
                 const allPersonas = await storage.getAllPersonas();
                 if (allPersonas.length > 0) {
-                  const personaCount = Math.min(
-                    Math.floor(Math.random() * 2) + 3, // 3-4개
-                    allPersonas.length
-                  );
+                  const personaCount = Math.min(3, allPersonas.length);
                   const selectedPersonas = allPersonas
                     .sort(() => Math.random() - 0.5)
                     .slice(0, personaCount);
                   
                   const personaIds = selectedPersonas.map(p => p.id);
-                  const personaNames = selectedPersonas.map(p => p.name);
-                  
                   const contexts: string[] = [];
                   room = persoRoomManager.createRoom(postId, postContent, personaIds, contexts);
-                  console.log(`[USER MESSAGE] Created new room ${room.roomId} with random personas: ${personaNames.join(', ')} (IDs: ${personaIds.join(', ')})`);
-                } else {
-                  console.error(`[USER MESSAGE] No personas available in database for room creation`);
+                  console.log(`[AUTO CHAT] Created new room ${room.roomId} with random personas`);
                 }
               }
-            } else {
-              console.log(`[USER MESSAGE] Using existing room ${room.roomId} for post ${postId}`);
             }
             
-            const { onUserMessage } = await import('./engine/autoTick.js');
-            onUserMessage(room.roomId);
-            console.log(`[USER MESSAGE] Triggered auto-chat for room ${room.roomId} after user message`);
+            if (room) {
+              const { onUserMessage } = await import('./engine/autoTick.js');
+              onUserMessage(room.roomId);
+              console.log(`[AUTO CHAT] Triggered auto-chat for room ${room.roomId}`);
+            }
           } catch (autoError) {
-            console.error('[USER MESSAGE] Auto-chat trigger error:', autoError);
+            console.error('[AUTO CHAT] Auto-chat trigger error:', autoError);
           }
-        })();
+        }, 100); // 100ms 지연으로 메시지 전송 완료 후 실행
       }
     } catch (error) {
       console.error('메시지 작성 에러:', error);

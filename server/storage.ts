@@ -354,6 +354,9 @@ export class DbStorage implements IStorage {
   }
 
   async getMessagesByConversation(conversationId: string, userId?: string): Promise<Message[]> {
+    console.log(`[DB QUERY] 메시지 조회 시작: conversationId=${conversationId}, userId=${userId}`);
+    
+    // 모든 메시지 조회 (visibleAt 조건 포함)
     const allMessages = await db
       .select()
       .from(messages)
@@ -365,12 +368,37 @@ export class DbStorage implements IStorage {
           lte(messages.visibleAt, sql`NOW()`)
         )
       ))
-      .orderBy(messages.createdAt);
+      .orderBy(desc(messages.createdAt)) // 최신순으로 정렬
+      .limit(50); // 최대 50개 메시지만 가져오기 (성능 향상)
+    
+    console.log(`[DB QUERY] 메시지 조회 완료: ${allMessages.length}개 메시지`);
+    if (allMessages.length > 0) {
+      console.log(`[DB QUERY] 최신 메시지:`, {
+        id: allMessages[0].id,
+        content: allMessages[0].content?.substring(0, 50) + '...',
+        senderType: allMessages[0].senderType,
+        createdAt: allMessages[0].createdAt,
+        visibleAt: allMessages[0].visibleAt,
+        meta: allMessages[0].meta
+      });
+      
+      // 모든 메시지의 메타데이터 확인
+      console.log(`[DB QUERY] 모든 메시지 메타데이터:`, allMessages.map(msg => ({
+        id: msg.id,
+        content: msg.content?.substring(0, 20) + '...',
+        meta: msg.meta,
+        visibleAt: msg.visibleAt,
+        createdAt: msg.createdAt
+      })));
+    } else {
+      console.log(`[DB QUERY] 조회된 메시지가 없습니다. conversationId: ${conversationId}`);
+    }
     
     if (!userId) {
       return allMessages;
     }
     
+    // 삭제된 메시지 ID 조회 최적화
     const deletedMessageIds = await db
       .select({ messageId: messageDeletedByUsers.messageId })
       .from(messageDeletedByUsers)
@@ -477,14 +505,60 @@ export class DbStorage implements IStorage {
   }
 
   async createMessageInConversation(insertMessage: InsertMessage): Promise<Message> {
-    const [message] = await db
-      .insert(messages)
-      .values(insertMessage)
-      .returning();
+    const dbStartTime = Date.now();
     
-    await this.updateConversationTimestamp(insertMessage.conversationId);
+    console.log(`[DB INSERT] 메시지 저장 시작:`, {
+      conversationId: insertMessage.conversationId,
+      senderType: insertMessage.senderType,
+      senderId: insertMessage.senderId,
+      content: insertMessage.content?.substring(0, 50) + '...',
+      messageType: insertMessage.messageType,
+      hasThinking: !!insertMessage.thinking,
+      hasMeta: !!insertMessage.meta
+    });
     
-    return message;
+    try {
+      const [message] = await db
+        .insert(messages)
+        .values(insertMessage)
+        .returning();
+      
+      const dbInsertTime = Date.now();
+      const insertDuration = dbInsertTime - dbStartTime;
+      console.log(`[DB INSERT] 메시지 DB 삽입 성공: ${insertDuration}ms, ID: ${message.id}`);
+      
+      // 저장 후 즉시 검증
+      const verificationStart = Date.now();
+      const verification = await db
+        .select()
+        .from(messages)
+        .where(eq(messages.id, message.id))
+        .limit(1);
+      
+      const verificationEnd = Date.now();
+      const verificationDuration = verificationEnd - verificationStart;
+      
+      if (verification.length === 0) {
+        console.error(`[VERIFICATION] 저장된 메시지를 조회할 수 없습니다: ${message.id}`);
+        throw new Error(`메시지 저장 후 검증 실패: ${message.id}`);
+      } else {
+        console.log(`[VERIFICATION] 메시지 저장 검증 성공: ${verificationDuration}ms, ID: ${message.id}`);
+      }
+      
+      await this.updateConversationTimestamp(insertMessage.conversationId);
+      
+      const dbEndTime = Date.now();
+      const totalDbTime = dbEndTime - dbStartTime;
+      console.log(`[DB COMPLETE] 전체 DB 작업 완료: ${totalDbTime}ms`);
+      
+      return message;
+    } catch (error) {
+      const dbEndTime = Date.now();
+      const totalDbTime = dbEndTime - dbStartTime;
+      console.error(`[DB INSERT] 메시지 DB 삽입 실패 (${totalDbTime}ms):`, error);
+      console.error(`[DB INSERT] 실패한 데이터:`, insertMessage);
+      throw error;
+    }
   }
 
   async getParticipantsByConversation(conversationId: string): Promise<ConversationParticipant[]> {

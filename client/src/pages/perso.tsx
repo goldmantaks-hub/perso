@@ -12,6 +12,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useWebSocket } from "@/hooks/useWebSocket";
+import { useChatStream } from "@/hooks/useChatStream";
 import { getUser, isAuthenticated } from "@/lib/auth";
 import EnhancedChatPanel from "@/components/EnhancedChatPanel";
 import ActivePersonas from "@/components/ActivePersonas";
@@ -339,12 +340,15 @@ export default function PersoPage() {
 
   // WebSocket으로 실시간 메시지 수신
   const handleNewMessage = useCallback((newMessage: any) => {
-    // thinking 필드 디버깅
-    if (newMessage.senderType === 'persona' && newMessage.thinking) {
-      console.log(`[THINKING DEBUG] WebSocket received thinking for ${newMessage.persona?.name}:`, {
+    // thinking 필드 디버깅 - 모든 페르소나 메시지에 대해 확인
+    if (newMessage.senderType === 'persona') {
+      console.log(`[THINKING DEBUG] WebSocket received message for ${newMessage.persona?.name}:`, {
         messageId: newMessage.id,
+        hasThinking: !!newMessage.thinking,
         thinking: newMessage.thinking,
-        hasThinking: !!newMessage.thinking && newMessage.thinking !== "..."
+        thinkingLength: newMessage.thinking?.length || 0,
+        isThinkingEmpty: newMessage.thinking === "..." || newMessage.thinking === "",
+        fullMessage: newMessage
       });
     }
     
@@ -357,28 +361,37 @@ export default function PersoPage() {
     queryClient.setQueryData(["/api/perso", postId, "messages"], (old: any) => {
       if (!old) return old;
       
-      // 중복 메시지 체크 (더 강화된 로직)
+      // 중복 메시지 체크 (강화된 로직)
       const existingMessage = old.messages?.find((m: any) => {
         // 1. 같은 ID
         if (m.id === newMessage.id) return true;
         
-        // 2. 사용자 메시지의 경우 - 같은 내용 + 비슷한 시간 (3초 이내)
+        // 2. 사용자 메시지의 경우 - 같은 내용 + 비슷한 시간 (5초 이내)
         if (!newMessage.isAI && !m.isAI && 
             m.content === newMessage.content) {
           const timeDiff = Math.abs(
             new Date(m.createdAt).getTime() - new Date(newMessage.createdAt).getTime()
           );
-          if (timeDiff < 3000) return true;
+          if (timeDiff < 5000) return true;
         }
         
-        // 3. AI 메시지의 경우 - 같은 내용 + 같은 페르소나 + 비슷한 시간 (10초 이내)
+        // 3. AI 메시지의 경우 - 같은 내용 + 같은 페르소나 + 비슷한 시간 (15초 이내)
         if (newMessage.isAI && m.isAI && 
             m.personaId === newMessage.personaId &&
             m.content === newMessage.content) {
           const timeDiff = Math.abs(
             new Date(m.createdAt).getTime() - new Date(newMessage.createdAt).getTime()
           );
-          if (timeDiff < 10000) return true;
+          if (timeDiff < 15000) return true;
+        }
+        
+        // 4. 같은 발신자 + 같은 내용 + 30초 이내 (강화된 중복 체크)
+        if (m.senderId === newMessage.senderId && 
+            m.content === newMessage.content) {
+          const timeDiff = Math.abs(
+            new Date(m.createdAt).getTime() - new Date(newMessage.createdAt).getTime()
+          );
+          if (timeDiff < 30000) return true;
         }
         
         return false;
@@ -390,9 +403,15 @@ export default function PersoPage() {
       }
       
       console.log('[PERSO] Adding new message:', newMessage.id, newMessage.content?.substring(0, 20));
+      
+      // 새로운 메시지만 추가하여 불필요한 리렌더링 방지
+      const newMessages = [...(old.messages || []), newMessage];
+      
       return {
         ...old,
-        messages: [...(old.messages || []), newMessage],
+        messages: newMessages,
+        // 메시지 수 업데이트 (캐시 최적화)
+        messageCount: newMessages.length
       };
     });
   }, [postId]);
@@ -1107,6 +1126,45 @@ export default function PersoPage() {
     enabled: !!conversationId,
   });
 
+  // SSE 기반 실시간 메시지 스트림
+  const { 
+    connected: sseConnected, 
+    incoming: sseMessages, 
+    error: sseError,
+    sendMessage: sseSendMessage,
+    getHistory: sseGetHistory,
+    clearIncoming: clearSseMessages
+  } = useChatStream({ 
+    roomId: postId || '', 
+    baseUrl: '' 
+  });
+
+  // SSE 메시지 처리
+  useEffect(() => {
+    if (sseMessages.length > 0) {
+      console.log('[PERSO] SSE 메시지 수신:', sseMessages);
+      sseMessages.forEach(msg => {
+        handleNewMessage(msg);
+      });
+      clearSseMessages();
+    }
+  }, [sseMessages, clearSseMessages]);
+
+  // SSE 연결 상태 모니터링
+  useEffect(() => {
+    if (sseError) {
+      console.error('[PERSO] SSE 오류:', sseError);
+      // 연결 중이거나 일시적인 오류인 경우 토스트를 표시하지 않음
+      if (sseError !== '연결 중...' && sseError !== '연결이 종료되었습니다') {
+        toast({
+          title: "연결 오류",
+          description: sseError,
+          variant: "destructive",
+        });
+      }
+    }
+  }, [sseError, toast]);
+
   // 명시적인 입장인 경우에만 입장 메시지 생성
   useEffect(() => {
     if (isExplicitJoin && conversationId && joinConversation) {
@@ -1134,13 +1192,41 @@ export default function PersoPage() {
   // 메시지 전송 (낙관적 업데이트 제거)
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
+      console.log('[MESSAGE SEND] 메시지 전송 시작:', { content, postId });
+      
       if (!isAuthenticated()) {
+        console.log('[MESSAGE SEND] 인증 실패');
         throw new Error('로그인이 필요합니다');
       }
+      
+      console.log('[MESSAGE SEND] API 요청 시작:', `/api/perso/${postId}/messages`);
       const response = await apiRequest("POST", `/api/perso/${postId}/messages`, { content, isAI: false });
-      return response;
+      console.log('[MESSAGE SEND] API 응답:', response.status, response.ok);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.log('[MESSAGE SEND] API 오류:', errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      
+      const result = await response.json();
+      console.log('[MESSAGE SEND] 서버 응답 데이터:', result);
+      return result;
     },
     onError: (err: any, content) => {
+      // 임시 메시지 제거
+      queryClient.setQueryData(["/api/perso", postId, "messages"], (old: any) => {
+        if (!old) return old;
+        
+        // 임시 메시지 제거
+        const filteredMessages = old.messages?.filter((msg: any) => !msg.id.startsWith('temp-')) || [];
+        
+        return {
+          ...old,
+          messages: filteredMessages
+        };
+      });
+      
       let errorMessage = "다시 시도해주세요.";
       if (err.message?.includes('로그인')) {
         errorMessage = "로그인이 필요합니다.";
@@ -1155,8 +1241,45 @@ export default function PersoPage() {
       });
     },
     onSuccess: async (serverMessage: any, sentMessageContent) => {
-      // 메시지 전송 성공 후 쿼리 무효화하여 최신 메시지 가져오기
-      await queryClient.invalidateQueries({ queryKey: ["/api/perso", postId, "messages"] });
+      console.log('[ON SUCCESS] 서버 응답:', serverMessage);
+      
+      // 임시 메시지 제거하고 실제 메시지로 교체
+      queryClient.setQueryData(["/api/perso", postId, "messages"], (old: any) => {
+        if (!old) return old;
+        
+        // 임시 메시지 제거
+        const filteredMessages = old.messages?.filter((msg: any) => !msg.id.startsWith('temp-')) || [];
+        
+        // 서버 메시지가 있으면 추가, 없으면 임시 메시지를 실제 메시지로 변환
+        let updatedMessages;
+        if (serverMessage) {
+          console.log('[ON SUCCESS] 서버 메시지 추가:', serverMessage.id);
+          updatedMessages = [...filteredMessages, serverMessage];
+        } else {
+          // 서버 메시지가 없으면 임시 메시지를 실제 메시지로 변환
+          const tempMessage = old.messages?.find((msg: any) => msg.id.startsWith('temp-'));
+          if (tempMessage) {
+            console.log('[ON SUCCESS] 임시 메시지를 실제 메시지로 변환:', tempMessage.id);
+            const realMessage = {
+              ...tempMessage,
+              id: `user-${Date.now()}`, // 실제 ID로 변경
+              createdAt: new Date().toISOString(),
+              isAI: false,
+              senderType: 'user',
+              senderId: 'current-user'
+            };
+            updatedMessages = [...filteredMessages, realMessage];
+          } else {
+            console.log('[ON SUCCESS] 임시 메시지를 찾을 수 없음');
+            updatedMessages = filteredMessages;
+          }
+        }
+        
+        return {
+          ...old,
+          messages: updatedMessages
+        };
+      });
 
       // AI 응답 생성을 위한 페르소나 데이터 가져오기
       let personaData: any;
@@ -1164,7 +1287,9 @@ export default function PersoPage() {
         personaData = await queryClient.ensureQueryData({
           queryKey: ['/api/user/persona'],
         });
+        console.log('[AI RESPONSE] 페르소나 데이터:', personaData);
       } catch (error: any) {
+        console.error('[AI RESPONSE] 페르소나 데이터 가져오기 실패:', error);
         toast({
           title: "로그인이 필요합니다",
           description: "AI와 대화하려면 로그인해주세요.",
@@ -1174,8 +1299,10 @@ export default function PersoPage() {
       }
       
       const personaId = personaData?.id;
+      console.log('[AI RESPONSE] 페르소나 ID:', personaId);
       
       if (!personaId) {
+        console.warn('[AI RESPONSE] 페르소나 ID가 없습니다');
         toast({
           title: "페르소나를 찾을 수 없습니다",
           description: "AI 응답을 생성할 수 없습니다.",
@@ -1184,70 +1311,83 @@ export default function PersoPage() {
         return;
       }
       
-      // AI 응답 생성
-      setTimeout(async () => {
-        try {
-          // 최신 메시지 목록 가져오기
-          const currentData = await queryClient.ensureQueryData({
-            queryKey: ["/api/perso", postId, "messages"],
-          }) as any;
-          const allMessages = currentData?.messages || [];
-          const recentMessages = allMessages.slice(-5);
-          
-          const response = await apiRequest("POST", `/api/perso/${postId}/ai-response`, {
-            personaId,
-            recentMessages,
-          });
-          const aiResponse = await response.json();
-          
-          const aiContent = aiResponse.content?.trim();
-          const aiThinking = aiResponse.thinking?.trim();
-          
-          if (!aiContent || aiContent.length === 0) {
-            console.warn('[PERSO] Empty AI response received, skipping');
-            return;
-          }
-          
-          await apiRequest("POST", `/api/perso/${postId}/messages`, { 
-            content: aiContent,
-            thinking: aiThinking,
-            isAI: true,
-            personaId,
-          });
-          
-          queryClient.invalidateQueries({ queryKey: ["/api/perso", postId, "messages"] });
-        } catch (error: any) {
-          console.error('AI 응답 생성 실패:', error);
-          
-          let errorMessage = "다시 시도해주세요.";
-          if (error.message?.includes("OpenAI")) {
-            errorMessage = "AI 서비스를 사용할 수 없습니다. 관리자에게 문의하세요.";
-          }
-          
-          toast({
-            title: "AI 응답 생성 실패",
-            description: errorMessage,
-            variant: "destructive",
-          });
-        }
-      }, 1000);
+      // AI 응답 생성을 완전히 비활성화 (자동 대화 시스템이 처리)
+      console.log('[AI RESPONSE] AI 응답 생성 비활성화 - 자동 대화 시스템이 처리합니다');
+      
+      // 자동 대화 시스템이 처리하도록 WebSocket 업데이트만 대기
+      // invalidateQueries는 WebSocket으로 자동 처리되므로 별도 호출 불필요
     },
   });
 
   const handleSend = (messageText?: string) => {
     const textToSend = messageText || message;
-    if (!textToSend || !textToSend.trim()) return;
+    console.log('[HANDLE SEND] 메시지 전송 시도:', { textToSend, postId, messageText, message });
     
-    // 입력창 즉시 비우기 (사용자 경험 개선)
+    if (!textToSend || !textToSend.trim()) {
+      console.log('[HANDLE SEND] 빈 메시지, 전송 취소');
+            return;
+          }
+          
+    console.log('[HANDLE SEND] 메시지 유효성 검사 통과');
+    
+    // 입력창 즉시 비우기
     setMessage("");
     
+    // 낙관적 업데이트: 사용자 메시지를 즉시 표시
+    const tempMessage = {
+      id: `temp-${Date.now()}`,
+      content: textToSend,
+      isAI: false,
+      senderType: 'user',
+      senderId: 'current-user',
+      createdAt: new Date().toISOString(),
+      user: {
+        name: '사용자',
+        username: 'user',
+        profileImage: null
+      },
+      // transformMessages 함수가 제대로 처리할 수 있도록 필요한 필드 추가
+      messageType: 'user',
+      thinking: null
+    };
+    
+    console.log('[HANDLE SEND] 임시 메시지 생성:', tempMessage);
+    
+    // 임시 메시지를 즉시 추가
+    queryClient.setQueryData(["/api/perso", postId, "messages"], (old: any) => {
+      if (!old) return old;
+      return {
+        ...old,
+        messages: [...(old.messages || []), tempMessage]
+      };
+    });
+    
+    console.log('[HANDLE SEND] mutation 호출 시작');
     // 메시지 전송
     sendMessageMutation.mutate(textToSend);
   };
 
-  // 메시지 형식 변환 함수 - 메시지 내용이 진실
+  // 메시지 형식 변환 함수
   const transformMessages = (originalMessages: any[]) => {
     return originalMessages.map((msg: any) => {
+      // 임시 메시지 처리 (낙관적 업데이트)
+      if (msg.id && msg.id.startsWith('temp-')) {
+        return {
+          id: msg.id,
+          sender: '사용자',
+          senderType: 'user',
+          message: msg.content,
+          thinking: msg.thinking,
+          type: 'user',
+          expandedInfo: null,
+          timestamp: new Date(msg.createdAt).getTime(),
+          index: 0,
+          total: 1,
+          user: msg.user,
+          persona: null
+        };
+      }
+      
       // 시스템 메시지 처리
       if (msg.senderType === 'system' || msg.messageType === 'join' || msg.messageType === 'leave') {
         // 메시지 내용에서 발신자 이름 추출 (가장 정확한 방법)
@@ -1658,7 +1798,7 @@ export default function PersoPage() {
             onKeyPress={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                handleSend();
+                handleSend(message);
               }
             }}
             placeholder="메시지를 입력하세요..."
@@ -1667,7 +1807,7 @@ export default function PersoPage() {
             data-testid="input-chat-message"
           />
           <Button 
-            onClick={() => handleSend()}
+            onClick={() => handleSend(message)}
             disabled={!message.trim() || sendMessageMutation.isPending}
             size="icon"
             data-testid="button-send-message"

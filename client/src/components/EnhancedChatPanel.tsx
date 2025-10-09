@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { Brain, Sparkles } from "lucide-react";
+import { Brain, Sparkles, ChevronUp } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import SystemMessage from "./SystemMessage";
 
 interface Message {
@@ -135,6 +135,7 @@ export default function EnhancedChatPanel({
   onPersonaClick
 }: EnhancedChatPanelProps) {
   const [showThinking, setShowThinking] = useState<Set<string>>(new Set());
+  const [displayedMessageCount, setDisplayedMessageCount] = useState(20);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -144,6 +145,13 @@ export default function EnhancedChatPanel({
   useEffect(() => {
     scrollToBottom();
   }, [messages, isThinking]);
+
+  // 새로운 메시지가 추가되면 자동으로 표시 개수 증가
+  useEffect(() => {
+    if (messages.length > displayedMessageCount) {
+      setDisplayedMessageCount(prev => Math.min(prev + 1, messages.length));
+    }
+  }, [messages.length]); // displayedMessageCount 의존성 제거
 
   const toggleThinking = (messageId: string) => {
     setShowThinking(prev => {
@@ -281,24 +289,45 @@ export default function EnhancedChatPanel({
     }
   };
 
+  // 메시지 표시 로직: 5개씩 추가 로딩
+  const displayMessages = messages.slice(-displayedMessageCount);
+
   return (
     <div className="bg-background">
       <div className="p-4 space-y-4">
-        <AnimatePresence>
-          {messages.slice(-20).map((msg, idx) => {
+        {/* 지난 대화 보기 버튼 */}
+        {messages.length > displayedMessageCount && (
+          <div className="flex justify-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDisplayedMessageCount(prev => Math.min(prev + 5, messages.length))}
+              className="text-xs"
+            >
+              <ChevronUp className="w-3 h-3 mr-1" />
+              지난 대화 5개 더 보기 ({displayedMessageCount}/{messages.length})
+            </Button>
+          </div>
+        )}
+        
+        <div>
+          {displayMessages.map((msg, idx) => {
             // 시스템 메시지 (입장/퇴장/주도권교체/자동소개)는 SystemMessage로 표시
             if (msg.senderType === 'system' || msg.type === 'join' || msg.type === 'leave' || msg.type === 'handover' || msg.type === 'auto-introduction') {
               return (
-                <SystemMessage
+                <div
                   key={`${msg.id}-${idx}`}
-                  type={msg.type}
-                  personaId={msg.sender}
-                  personaName={msg.sender}
-                  dominantPersona={msg.dominantPersona}
-                  dominantPersonaOwner={msg.dominantPersonaOwner}
-                  message={msg.message}
-                  timestamp={msg.timestamp}
-                />
+                >
+                  <SystemMessage
+                    type={msg.type}
+                    personaId={msg.sender}
+                    personaName={msg.sender}
+                    dominantPersona={msg.dominantPersona}
+                    dominantPersonaOwner={msg.dominantPersonaOwner}
+                    message={msg.message}
+                    timestamp={msg.timestamp}
+                  />
+                </div>
               );
             }
 
@@ -311,24 +340,20 @@ export default function EnhancedChatPanel({
             });
 
             return (
-              <motion.div
+              <div
                 key={`${msg.id}-${idx}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className={`flex gap-3 ${msg.senderType === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`flex gap-3 mb-4 ${msg.senderType === 'user' ? 'justify-end pr-4' : 'justify-start pl-4'}`}
                 data-testid={`message-${msg.senderType}-${idx}`}
               >
                 {msg.senderType === 'ai' && (
-                  <Avatar className="w-8 h-8">
-                    <AvatarFallback className="text-xs">
+                  <Avatar className="w-8 h-8 flex-shrink-0">
+                    <AvatarFallback className="text-xs bg-secondary">
                       {getPersonaEmoji(msg.sender)}
                     </AvatarFallback>
                   </Avatar>
                 )}
                 
-                <div className={`flex flex-col ${msg.senderType === 'user' ? 'items-end' : 'items-start'} max-w-[80%]`}>
+                <div className={`flex flex-col ${msg.senderType === 'user' ? 'items-end mr-2' : 'items-start ml-2'} max-w-[80%]`}>
                   {msg.senderType === 'ai' && (
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-xs font-medium text-foreground">{msg.sender}</span>
@@ -346,43 +371,36 @@ export default function EnhancedChatPanel({
                   
                   {/* 내부 추론 표시 */}
                   {(() => {
-                    const hasThinking = msg.senderType === 'ai' && msg.thinking && msg.thinking !== "...";
+                    const hasThinking = msg.senderType === 'ai' && msg.thinking && msg.thinking.trim() !== "" && msg.thinking !== "...";
+                    const isThinkingVisible = showThinking.has(`${msg.id}-${idx}`);
                     console.log(`[THINKING DEBUG] EnhancedChatPanel - Message ${msg.id}:`, {
                       senderType: msg.senderType,
                       hasThinking: !!msg.thinking,
                       thinking: msg.thinking,
                       thinkingLength: msg.thinking?.length || 0,
                       willShow: hasThinking,
-                      messageKeys: Object.keys(msg)
+                      isThinkingVisible: isThinkingVisible,
+                      messageKeys: Object.keys(msg),
+                      condition: {
+                        isAI: msg.senderType === 'ai',
+                        hasThinking: !!msg.thinking,
+                        notEmpty: msg.thinking && msg.thinking.trim() !== "",
+                        notDots: msg.thinking !== "..."
+                      }
                     });
                     return hasThinking;
                   })() && (
-                    <motion.div
-                      initial={false}
-                      animate={{ height: isThinkingVisible ? 'auto' : 0, opacity: isThinkingVisible ? 1 : 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="mb-2 overflow-hidden"
-                    >
-                      <div className={`px-3 py-1.5 rounded-lg border ${colors?.bg || 'bg-muted/50'} ${colors?.border || 'border-border/50'}`}>
-                        <div className="flex items-center gap-2 mb-1">
+                    <div className="mb-2">
+                      <div className={`px-4 py-2 rounded-2xl border ${colors?.bg || 'bg-muted/50'} ${colors?.border || 'border-border/50'}`}>
+                        <div className="flex items-center gap-2">
                           <Brain className="w-3 h-3" />
-                          <span className="text-xs font-medium">내부 추론</span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-4 px-1 text-xs"
-                            onClick={() => toggleThinking(`${msg.id}-${idx}`)}
-                          >
-                            {isThinkingVisible ? '숨기기' : '보기'}
-                          </Button>
-                        </div>
-                        {isThinkingVisible && (
-                          <p className="text-xs text-muted-foreground italic">
+                          <span className="text-xs font-medium">추론:</span>
+                          <span className="text-xs text-muted-foreground italic leading-tight">
                             {msg.thinking}
-                          </p>
-                        )}
+                          </span>
+                        </div>
                       </div>
-                    </motion.div>
+                    </div>
                   )}
                   
                   {/* 확장 정보 툴팁 */}
@@ -411,10 +429,7 @@ export default function EnhancedChatPanel({
                     </TooltipProvider>
                   )}
                   
-                  <motion.div
-                    initial={{ scale: 0.95, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ duration: 0.2 }}
+                  <div
                     className={`rounded-2xl px-4 py-2 ${
                       msg.senderType === 'user'
                         ? 'bg-primary text-primary-foreground'
@@ -422,24 +437,25 @@ export default function EnhancedChatPanel({
                     }`}
                   >
                     <p className="text-sm break-words whitespace-pre-wrap">{msg.message}</p>
-                  </motion.div>
+                  </div>
                 </div>
 
                 {msg.senderType === 'user' && (
-                  <Avatar className="w-8 h-8">
+                  <Avatar className="w-8 h-8 flex-shrink-0">
                     <AvatarImage 
-                      src={msg.user?.profileImage || currentUser?.profileImage || currentUser?.avatar} 
+                      src={msg.user?.profileImage || currentUser?.profileImage || currentUser?.avatar || '/default-avatar.png'} 
                       alt={msg.user?.name || currentUser?.name || '사용자'} 
+                      className="object-cover"
                     />
-                    <AvatarFallback>
+                    <AvatarFallback className="bg-primary text-primary-foreground">
                       {(msg.user?.name || currentUser?.name || '사용자')[0]}
                     </AvatarFallback>
                   </Avatar>
                 )}
-              </motion.div>
+              </div>
             );
           })}
-        </AnimatePresence>
+        </div>
 
         {isTyping && (
           <motion.div
