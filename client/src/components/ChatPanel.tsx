@@ -80,12 +80,7 @@ export default function ChatPanel({
   return (
     <div className="flex flex-col h-full bg-background">
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        <div className="p-4 bg-muted/50 rounded-lg border border-border">
-          <p className="text-sm text-muted-foreground mb-1">게시물:</p>
-          <p className="text-foreground">{postContent}</p>
-        </div>
-
-        {messages.map((msg, idx) => (
+        {messages.slice(-20).map((msg, idx) => (
           <div
             key={`${msg.id}-${idx}`}
             className={`flex gap-3 ${msg.senderType === 'user' ? 'justify-end' : 'justify-start'}`}

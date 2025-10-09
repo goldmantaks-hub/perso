@@ -32,6 +32,8 @@ export default function ChatPage() {
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
+  const [displayCount, setDisplayCount] = useState(20); // 표시할 메시지 개수
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
@@ -99,6 +101,30 @@ export default function ChatPage() {
     }
   };
 
+  const handleLoadMoreMessages = async () => {
+    if (isLoadingMore) return;
+    
+    setIsLoadingMore(true);
+    try {
+      // 실제로는 여기서 API 호출로 이전 메시지를 가져와야 하지만,
+      // 현재는 displayCount만 증가시켜서 기존 메시지를 더 표시
+      setDisplayCount(prev => prev + 5);
+      
+      // TODO: 실제 API 호출 시에는 이전 메시지를 가져와서 messages에 추가
+      // const moreMessages = await fetchPreviousMessages(displayCount, 5);
+      // setMessages(prev => [...moreMessages, ...prev]);
+      
+    } catch (error) {
+      toast({
+        title: "메시지 불러오기 실패",
+        description: "이전 메시지를 불러오는데 실패했습니다.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
   // 스크롤 자동 이동
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -143,6 +169,27 @@ export default function ChatPage() {
 
       {/* 메시지 영역 */}
       <div className="flex-1 overflow-y-auto p-4 pb-32 md:pb-4 space-y-4">
+        {/* 지난대화 불러오기 버튼 - 메시지가 20개 이상일 때만 표시 */}
+        {messages.length > displayCount && (
+          <div className="flex justify-center mb-4">
+            <Button
+              variant="outline"
+              onClick={handleLoadMoreMessages}
+              disabled={isLoadingMore}
+              className="text-sm"
+            >
+              {isLoadingMore ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  불러오는 중...
+                </>
+              ) : (
+                `지난대화 불러오기 (${messages.length - displayCount}개 더 있음)`
+              )}
+            </Button>
+          </div>
+        )}
+
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <Avatar className="w-20 h-20 mb-4">
@@ -155,7 +202,8 @@ export default function ChatPage() {
             </p>
           </div>
         ) : (
-          messages.map((message) => (
+          <>
+            {messages.slice(-displayCount).map((message) => (
             <div
               key={message.id}
               className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
@@ -173,7 +221,9 @@ export default function ChatPage() {
                 </CardContent>
               </Card>
             </div>
-          ))
+            ))
+            }
+          </>
         )}
         <div ref={messagesEndRef} />
       </div>

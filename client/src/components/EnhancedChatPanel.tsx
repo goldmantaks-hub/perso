@@ -284,13 +284,8 @@ export default function EnhancedChatPanel({
   return (
     <div className="bg-background">
       <div className="p-4 space-y-4">
-        <div className="p-4 bg-muted/50 rounded-lg border border-border">
-          <p className="text-sm text-muted-foreground mb-1">게시물:</p>
-          <p className="text-foreground">{postContent}</p>
-        </div>
-
         <AnimatePresence>
-          {messages.map((msg, idx) => {
+          {messages.slice(-20).map((msg, idx) => {
             // 시스템 메시지 (입장/퇴장/주도권교체/자동소개)는 SystemMessage로 표시
             if (msg.senderType === 'system' || msg.type === 'join' || msg.type === 'leave' || msg.type === 'handover' || msg.type === 'auto-introduction') {
               return (

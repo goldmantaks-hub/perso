@@ -288,7 +288,7 @@ export default function PersonaChatPage() {
               </p>
             </div>
           ) : (
-            messages.map((msg: any) => {
+            messages.slice(-20).map((msg: any) => {
               // 시스템 메시지 처리
               if (msg.senderType === 'system' || msg.messageType === 'join' || msg.messageType === 'leave') {
                 return (

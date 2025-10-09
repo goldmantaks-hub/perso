@@ -11,7 +11,7 @@ type GenArgs = {
   targetPersonaId?: string;
 };
 
-export async function generatePersonaLine(args: GenArgs): Promise<string> {
+export async function generatePersonaLine(args: GenArgs): Promise<{ message: string; thinking: string }> {
   const persona = await loadPersona(args.personaId);
   const recent = args.roomMessages.slice(-6).map(m => `${m.personaId ?? 'User'}: ${m.text}`).join('\n');
 
@@ -22,7 +22,10 @@ export async function generatePersonaLine(args: GenArgs): Promise<string> {
     // 스텁: 의도/주제 반영한 짧은 한줄 생성
     const tag = args.context.subjects[0] ?? 'topic';
     const tone = args.context.tones?.[0] ?? 'neutral';
-    return `[stub:${persona.name}/${args.intent}] ${tag}에 대해 ${tone} 톤으로 한마디.`;
+    return {
+      message: `[stub:${persona.name}/${args.intent}] ${tag}에 대해 ${tone} 톤으로 한마디.`,
+      thinking: `[stub thinking] ${persona.name}이 ${tag}에 대해 ${tone} 톤으로 생각 중...`
+    };
   }
 
   return await realLLM(persona, recent, args);
@@ -51,7 +54,7 @@ async function loadPersona(personaId: string) {
   };
 }
 
-async function realLLM(persona: any, recent: string, args: GenArgs): Promise<string> {
+async function realLLM(persona: any, recent: string, args: GenArgs): Promise<{ message: string; thinking: string }> {
   const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   });
@@ -92,6 +95,7 @@ ${recent}
 위 대화를 읽고, ${persona.name}의 관점에서 ${intentDescriptions[args.intent as keyof typeof intentDescriptions] || args.intent} 응답을 작성하세요.`;
 
   try {
+    // 메시지 생성
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
@@ -105,16 +109,55 @@ ${recent}
     const response = completion.choices[0]?.message?.content?.trim() || '';
     
     // 최대 길이 제한
-    if (response.length > 180) {
-      return response.substring(0, 177) + '...';
-    }
+    const finalMessage = response.length > 180 ? response.substring(0, 177) + '...' : response;
     
-    return response;
+    // thinking 생성
+    const thinking = await generateThinking(persona, args.context, recent);
+    
+    return {
+      message: finalMessage,
+      thinking: thinking
+    };
   } catch (error) {
     console.error('[LLM] Error generating response:', error);
     // 에러 시 스텁 반환
     const tag = args.context.subjects[0] ?? 'topic';
     const tone = args.context.tones?.[0] ?? 'neutral';
-    return `[error fallback:${persona.name}] ${tag}에 대해 ${tone} 톤으로 한마디.`;
+    return {
+      message: `[error fallback:${persona.name}] ${tag}에 대해 ${tone} 톤으로 한마디.`,
+      thinking: `[error fallback thinking] ${persona.name}이 ${tag}에 대해 ${tone} 톤으로 생각 중...`
+    };
+  }
+}
+
+// thinking 생성 함수 추가
+async function generateThinking(persona: any, context: any, recent: string): Promise<string> {
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+
+  const thinkingPrompt = `당신은 "${persona.name}"입니다. 다음 대화에 응답하기 전에 내부적으로 무엇을 생각하고 있는지 1문장으로 표현하세요.
+
+대화 맥락: ${recent}
+주제: ${context.subjects.join(', ')}
+분위기: ${context.sentiment.positive > 0.3 ? '긍정적' : context.sentiment.negative > 0.3 ? '부정적' : '중립적'}
+
+1문장으로 간결하게 내부 생각을 표현하세요.`;
+
+  try {
+    const thinkingCompletion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: `당신은 ${persona.name}입니다. ${persona.description || ''}` },
+        { role: "user", content: thinkingPrompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 50,
+    });
+
+    return thinkingCompletion.choices[0]?.message?.content?.trim() || "";
+  } catch (error) {
+    console.error('[LLM] Error generating thinking:', error);
+    return "";
   }
 }

@@ -67,13 +67,16 @@ export class AutoChatOrchestrator {
         break;
       }
 
-      const text = await generatePersonaLine({
+      const result = await generatePersonaLine({
         personaId: speaker.personaId,
         context: ctx,
         roomMessages: room.getLastMessages(12),
         intent: speaker.intent,
         targetPersonaId: speaker.targetPersonaId,
       });
+
+      const text = result.message;
+      const thinking = result.thinking;
 
       const prev = room.getLastMessages(6).map(m => m.text).join('\n');
       const sim = similarity(prev, text);
@@ -101,7 +104,7 @@ export class AutoChatOrchestrator {
             senderId: speaker.personaId,
             content: text,
             messageType: 'text',
-            thinking: null,
+            thinking: thinking,
           });
           console.log(`[AUTO CHAT] Message saved to DB for conversation ${room.conversationId}`);
           
