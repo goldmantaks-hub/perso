@@ -443,7 +443,7 @@ export default function EnhancedChatPanel({
                 {msg.senderType === 'user' && (
                   <Avatar className="w-8 h-8 flex-shrink-0">
                     <AvatarImage 
-                      src={msg.user?.profileImage || currentUser?.profileImage || currentUser?.avatar || '/default-avatar.png'} 
+                      src={msg.user?.avatar || currentUser?.avatar || currentUser?.profileImage || '/default-avatar.png'} 
                       alt={msg.user?.name || currentUser?.name || '사용자'} 
                       className="object-cover"
                     />
