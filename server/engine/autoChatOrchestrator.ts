@@ -85,8 +85,10 @@ export class AutoChatOrchestrator {
 
       const prev = room.getLastMessages(6).map(m => m.text).join('\n');
       const sim = similarity(prev, text);
-      if (sim >= this.policy.similarityThreshold) {
-        console.log(`[AUTO CHAT] Message too similar (${sim.toFixed(2)}), skipping: "${text}"`);
+      // user_message 트리거인 경우 더 낮은 임계값 적용 (응답이 반드시 나와야 함)
+      const threshold = trigger === 'user_message' ? 0.7 : this.policy.similarityThreshold;
+      if (sim >= threshold) {
+        console.log(`[AUTO CHAT] Message too similar (${sim.toFixed(2)} >= ${threshold.toFixed(2)}), skipping: "${text}"`);
         this.setCooldown(speaker.personaId);
         continue;
       }
