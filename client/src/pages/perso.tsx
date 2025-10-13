@@ -1400,7 +1400,7 @@ export default function PersoPage() {
       if (msg.id && msg.id.startsWith('temp-')) {
         return {
           id: msg.id,
-          sender: '사용자',
+          sender: msg.user?.name || '사용자',
           senderType: 'user',
           message: msg.content,
           thinking: msg.thinking,
