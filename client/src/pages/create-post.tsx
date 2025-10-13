@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
+import { getToken } from "@/lib/auth";
 
 export default function CreatePostPage() {
   const [, setLocation] = useLocation();
@@ -56,12 +57,17 @@ export default function CreatePostPage() {
     const formData = new FormData();
     formData.append('image', file);
 
+    const token = getToken();
+    const headers: Record<string, string> = {};
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch('/api/upload/image', {
       method: 'POST',
       body: formData,
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      },
+      headers,
     });
 
     if (!response.ok) {
