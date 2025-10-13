@@ -50,42 +50,20 @@ app.use((req, res, next) => {
   next();
 });
 
-// 서버 시작 시 기존 Conversation의 Room 재생성
-async function reloadActiveRooms() {
+// 서버 시작 시 기존 Room들을 모두 삭제 (이미지 분석과 함께 재생성하기 위해)
+async function clearAllRooms() {
   try {
-    console.log('[INIT] Loading active conversations...');
+    console.log('[INIT] Clearing all existing rooms for fresh image analysis...');
     
-    // DB에서 모든 post-scoped conversation 조회
-    const allPosts = await storage.getPosts();
-    let loadedCount = 0;
-    
-    for (const post of allPosts) {
-      const conversation = await storage.getConversationByPost(post.id);
-      if (!conversation) continue;
-      
-      // 이미 Room이 있으면 스킵
-      const roomId = `room-${post.id}`;
-      if (persoRoomManager.get(roomId)) continue;
-      
-      // 참가자 조회
-      const participants = await storage.getParticipants(conversation.id);
-      const personaParticipants = participants.filter(p => p.participantType === 'persona');
-      
-      if (personaParticipants.length === 0) continue;
-      
-      // Room 재생성
-      const personaIds = personaParticipants.map(p => p.participantId);
-      const postContent = post.description || post.title;
-      const room = persoRoomManager.createRoom(post.id, postContent, personaIds, []);
-      room.setConversationId(conversation.id);
-      
-      loadedCount++;
-      console.log(`[INIT] Reloaded room ${roomId} with ${personaIds.length} personas`);
+    // 모든 Room 삭제
+    const allRoomIds = persoRoomManager.ids();
+    for (const roomId of allRoomIds) {
+      persoRoomManager.deleteRoom(roomId);
     }
     
-    console.log(`[INIT] Successfully reloaded ${loadedCount} active rooms`);
+    console.log(`[INIT] Cleared ${allRoomIds.length} rooms. Rooms will be recreated with image analysis on next access.`);
   } catch (error) {
-    console.error('[INIT] Error reloading active rooms:', error);
+    console.error('[INIT] Error clearing rooms:', error);
   }
 }
 
@@ -146,7 +124,7 @@ async function reloadActiveRooms() {
       console.log(`✅ Database connection successful!`);
     }
     
-    // 서버 시작 후 기존 Room 재생성
-    await reloadActiveRooms();
+    // 서버 시작 후 기존 Room 삭제 (이미지 분석과 함께 재생성하기 위해)
+    await clearAllRooms();
   });
 })();
