@@ -19,7 +19,17 @@ interface ImageAnalysis {
 // OpenAI Vision API를 사용하여 이미지 분석
 async function analyzeImageWithVision(imageUrl: string): Promise<ImageAnalysis | null> {
   try {
-    console.log(`[IMAGE ANALYSIS] Analyzing image: ${imageUrl}`);
+    // 상대 경로를 절대 URL로 변환
+    let fullImageUrl = imageUrl;
+    if (imageUrl.startsWith('/')) {
+      // Replit 환경에서는 REPLIT_DEV_DOMAIN 사용
+      const domain = process.env.REPLIT_DEV_DOMAIN || 'localhost:5000';
+      const protocol = process.env.REPLIT_DEV_DOMAIN ? 'https' : 'http';
+      fullImageUrl = `${protocol}://${domain}${imageUrl}`;
+      console.log(`[IMAGE ANALYSIS] Converted relative path to absolute URL: ${fullImageUrl}`);
+    }
+    
+    console.log(`[IMAGE ANALYSIS] Analyzing image: ${fullImageUrl}`);
     
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -33,7 +43,7 @@ async function analyzeImageWithVision(imageUrl: string): Promise<ImageAnalysis |
             },
             {
               type: "image_url",
-              image_url: { url: imageUrl }
+              image_url: { url: fullImageUrl }
             }
           ]
         }
