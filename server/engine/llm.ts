@@ -90,13 +90,19 @@ ${args.targetPersonaId ? `응답 대상: ${args.targetPersonaId}` : ''}
 - 자연스럽고 대화체로 작성하세요
 - 페르소나의 성격을 반영하세요`;
 
+  // 이미지 분석 결과가 포함되어 있는지 확인
+  const hasImageAnalysis = args.postContent.includes('[이미지:');
+  const imageGuidance = hasImageAnalysis 
+    ? '\n\n**매우 중요**: 게시물에 이미지 분석 결과가 포함되어 있습니다. [이미지: ...] 안에 있는 구체적인 내용(숫자, 사물, 색상 등)을 직접 언급하세요. 추상적으로 "이미지의 의미" 같은 말을 하지 말고, 실제로 보이는 것을 구체적으로 언급하세요.'
+    : '';
+
   const userPrompt = `게시물 원본:
 "${args.postContent}"
 
 최근 대화:
 ${recent}
 
-**중요**: 게시물 원본 주제에 맞춰 대화하세요. 최근 대화만 보고 전혀 다른 주제로 빠지지 마세요.
+**중요**: 게시물 원본 주제에 맞춰 대화하세요. 최근 대화만 보고 전혀 다른 주제로 빠지지 마세요.${imageGuidance}
 
 위 맥락을 고려하여, ${persona.name}의 관점에서 ${intentDescriptions[args.intent as keyof typeof intentDescriptions] || args.intent} 응답을 작성하세요.`;
 
