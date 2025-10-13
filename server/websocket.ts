@@ -538,15 +538,56 @@ export function setupWebSocket(server: Server) {
       message: string;
       postContent: string;
       analysis: any;
+      conversationId?: string;
     }) => {
       try {
         console.log(`[WS] user:message event received from ${userId}`);
         console.log(`[WS] User message: "${data.message}"`);
+        console.log(`[WS] ConversationId: ${data.conversationId}`);
         
         socket.emit('user:message:typing', { postId: data.postId });
         
         const { handleUserMessage } = await import('./engine/humanBridge.js');
         const { persoRoomManager } = await import('./engine/persoRoom.js');
+        
+        // 1. 사용자 메시지를 DB에 저장
+        if (data.conversationId) {
+          try {
+            const savedUserMessage = await storage.createMessageInConversation({
+              conversationId: data.conversationId,
+              senderType: 'user',
+              senderId: userId,
+              content: data.message,
+              messageType: 'text',
+              thinking: null,
+            });
+            
+            console.log(`[WS] User message saved to DB: ${savedUserMessage.id}`);
+            
+            // 2. 사용자 메시지를 WebSocket으로 브로드캐스트
+            const user = await storage.getUser(userId);
+            io.to(`conversation:${data.conversationId}`).emit('message:new', {
+              id: savedUserMessage.id,
+              conversationId: savedUserMessage.conversationId,
+              senderType: 'user',
+              senderId: userId,
+              content: savedUserMessage.content,
+              messageType: 'text',
+              thinking: null,
+              createdAt: savedUserMessage.createdAt.toISOString(),
+              isAI: false,
+              user: user ? {
+                name: user.name,
+                username: user.username,
+                avatar: user.avatar
+              } : null
+            });
+            
+            console.log(`[WS] User message broadcasted to conversation:${data.conversationId}`);
+          } catch (error) {
+            console.error(`[WS] Error saving/broadcasting user message:`, error);
+          }
+        }
         
         const postContext = {
           postId: data.postId,
