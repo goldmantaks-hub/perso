@@ -68,6 +68,7 @@ export class AutoChatOrchestrator {
       }
 
       console.log(`[AUTO CHAT] Calling generatePersonaLine for ${speaker.personaId}`);
+      console.log(`[AUTO CHAT] postContent: "${room.postContent}"`);
       const result = await generatePersonaLine({
         personaId: speaker.personaId,
         context: ctx,
