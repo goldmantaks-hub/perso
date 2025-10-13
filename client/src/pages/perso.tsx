@@ -1426,22 +1426,25 @@ export default function PersoPage() {
       }
       
       // 일반 메시지 처리
+      // senderType 기반으로 처리 (isAI 필드는 서버에서 제공되지 않음)
+      const isAIMessage = msg.senderType === 'persona' || msg.isAI === true;
+      
       // 페르소나 이름을 '소유자'의 '페르소나명' 형식으로 표시
       let displayName = 'AI';
-      if (msg.isAI && msg.persona) {
+      if (isAIMessage && msg.persona) {
         if (msg.persona.owner) {
           displayName = `${msg.persona.owner.name}의 ${msg.persona.name}`;
         } else {
           displayName = msg.persona.name;
         }
-      } else if (!msg.isAI && msg.user) {
+      } else if (!isAIMessage && msg.user) {
         displayName = msg.user.name || '사용자';
       }
 
       const transformedMessage = {
         id: msg.id,
         sender: displayName,
-        senderType: msg.isAI ? 'ai' : 'user',
+        senderType: isAIMessage ? 'ai' : 'user',
         message: msg.content,
         thinking: msg.thinking,
         type: msg.persona?.type || 'empath',
@@ -1454,7 +1457,7 @@ export default function PersoPage() {
       };
       
       // thinking 필드 디버깅 - 모든 AI 메시지에 대해 확인
-      if (msg.isAI) {
+      if (isAIMessage) {
         console.log(`[THINKING DEBUG] AI Message ${msg.id} (${displayName}):`, {
           hasThinking: !!msg.thinking,
           thinking: msg.thinking,
