@@ -1395,11 +1395,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // 저장 실패해도 클라이언트에는 응답 (임시 메시지로 표시)
       }
       
-      // 클라이언트에 응답 (메시지 전송 성공)
+      // 클라이언트에 응답 (메시지 전송 성공) - user/persona 정보 포함
       const requestEndTime = Date.now();
       const totalRequestTime = requestEndTime - requestStartTime;
       console.log(`[REQUEST COMPLETE] 전체 요청 처리 시간: ${totalRequestTime}ms`);
-      res.json(tempMessage);
+      res.json(messageWithInfo);
       
       // 백그라운드에서 메타데이터 생성 (비동기)
       setImmediate(async () => {
