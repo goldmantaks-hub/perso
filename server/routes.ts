@@ -85,11 +85,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const paginatedMessages = messages.slice(offset, offset + limit);
       const hasMore = offset + limit < totalMessages;
       
-      console.log(`[CHAT HISTORY] 응답: ${paginatedMessages.length}개 메시지, 총 ${totalMessages}개, hasMore=${hasMore}`);
+      // 메시지에 사용자/페르소나 정보 추가
+      const messagesWithInfo = await Promise.all(
+        paginatedMessages.map(async (msg) => {
+          if (msg.senderType === 'persona') {
+            const persona = await storage.getPersona(msg.senderId);
+            return {
+              ...msg,
+              isAI: true,
+              persona: persona ? {
+                id: persona.id,
+                name: persona.name,
+                image: persona.image,
+                owner: await storage.getUser(persona.userId).then(u => u ? {
+                  name: u.name,
+                  username: u.username
+                } : null)
+              } : null,
+            };
+          } else if (msg.senderType === 'user') {
+            const user = await storage.getUser(msg.senderId);
+            return {
+              ...msg,
+              isAI: false,
+              user: user ? {
+                name: user.name,
+                username: user.username,
+                avatar: user.avatar
+              } : null,
+            };
+          }
+          return msg;
+        })
+      );
+      
+      console.log(`[CHAT HISTORY] 응답: ${messagesWithInfo.length}개 메시지, 총 ${totalMessages}개, hasMore=${hasMore}`);
       
       res.json({ 
         ok: true, 
-        messages: paginatedMessages,
+        messages: messagesWithInfo,
         total: totalMessages,
         hasMore,
         offset,
