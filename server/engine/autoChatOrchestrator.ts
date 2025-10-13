@@ -18,7 +18,8 @@ export class AutoChatOrchestrator {
 
   async runBurst(trigger: 'post_created' | 'user_message' | 'idle_tick') {
     const now = Date.now();
-    if (now - this.lastBurstAt < this.policy.minSecondsBetweenBursts * 1000) {
+    // user_message 트리거인 경우 즉시 응답 (too soon 체크 우회)
+    if (trigger !== 'user_message' && now - this.lastBurstAt < this.policy.minSecondsBetweenBursts * 1000) {
       console.log(`[AUTO CHAT] Skipping burst for ${this.roomId} - too soon (${Math.floor((now - this.lastBurstAt) / 1000)}s ago)`);
       return;
     }
