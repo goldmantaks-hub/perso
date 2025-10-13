@@ -135,7 +135,7 @@ export default function EnhancedChatPanel({
   onPersonaClick
 }: EnhancedChatPanelProps) {
   const [showThinking, setShowThinking] = useState<Set<string>>(new Set());
-  const [displayedMessageCount, setDisplayedMessageCount] = useState(20);
+  const [displayedMessageCount, setDisplayedMessageCount] = useState(100);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
