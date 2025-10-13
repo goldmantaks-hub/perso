@@ -340,6 +340,17 @@ export default function PersoPage() {
 
   // WebSocket으로 실시간 메시지 수신
   const handleNewMessage = useCallback((newMessage: any) => {
+    // 모든 WebSocket 메시지 디버깅
+    console.log('[WS MESSAGE] 전체 메시지 구조:', {
+      id: newMessage.id,
+      senderType: newMessage.senderType,
+      hasUser: !!newMessage.user,
+      hasPersona: !!newMessage.persona,
+      user: newMessage.user,
+      persona: newMessage.persona,
+      fullMessage: newMessage
+    });
+    
     // thinking 필드 디버깅 - 모든 페르소나 메시지에 대해 확인
     if (newMessage.senderType === 'persona') {
       console.log(`[THINKING DEBUG] WebSocket received message for ${newMessage.persona?.name}:`, {
