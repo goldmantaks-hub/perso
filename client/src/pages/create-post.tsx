@@ -111,13 +111,15 @@ export default function CreatePostPage() {
         image: imageUrl,
       });
 
-      // 3. 캐시 무효화 및 피드로 이동
+      // 3. 캐시 무효화 및 새로고침
       await queryClient.invalidateQueries({ queryKey: ['/api/posts'] });
+      await queryClient.refetchQueries({ queryKey: ['/api/posts'] });
       
       toast({
         title: "게시물이 작성되었습니다",
       });
       
+      // 4. 피드로 이동
       setLocation('/');
     } catch (error) {
       console.error('게시물 작성 실패:', error);

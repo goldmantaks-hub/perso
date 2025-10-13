@@ -1490,7 +1490,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               // Post 내용 조회
               const post = await storage.getPost(postId);
-              const postContent = post ? (post.description || post.title) : '';
+              let postContent = post ? (post.description || post.title) : '';
+              
+              // 이미지 분석 추가 (post creation과 동일한 로직)
+              if (post?.image) {
+                const { detectSubjects } = await import('./api/analyze.js');
+                const { imageAnalysis } = await detectSubjects(postContent, post.image);
+                if (imageAnalysis) {
+                  postContent = `${postContent}\n\n[이미지: ${imageAnalysis.description}]`;
+                  console.log(`[AUTO CHAT] Image analysis added: ${imageAnalysis.description}`);
+                }
+              }
               
               // Conversation에서 페르소나 참가자 추출
               const participants = await storage.getParticipants(conversation.id);
@@ -2019,7 +2029,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Post 내용 조회
             const post = await storage.getPost(postId);
-            const postContent = post ? (post.description || post.title) : '';
+            let postContent = post ? (post.description || post.title) : '';
+            
+            // 이미지 분석 추가 (post creation과 동일한 로직)
+            if (post?.image) {
+              const { detectSubjects } = await import('./api/analyze.js');
+              const { imageAnalysis } = await detectSubjects(postContent, post.image);
+              if (imageAnalysis) {
+                postContent = `${postContent}\n\n[이미지: ${imageAnalysis.description}]`;
+                console.log(`[AI RESPONSE] Image analysis added: ${imageAnalysis.description}`);
+              }
+            }
             
             // Conversation 조회
             const conversation = await storage.getConversationByPost(postId);

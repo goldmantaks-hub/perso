@@ -154,22 +154,24 @@ function PostCard({ post }: { post: any }) {
 
       {/* 포스트 카드 */}
       <div className="bg-background rounded-xl overflow-hidden shadow-sm">
-        {/* 이미지 */}
-        <div className="relative">
-          <img 
-            src={post.image} 
-            alt={post.title}
-            className="w-full aspect-square object-cover"
-            data-testid="img-post"
-          />
-        </div>
+        {/* 이미지 (있을 경우에만) */}
+        {post.image && (
+          <div className="relative">
+            <img 
+              src={post.image} 
+              alt={post.title}
+              className="w-full aspect-square object-cover"
+              data-testid="img-post"
+            />
+          </div>
+        )}
 
         {/* 텍스트 내용 */}
-        <div className="p-4">
-          <p className="text-base font-bold" data-testid="text-post-title">
+        <div className={post.image ? "p-4" : "p-6"}>
+          <p className={`font-bold ${post.image ? "text-base" : "text-xl"}`} data-testid="text-post-title">
             {post.title}
           </p>
-          <p className="text-sm text-muted-foreground mt-1" data-testid="text-post-description">
+          <p className={`text-muted-foreground mt-1 ${post.image ? "text-sm" : "text-base"}`} data-testid="text-post-description">
             {post.description}
           </p>
           
