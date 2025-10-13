@@ -154,17 +154,16 @@ function PostCard({ post }: { post: any }) {
 
       {/* 포스트 카드 */}
       <div className="bg-background rounded-xl overflow-hidden shadow-sm">
-        {/* 이미지 (있을 경우에만) */}
-        {post.image && (
-          <div className="relative">
+        {/* 이미지 영역 */}
+        <div className="relative" data-testid="img-post">
+          {post.image ? (
             <img 
               src={post.image} 
               alt={post.title}
               className="w-full aspect-square object-cover"
-              data-testid="img-post"
             />
-          </div>
-        )}
+          ) : null}
+        </div>
 
         {/* 텍스트 내용 */}
         <div className={post.image ? "p-4" : "p-6"}>

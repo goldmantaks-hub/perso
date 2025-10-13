@@ -1492,8 +1492,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const post = await storage.getPost(postId);
               let postContent = post ? (post.description || post.title) : '';
               
-              // 이미지 분석 추가 (post creation과 동일한 로직)
-              if (post?.image) {
+              // 이미지 분석 추가 (중복 방지)
+              if (post?.image && !postContent.includes('[이미지:')) {
                 const { detectSubjects } = await import('./api/analyze.js');
                 const { imageAnalysis } = await detectSubjects(postContent, post.image);
                 if (imageAnalysis) {
@@ -1530,9 +1530,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             
             if (room) {
+              console.log(`[AUTO CHAT] Triggering onUserMessage for room ${room.roomId}`);
               const { onUserMessage } = await import('./engine/autoTick.js');
-              onUserMessage(room.roomId);
-              console.log(`[AUTO CHAT] Triggered auto-chat for room ${room.roomId}`);
+              try {
+                await onUserMessage(room.roomId);
+                console.log(`[AUTO CHAT] Successfully triggered auto-chat for room ${room.roomId}`);
+              } catch (autoError) {
+                console.error(`[AUTO CHAT] onUserMessage failed for room ${room.roomId}:`, autoError);
+              }
+            } else {
+              console.error(`[AUTO CHAT] Failed to create or restore room for post ${postId}`);
             }
           } catch (autoError) {
             console.error('[AUTO CHAT] Auto-chat trigger error:', autoError);
@@ -2031,8 +2038,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const post = await storage.getPost(postId);
             let postContent = post ? (post.description || post.title) : '';
             
-            // 이미지 분석 추가 (post creation과 동일한 로직)
-            if (post?.image) {
+            // 이미지 분석 추가 (중복 방지)
+            if (post?.image && !postContent.includes('[이미지:')) {
               const { detectSubjects } = await import('./api/analyze.js');
               const { imageAnalysis } = await detectSubjects(postContent, post.image);
               if (imageAnalysis) {
@@ -2091,9 +2098,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           if (room) {
+            console.log(`[AI RESPONSE] Triggering onUserMessage for room ${room.roomId}`);
             const { onUserMessage } = await import('./engine/autoTick.js');
-            onUserMessage(room.roomId);
-            console.log(`[AI RESPONSE] Triggered auto-chat for room ${room.roomId} after AI response`);
+            try {
+              await onUserMessage(room.roomId);
+              console.log(`[AI RESPONSE] Successfully triggered auto-chat for room ${room.roomId} after AI response`);
+            } catch (autoError) {
+              console.error(`[AI RESPONSE] onUserMessage failed for room ${room.roomId}:`, autoError);
+            }
+          } else {
+            console.error(`[AI RESPONSE] Failed to create or restore room for post ${postId}`);
           }
         } catch (autoError) {
           console.error('[AI RESPONSE] Auto-chat trigger error:', autoError);
