@@ -356,8 +356,8 @@ export class DbStorage implements IStorage {
   async getMessagesByConversation(conversationId: string, userId?: string): Promise<Message[]> {
     console.log(`[DB QUERY] 메시지 조회 시작: conversationId=${conversationId}, userId=${userId}`);
     
-    // 모든 메시지 조회 (visibleAt 조건 포함)
-    const allMessages = await db
+    // 최신 50개 메시지를 가져온 후 역순으로 정렬 (채팅 UI용: 오래된→최신 순서)
+    const latestMessages = await db
       .select()
       .from(messages)
       .where(and(
@@ -368,8 +368,11 @@ export class DbStorage implements IStorage {
           lte(messages.visibleAt, sql`NOW()`)
         )
       ))
-      .orderBy(desc(messages.createdAt)) // 최신순으로 정렬
-      .limit(50); // 최대 50개 메시지만 가져오기 (성능 향상)
+      .orderBy(desc(messages.createdAt)) // 최신순으로 정렬하여 최신 50개 선택
+      .limit(50); // 최대 50개 메시지만 가져오기
+    
+    // 배열을 역순으로 뒤집어서 오래된 메시지가 앞에 오도록 함
+    const allMessages = latestMessages.reverse();
     
     console.log(`[DB QUERY] 메시지 조회 완료: ${allMessages.length}개 메시지`);
     if (allMessages.length > 0) {
