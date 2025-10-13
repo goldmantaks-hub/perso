@@ -1074,7 +1074,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               user: user ? {
                 name: user.name,
                 username: user.username,
-                profileImage: user.profileImage,
+                avatar: user.profileImage,
               } : null,
             };
             } else {
@@ -1091,7 +1091,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                         id: user.id,
                         name: user.name,
                         username: user.username,
-                        profileImage: user.profileImage,
+                        avatar: user.profileImage,
                       }
                     };
                   } else {
@@ -1147,7 +1147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               userId: user.id,
               username: user.username,
               name: user.name,
-              profileImage: user.profileImage,
+              avatar: user.profileImage,
             };
           }
           return null;
