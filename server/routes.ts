@@ -13,6 +13,10 @@ import { openPerso } from "./api/personas.js";
 import { runSeed } from "./seed.js";
 import { cleanupPostsWithoutConversations, listPostsWithoutConversations } from "./scripts/cleanup-posts.js";
 import { sseBroker } from "./sse/broker";
+import multer from "multer";
+import path from "path";
+import { nanoid } from "nanoid";
+import fs from "fs/promises";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // WebSocket 서버 참조를 위한 헬퍼 함수
@@ -21,6 +25,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // OpenAI 클라이언트 초기화
   const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
+  });
+
+  // Multer 설정: 이미지 업로드
+  const storage_multer = multer.diskStorage({
+    destination: async (req, file, cb) => {
+      const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+      await fs.mkdir(uploadDir, { recursive: true });
+      cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname);
+      const filename = `${nanoid()}-${Date.now()}${ext}`;
+      cb(null, filename);
+    }
+  });
+
+  const upload = multer({
+    storage: storage_multer,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+    fileFilter: (req, file, cb) => {
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('이미지 파일만 업로드 가능합니다 (JPEG, PNG, GIF, WebP)'));
+      }
+    }
   });
 
   // 헬스체크 엔드포인트
@@ -666,6 +697,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(persona);
     } catch (error) {
       res.status(500).json({ message: "페르소나를 가져오는데 실패했습니다" });
+    }
+  });
+
+  // POST /api/upload/image - 이미지 업로드
+  app.post("/api/upload/image", authenticateToken, upload.single('image'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "이미지 파일이 없습니다" });
+      }
+
+      // 업로드된 파일의 URL 생성
+      const imageUrl = `/uploads/${req.file.filename}`;
+      
+      console.log(`[IMAGE UPLOAD] 이미지 업로드 성공: ${imageUrl}`);
+      
+      res.json({ 
+        url: imageUrl,
+        filename: req.file.filename,
+        size: req.file.size,
+        mimetype: req.file.mimetype
+      });
+    } catch (error) {
+      console.error('[IMAGE UPLOAD] 이미지 업로드 실패:', error);
+      res.status(500).json({ message: "이미지 업로드에 실패했습니다" });
     }
   });
 
