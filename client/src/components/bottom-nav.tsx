@@ -1,7 +1,5 @@
 import { Home, Search, Plus, MessageCircle, User } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { useState } from "react";
-import CreatePostModal from "./create-post-modal";
 import { isAuthenticated } from "@/lib/auth";
 
 interface BottomNavProps {
@@ -14,7 +12,6 @@ interface BottomNavProps {
 
 export default function BottomNav({ currentUser }: BottomNavProps) {
   const [location, setLocation] = useLocation();
-  const [createPostOpen, setCreatePostOpen] = useState(false);
 
   const isActive = (path: string) => location === path;
 
@@ -29,7 +26,7 @@ export default function BottomNav({ currentUser }: BottomNavProps) {
     if (!isAuthenticated()) {
       setLocation("/login");
     } else {
-      setCreatePostOpen(true);
+      setLocation("/create");
     }
   };
 
@@ -95,12 +92,6 @@ export default function BottomNav({ currentUser }: BottomNavProps) {
           </div>
         </div>
       </nav>
-
-      <CreatePostModal
-        open={createPostOpen}
-        onOpenChange={setCreatePostOpen}
-        currentUser={currentUser}
-      />
     </>
   );
 }

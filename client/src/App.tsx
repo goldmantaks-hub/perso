@@ -17,6 +17,7 @@ import PersonaStatePage from "@/pages/persona-state";
 import PersonaNetworkPage from "@/pages/persona-network";
 import VisualizationPage from "@/pages/visualization";
 import UITest from "@/pages/UITest";
+import CreatePostPage from "@/pages/create-post";
 import { useEffect, useState } from "react";
 import { isAuthenticated, setToken, setUser } from "./lib/auth";
 
@@ -27,6 +28,7 @@ function Router() {
       <Route path="/signup" component={SignupPage} />
       <Route path="/login" component={LoginPage} />
       <Route path="/feed" component={FeedPage} />
+      <Route path="/create" component={CreatePostPage} />
       <Route path="/search" component={SearchPage} />
       <Route path="/activity" component={ActivityPage} />
       <Route path="/profile" component={ProfilePage} />

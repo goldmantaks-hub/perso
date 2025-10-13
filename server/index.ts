@@ -14,6 +14,9 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Static files: 업로드된 이미지 서빙
+app.use('/uploads', express.static('public/uploads'));
+
 // Auto-chat API 라우터 등록
 app.use('/api/auto', autoChat);
 

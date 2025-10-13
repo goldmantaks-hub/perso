@@ -10,7 +10,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import CreatePostModal from "./create-post-modal";
 
 interface NavbarProps {
   currentUser?: {
@@ -21,8 +20,7 @@ interface NavbarProps {
 }
 
 export default function Navbar({ currentUser }: NavbarProps) {
-  const [location] = useLocation();
-  const [createPostOpen, setCreatePostOpen] = useState(false);
+  const [location, setLocation] = useLocation();
   const [isDark, setIsDark] = useState(false);
 
   const toggleTheme = () => {
@@ -51,14 +49,15 @@ export default function Navbar({ currentUser }: NavbarProps) {
                 </Button>
               </Link>
 
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setCreatePostOpen(true)}
-                data-testid="button-nav-create"
-              >
-                <PlusCircle className="w-5 h-5" />
-              </Button>
+              <Link href="/create">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  data-testid="button-nav-create"
+                >
+                  <PlusCircle className="w-5 h-5" />
+                </Button>
+              </Link>
 
               <Button
                 variant="ghost"
@@ -101,12 +100,6 @@ export default function Navbar({ currentUser }: NavbarProps) {
           </div>
         </div>
       </nav>
-
-      <CreatePostModal
-        open={createPostOpen}
-        onOpenChange={setCreatePostOpen}
-        currentUser={currentUser}
-      />
     </>
   );
 }
