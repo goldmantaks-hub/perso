@@ -303,7 +303,7 @@ function PersoSection({ post }: { post: any }) {
                       <p className="text-xs text-muted-foreground truncate">
                         <span className="font-medium">
                           {msg.isAI && msg.persona?.owner 
-                            ? `${msg.persona.owner.name}의 ${msg.persona.name}`
+                            ? `${msg.persona.owner.username}의 ${msg.persona.name}`
                             : msg.isAI 
                               ? msg.persona?.name 
                               : msg.user?.name}

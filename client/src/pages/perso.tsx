@@ -736,7 +736,7 @@ export default function PersoPage() {
     // 주도권 교체 시스템 메시지 추가
     const newDominantPersona = activePersonas.find(p => p.id === handoverData.newDominant);
     const displayName = newDominantPersona?.owner 
-      ? `${newDominantPersona.owner.name}의 ${handoverData.newDominant}`
+      ? `${newDominantPersona.owner.username}의 ${handoverData.newDominant}`
       : handoverData.newDominant;
     
     const handoverMessage = {
@@ -1459,7 +1459,7 @@ export default function PersoPage() {
       let displayName = 'AI';
       if (isAIMessage && msg.persona) {
         if (msg.persona.owner) {
-          displayName = `${msg.persona.owner.name}의 ${msg.persona.name}`;
+          displayName = `${msg.persona.owner.username}의 ${msg.persona.name}`;
         } else {
           displayName = msg.persona.name;
         }
@@ -1912,7 +1912,7 @@ export default function PersoPage() {
             <AlertDialogDescription>
               {selectedPersona && (
                 <>
-                  <strong>{selectedPersona.owner ? `${selectedPersona.owner.name}의 ` : ''}{selectedPersona.name}</strong>을(를) 
+                  <strong>{selectedPersona.owner ? `${selectedPersona.owner.username}의 ` : ''}{selectedPersona.name}</strong>을(를) 
                   대화방에서 퇴장시키시겠습니까?
                 </>
               )}

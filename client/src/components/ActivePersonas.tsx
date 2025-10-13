@@ -284,7 +284,7 @@ export default function ActivePersonas({
                         </Avatar>
                         <div className="flex flex-col gap-1 min-w-0 flex-1">
                           <span className={`text-xs font-medium ${colors.text} truncate`}>
-                            {persona.owner ? `${persona.owner.name}의 ${persona.name || 'Unknown'}` : (persona.name || 'Unknown')}
+                            {persona.owner ? `${persona.owner.username}의 ${persona.name || 'Unknown'}` : (persona.name || 'Unknown')}
                           </span>
                           <div className="flex items-center gap-1 flex-wrap">
                             {getStatusBadge(persona.status)}
@@ -324,7 +324,7 @@ export default function ActivePersonas({
           }}
         >
           <div className="font-medium mb-1">
-            {persona.owner ? `${persona.owner.name}의 ${persona.name || 'Unknown'}` : (persona.name || 'Unknown')}
+            {persona.owner ? `${persona.owner.username}의 ${persona.name || 'Unknown'}` : (persona.name || 'Unknown')}
           </div>
           <div className="text-gray-300 text-xs mb-1">
             {personaDescriptions[persona.name] || 

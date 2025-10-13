@@ -1170,7 +1170,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               userId: user.id,
               username: user.username,
               name: user.name,
-              avatar: user.profileImage,
+              profileImage: user.profileImage,
             };
           }
           return null;
