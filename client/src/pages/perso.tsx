@@ -1330,7 +1330,7 @@ export default function PersoPage() {
     },
   });
 
-  const handleSend = (messageText?: string) => {
+  const handleSend = async (messageText?: string) => {
     const textToSend = messageText || message;
     console.log('[HANDLE SEND] 메시지 전송 시도:', { textToSend, postId, messageText, message });
     
@@ -1344,18 +1344,33 @@ export default function PersoPage() {
     // 입력창 즉시 비우기
     setMessage("");
     
+    // 실제 사용자 정보 가져오기
+    let currentUser: any = null;
+    try {
+      currentUser = await queryClient.ensureQueryData({
+        queryKey: ['/api/user'],
+      });
+      console.log('[HANDLE SEND] 현재 사용자 정보:', currentUser);
+    } catch (error) {
+      console.error('[HANDLE SEND] 사용자 정보 가져오기 실패:', error);
+    }
+    
     // 낙관적 업데이트: 사용자 메시지를 즉시 표시
     const tempMessage = {
       id: `temp-${Date.now()}`,
       content: textToSend,
       isAI: false,
       senderType: 'user',
-      senderId: 'current-user',
+      senderId: currentUser?.id || 'current-user',
       createdAt: new Date().toISOString(),
-      user: {
+      user: currentUser ? {
+        name: currentUser.name,
+        username: currentUser.username,
+        avatar: currentUser.profileImage
+      } : {
         name: '사용자',
         username: 'user',
-        profileImage: null
+        avatar: null
       },
       // transformMessages 함수가 제대로 처리할 수 있도록 필요한 필드 추가
       messageType: 'user',
