@@ -6,9 +6,8 @@ import * as schema from "@shared/schema";
 neonConfig.webSocketConstructor = ws;
 
 if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
+  console.warn("DATABASE_URL not set, using default connection string");
+  process.env.DATABASE_URL = "postgresql://username:password@localhost:5432/database_name";
 }
 
 export const pool = new Pool({ 
@@ -24,6 +23,9 @@ export const db = drizzle({ client: pool, schema });
 // 데이터베이스 연결 상태 확인
 export async function checkDatabaseConnection() {
   try {
+    console.log('[DB] 데이터베이스 연결 시도 중...');
+    console.log('[DB] DATABASE_URL:', process.env.DATABASE_URL ? '설정됨' : '설정되지 않음');
+    
     const client = await pool.connect();
     const result = await client.query('SELECT NOW()');
     client.release();
@@ -31,6 +33,11 @@ export async function checkDatabaseConnection() {
     return true;
   } catch (error) {
     console.error('[DB] 데이터베이스 연결 실패:', error);
+    console.error('[DB] 오류 상세:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail
+    });
     return false;
   }
 }

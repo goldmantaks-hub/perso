@@ -129,9 +129,16 @@ async function reloadActiveRooms() {
     
     // 데이터베이스 연결 확인
     console.log(`🔍 Checking database connection...`);
+    console.log(`🔍 Environment variables:`, {
+      NODE_ENV: process.env.NODE_ENV,
+      PORT: process.env.PORT,
+      DATABASE_URL: process.env.DATABASE_URL ? '설정됨' : '설정되지 않음'
+    });
+    
     const dbConnected = await checkDatabaseConnection();
     if (!dbConnected) {
       console.error(`❌ Database connection failed!`);
+      console.error(`❌ 서버는 시작되지만 데이터베이스 연결이 실패했습니다.`);
     } else {
       console.log(`✅ Database connection successful!`);
     }
