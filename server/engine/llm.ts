@@ -9,6 +9,7 @@ type GenArgs = {
   roomMessages: { personaId?: string; text: string }[];
   intent: string;
   targetPersonaId?: string;
+  postContent: string;
 };
 
 export async function generatePersonaLine(args: GenArgs): Promise<{ message: string; thinking: string }> {
@@ -89,10 +90,15 @@ ${args.targetPersonaId ? `응답 대상: ${args.targetPersonaId}` : ''}
 - 자연스럽고 대화체로 작성하세요
 - 페르소나의 성격을 반영하세요`;
 
-  const userPrompt = `최근 대화:
+  const userPrompt = `게시물 원본:
+"${args.postContent}"
+
+최근 대화:
 ${recent}
 
-위 대화를 읽고, ${persona.name}의 관점에서 ${intentDescriptions[args.intent as keyof typeof intentDescriptions] || args.intent} 응답을 작성하세요.`;
+**중요**: 게시물 원본 주제에 맞춰 대화하세요. 최근 대화만 보고 전혀 다른 주제로 빠지지 마세요.
+
+위 맥락을 고려하여, ${persona.name}의 관점에서 ${intentDescriptions[args.intent as keyof typeof intentDescriptions] || args.intent} 응답을 작성하세요.`;
 
   try {
     // 메시지 생성
@@ -112,7 +118,7 @@ ${recent}
     const finalMessage = response.length > 180 ? response.substring(0, 177) + '...' : response;
     
     // thinking 생성
-    const thinking = await generateThinking(persona, args.context, recent);
+    const thinking = await generateThinking(persona, args.context, recent, args.postContent);
     
     return {
       message: finalMessage,
@@ -131,18 +137,19 @@ ${recent}
 }
 
 // thinking 생성 함수 추가
-async function generateThinking(persona: any, context: any, recent: string): Promise<string> {
+async function generateThinking(persona: any, context: any, recent: string, postContent: string): Promise<string> {
   const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   });
 
   const thinkingPrompt = `당신은 "${persona.name}"입니다. 다음 대화에 응답하기 전에 내부적으로 무엇을 생각하고 있는지 1문장으로 표현하세요.
 
-대화 맥락: ${recent}
+게시물 원본: "${postContent}"
+최근 대화: ${recent}
 주제: ${context.subjects.join(', ')}
 분위기: ${context.sentiment.positive > 0.3 ? '긍정적' : context.sentiment.negative > 0.3 ? '부정적' : '중립적'}
 
-1문장으로 간결하게 내부 생각을 표현하세요.`;
+게시물 주제와 최근 대화를 고려하여 1문장으로 간결하게 내부 생각을 표현하세요.`;
 
   try {
     const thinkingCompletion = await openai.chat.completions.create({
