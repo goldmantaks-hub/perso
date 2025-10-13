@@ -74,6 +74,7 @@ export class AutoChatOrchestrator {
         roomMessages: room.getLastMessages(12),
         intent: speaker.intent,
         targetPersonaId: speaker.targetPersonaId,
+        postContent: room.postContent,
       });
 
       const text = result.message;
