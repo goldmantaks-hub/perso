@@ -105,13 +105,10 @@ export default function CreatePostPage() {
       setIsPosting(true);
       
       // 2. 게시물 생성
-      await apiRequest('/api/posts', {
-        method: 'POST',
-        body: JSON.stringify({
-          title: caption.substring(0, 100),
-          description: caption,
-          image: imageUrl,
-        }),
+      await apiRequest('POST', '/api/posts', {
+        title: caption.substring(0, 100),
+        description: caption,
+        image: imageUrl,
       });
 
       // 3. 캐시 무효화 및 피드로 이동
