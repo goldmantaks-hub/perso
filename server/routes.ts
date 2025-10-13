@@ -1329,6 +1329,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { content, isAI, personaId, thinking } = req.body;
       const postId = req.params.postId;
       
+      // DEBUG: isAI 값 확인
+      console.log(`[MESSAGE POST] isAI value:`, isAI, `type:`, typeof isAI, `content:`, content?.substring(0, 20));
+      
       // Conversation 가져오기 또는 생성
       let conversation = await storage.getConversationByPost(postId);
       
@@ -1477,7 +1480,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // 자동 대화 트리거를 별도 비동기 작업으로 분리 (메시지 전송에 영향 없음)
-      if (!isAI) {
+      // isAI가 false, "false", undefined, null 등 모든 falsy 값 처리
+      const isUserMessage = isAI === false || isAI === 'false' || !isAI;
+      console.log(`[AUTO CHAT CHECK] isAI:`, isAI, `isUserMessage:`, isUserMessage);
+      
+      if (isUserMessage && senderType === 'user') {
         // setTimeout으로 완전히 분리하여 메시지 전송에 영향 없도록 함
         setTimeout(async () => {
           try {
